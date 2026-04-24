@@ -1,0 +1,8 @@
+{
+  "title": "Player onboarding",
+  "subtitle": "Complete your profile to get better match suggestions.",
+  "stepIntent": "Choose your main intention",
+  "stepLevel": "Set your initial level",
+  "stepClub": "Add your main club (optional)",
+  "continueCta": "Continue"
+}

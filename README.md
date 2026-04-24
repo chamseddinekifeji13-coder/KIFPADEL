@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kifpadel
 
-## Getting Started
+Application SaaS multi-clubs de padel en PWA, mobile-first, avec `Next.js App Router`, `TypeScript`, `Tailwind`, `Supabase` et déploiement `Vercel`.
 
-First, run the development server:
+## Vision produit MVP
+
+- Joueur-first: trouver une partie, chercher des joueurs, réserver un terrain.
+- Club en secondaire UX: gestion des terrains, créneaux, matchs ouverts et incidents.
+- Profil joueur découpé en 3 axes indépendants:
+  - `sport_rating` (Elo simplifié 2v2 + ligues Bronze/Silver/Gold/Platinum)
+  - `trust_score` (fiabilité, sanctions progressives)
+  - `verification_level` (niveaux 1/2/3)
+
+## Architecture
+
+- `src/app`: UI + routing App Router.
+- `src/modules`: couche application (services/cas d’usage).
+- `src/domain`: types métier et règles pures.
+- `src/lib`: accès infra (Supabase, sécurité, env).
+- `supabase/migrations`: schéma SQL et RLS multi-tenant.
+
+## Routes principales
+
+- Joueur:
+  - `/:locale`
+  - `/:locale/play-now`
+  - `/:locale/find-players`
+  - `/:locale/book`
+  - `/:locale/matches/:matchId`
+  - `/:locale/profile`
+  - `/:locale/member-card`
+- Club:
+  - `/:locale/club/dashboard`
+  - `/:locale/club/courts`
+  - `/:locale/club/slots`
+  - `/:locale/club/open-matches`
+  - `/:locale/club/incidents`
+
+## i18n
+
+- Locales: `fr` (par défaut), `en`.
+- Dictionnaires JSON: `src/i18n/locales/{fr,en}`.
+- Toutes les pages UI utilisent les dictionnaires pour éviter les textes hardcodés.
+
+## PWA
+
+- Manifest: `public/manifest.webmanifest`
+- Service worker: `public/sw.js`
+- Enregistrement: `src/modules/pwa/register-sw.tsx`
+
+## Rôles utilisateur
+
+- `player`
+- `club_staff`
+- `club_manager`
+- `platform_admin`
+
+## Conventions de nommage
+
+- fichiers: `kebab-case`
+- composants / types: `PascalCase`
+- fonctions: `camelCase`
+- tables SQL: `snake_case` pluriel
+- FK SQL: `club_id`, `player_id`, `match_id`
+
+## Lancement local
+
+1. Copier les variables depuis `.env.example`.
+2. Installer les dépendances:
+
+```bash
+npm install
+```
+
+3. Lancer l’app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Vérifier la qualité:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run typecheck
+npm run test
+```

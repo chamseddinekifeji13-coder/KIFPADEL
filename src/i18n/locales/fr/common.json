@@ -1,0 +1,17 @@
+{
+  "appName": "Kifpadel",
+  "tagline": "Le plaisir du padel, maintenant",
+  "playNow": "Je veux jouer maintenant",
+  "findPlayers": "Je cherche des joueurs",
+  "bookCourt": "Je veux réserver un terrain",
+  "playNowDescription": "Rejoindre un match ouvert rapidement.",
+  "findPlayersDescription": "Trouver partenaires et adversaires compatibles.",
+  "bookCourtDescription": "Réserver un terrain en direct ou avec suggestion.",
+  "playerArea": "Espace joueur",
+  "clubArea": "Espace club",
+  "languageSwitch": "Langue",
+  "onboardingCta": "Commencer l'onboarding",
+  "authCta": "Se connecter",
+  "dashboardTitle": "Dashboard joueur",
+  "dashboardSubtitle": "Ton activité, tes prochains matchs et tes alertes."
+}

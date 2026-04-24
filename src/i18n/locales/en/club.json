@@ -1,0 +1,12 @@
+{
+  "dashboardTitle": "Club operations",
+  "dashboardSubtitle": "Global view of bookings, open matches and incidents.",
+  "courtsTitle": "Courts",
+  "courtsSubtitle": "Court setup, availability and maintenance.",
+  "slotsTitle": "Time slots",
+  "slotsSubtitle": "Recurring slots and special slot management.",
+  "openMatchesTitle": "Open matches",
+  "openMatchesSubtitle": "Publish and monitor open club matches.",
+  "incidentsTitle": "Incidents",
+  "incidentsSubtitle": "Reports, progressive sanctions and trust tracking."
+}

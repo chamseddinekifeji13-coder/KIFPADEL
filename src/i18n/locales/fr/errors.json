@@ -1,0 +1,6 @@
+{
+  "notFound": "Page introuvable",
+  "unauthorized": "Accès non autorisé",
+  "generic": "Une erreur est survenue",
+  "authRequired": "Connexion requise pour accéder à cette page."
+}

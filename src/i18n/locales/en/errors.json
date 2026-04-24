@@ -1,0 +1,6 @@
+{
+  "notFound": "Page not found",
+  "unauthorized": "Unauthorized access",
+  "generic": "Something went wrong",
+  "authRequired": "You need to sign in to access this page."
+}

@@ -1,0 +1,23 @@
+{
+  "homeTitle": "Find your next match",
+  "homeSubtitle": "Join an open game fast or build your own group.",
+  "profileTitle": "Player profile",
+  "memberCardTitle": "Digital member card",
+  "playNowTitle": "I want to play now",
+  "playNowSubtitle": "List of available open matches around me.",
+  "findPlayersTitle": "I am looking for players",
+  "findPlayersSubtitle": "Partner and opponent matching by level and availability.",
+  "bookTitle": "I want to book a court",
+  "bookSubtitle": "Direct booking or automatic court suggestion.",
+  "matchTitle": "Match details",
+  "matchSubtitle": "Participants, score and result validation.",
+  "profileSubtitle": "Sport rating, trust score and verification level.",
+  "memberCardSubtitle": "Player card with QR code, league, verification and reliability.",
+  "dashboardNextMatchTitle": "Next match",
+  "dashboardNextMatchSubtitle": "Today 8:00 PM · Open match · Tunis",
+  "dashboardProgressTitle": "Profile progression",
+  "dashboardProgressSubtitle": "Verification L1 complete · Trust healthy · Bronze League",
+  "dashboardClubTitle": "Club space",
+  "dashboardClubSubtitle": "Coming soon in MVP+.",
+  "dashboardClubCta": "Open club space"
+}

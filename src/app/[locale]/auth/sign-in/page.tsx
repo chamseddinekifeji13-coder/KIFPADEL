@@ -1,0 +1,82 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { SectionTitle } from "@/components/ui/section-title";
+import { TextInput } from "@/components/ui/text-input";
+import { isLocale, type Locale } from "@/i18n/config";
+import { getDictionary } from "@/i18n/get-dictionary";
+import { signInAction } from "@/modules/auth/actions/sign-in";
+
+type SignInPageProps = Readonly<{
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ error?: string; status?: string }>;
+}>;
+
+export default async function SignInPage({ params, searchParams }: SignInPageProps) {
+  const { locale } = await params;
+  const { error, status } = await searchParams;
+  if (!isLocale(locale)) notFound();
+  const dictionary = await getDictionary(locale as Locale);
+
+  return (
+    <section className="space-y-3">
+      <Card>
+        <SectionTitle
+          title={dictionary.auth.signInTitle}
+          subtitle={dictionary.auth.signInSubtitle}
+        />
+      </Card>
+
+      {error ? (
+        <Card className="bg-rose-50 ring-rose-100">
+          <p className="text-sm text-rose-700">
+            {error === "missing_fields"
+              ? dictionary.auth.missingFieldsError
+              : error === "auth_required"
+                ? dictionary.errors.authRequired
+                : dictionary.auth.invalidCredentialsError}
+          </p>
+        </Card>
+      ) : null}
+
+      {status === "check_email" ? (
+        <Card className="bg-emerald-50 ring-emerald-100">
+          <p className="text-sm text-emerald-700">{dictionary.auth.checkEmailInfo}</p>
+        </Card>
+      ) : null}
+
+      <Card>
+        <form action={signInAction} className="space-y-3">
+          <input type="hidden" name="locale" value={locale} />
+          <div className="space-y-1">
+            <label htmlFor="email" className="text-xs font-medium text-slate-700">
+              {dictionary.auth.emailLabel}
+            </label>
+            <TextInput id="email" name="email" type="email" placeholder="you@example.com" />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="password" className="text-xs font-medium text-slate-700">
+              {dictionary.auth.passwordLabel}
+            </label>
+            <TextInput id="password" name="password" type="password" placeholder="••••••••" />
+          </div>
+          <Button type="submit" className="w-full">
+            {dictionary.auth.signInCta}
+          </Button>
+        </form>
+      </Card>
+
+      <Card className="text-center">
+        <p className="text-sm text-slate-600">{dictionary.auth.createAccountHint}</p>
+        <Link
+          href={`/${locale}/auth/sign-up`}
+          className="mt-2 inline-block text-sm font-semibold text-sky-700"
+        >
+          {dictionary.auth.createAccountCta}
+        </Link>
+      </Card>
+    </section>
+  );
+}

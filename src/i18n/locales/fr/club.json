@@ -1,0 +1,12 @@
+{
+  "dashboardTitle": "Pilotage club",
+  "dashboardSubtitle": "Vue globale des réservations, matchs ouverts et incidents.",
+  "courtsTitle": "Terrains",
+  "courtsSubtitle": "Gestion des terrains, disponibilité et maintenance.",
+  "slotsTitle": "Créneaux",
+  "slotsSubtitle": "Pilotage des créneaux récurrents et slots spéciaux.",
+  "openMatchesTitle": "Matchs ouverts",
+  "openMatchesSubtitle": "Publication et suivi des matchs ouverts du club.",
+  "incidentsTitle": "Incidents",
+  "incidentsSubtitle": "Signalements, sanctions progressives et suivi trust score."
+}

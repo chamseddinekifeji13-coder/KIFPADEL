@@ -1,0 +1,23 @@
+{
+  "homeTitle": "Trouve ton prochain match",
+  "homeSubtitle": "Rejoins rapidement une partie ou compose ton groupe.",
+  "profileTitle": "Profil joueur",
+  "memberCardTitle": "Carte membre digitale",
+  "playNowTitle": "Je veux jouer maintenant",
+  "playNowSubtitle": "Liste des matchs ouverts disponibles autour de moi.",
+  "findPlayersTitle": "Je cherche des joueurs",
+  "findPlayersSubtitle": "Matching de partenaires et adversaires selon niveau et disponibilité.",
+  "bookTitle": "Je veux réserver un terrain",
+  "bookSubtitle": "Réservation directe ou suggestion automatique de terrains.",
+  "matchTitle": "Détail du match",
+  "matchSubtitle": "Participants, score et validation du résultat.",
+  "profileSubtitle": "Rating sportif, trust score et niveau de vérification.",
+  "memberCardSubtitle": "Carte joueur avec QR code, ligue, vérification et fiabilité.",
+  "dashboardNextMatchTitle": "Prochain match",
+  "dashboardNextMatchSubtitle": "Aujourd'hui 20:00 · Match ouvert · Tunis",
+  "dashboardProgressTitle": "Progression profil",
+  "dashboardProgressSubtitle": "Verification L1 complete · Trust healthy · Ligue Bronze",
+  "dashboardClubTitle": "Espace club",
+  "dashboardClubSubtitle": "Disponible prochainement dans le MVP+.",
+  "dashboardClubCta": "Ouvrir l'espace club"
+}
