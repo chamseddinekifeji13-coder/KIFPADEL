@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 
-import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
+import { DEFAULT_LOCALE, LOCALES, isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { AppShell } from "@/components/layout/app-shell";
+
+export function generateStaticParams() {
+  return LOCALES.map((locale) => ({ locale }));
+}
 
 type LocaleLayoutProps = Readonly<{
   children: React.ReactNode;

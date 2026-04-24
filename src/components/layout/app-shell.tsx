@@ -1,6 +1,5 @@
-import { AuthStateBadge } from "@/components/features/auth-state-badge";
-import { LocaleSwitcher } from "@/components/features/locale-switcher";
 import { MainNav } from "@/components/features/main-nav";
+import { cn } from "@/lib/utils/cn";
 
 type AppShellProps = Readonly<{
   locale: string;
@@ -24,29 +23,20 @@ type AppShellProps = Readonly<{
 
 export function AppShell({
   locale,
-  appName,
-  tagline,
   navLabels,
-  authLabels,
   children,
 }: AppShellProps) {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 px-4 py-4 md:max-w-4xl">
-      <header className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-base font-semibold text-sky-700">{appName}</p>
-            <p className="text-xs text-slate-600">{tagline}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <AuthStateBadge locale={locale} labels={authLabels} />
-            <LocaleSwitcher currentLocale={locale} />
-          </div>
-        </div>
-      </header>
+    <div className="mx-auto flex w-full max-w-lg min-h-screen flex-col bg-background selection:bg-sky-100 italic-selection">
+      {/* 
+          Main Content Area 
+          We use a larger bottom padding to accommodate the floating nav 
+      */}
+      <main className="flex-1 flex flex-col p-4 pb-32 animate-in fade-in duration-700">
+        {children}
+      </main>
 
-      <main className="flex flex-1 flex-col gap-3 pb-1">{children}</main>
-
+      {/* Modern Floating Bottom Navigation */}
       <MainNav locale={locale} labels={navLabels} />
     </div>
   );

@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-import { cn } from "@/lib/ui/cn";
+import { cn } from "@/lib/utils/cn";
+import { 
+  Home, 
+  Trophy, 
+  Search, 
+  Calendar, 
+  User 
+} from "lucide-react";
 
 type MainNavProps = Readonly<{
   locale: string;
@@ -18,36 +24,42 @@ type MainNavProps = Readonly<{
 
 export function MainNav({ locale, labels }: MainNavProps) {
   const pathname = usePathname();
+  
   const items = [
-    { href: `/${locale}`, label: labels.home },
-    { href: `/${locale}/play-now`, label: labels.play },
-    { href: `/${locale}/find-players`, label: labels.find },
-    { href: `/${locale}/book`, label: labels.book },
-    { href: `/${locale}/dashboard`, label: labels.dashboard },
+    { href: `/${locale}`, label: "Accueil", icon: Home },
+    { href: `/${locale}/play-now`, label: "Jouer", icon: Trophy },
+    { href: `/${locale}/find-players`, label: "Joueurs", icon: Search },
+    { href: `/${locale}/book`, label: "Clubs", icon: Calendar },
+    { href: `/${locale}/profile`, label: "Profil", icon: User },
   ];
 
   return (
-    <nav className="sticky bottom-0 z-20 mt-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
-      <ul className="grid grid-cols-5 gap-1">
+    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md">
+      <div className="bg-white/70 backdrop-blur-2xl border border-white/20 rounded-[2rem] p-2 shadow-2xl shadow-sky-900/10 flex justify-between items-center px-4 h-16">
         {items.map((item) => {
           const active = pathname === item.href;
+          const Icon = item.icon;
+          
           return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex min-h-11 items-center justify-center rounded-xl px-2 text-center text-[11px] font-medium transition",
-                  active
-                    ? "bg-sky-100 text-sky-800"
-                    : "text-slate-600 hover:bg-slate-100",
-                )}
-              >
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "relative flex flex-col items-center justify-center gap-1 transition-all duration-300 px-3",
+                active ? "text-sky-600 scale-110" : "text-slate-400 hover:text-slate-600"
+              )}
+            >
+              <Icon className={cn("h-5 w-5 transition-all", active ? "fill-sky-600/10" : "")} />
+              <span className={cn("text-[9px] font-bold uppercase tracking-tighter transition-all", active ? "opacity-100" : "opacity-0 h-0")}>
                 {item.label}
-              </Link>
-            </li>
+              </span>
+              {active && (
+                <div className="absolute -bottom-1 h-1 w-1 bg-sky-600 rounded-full" />
+              )}
+            </Link>
           );
         })}
-      </ul>
+      </div>
     </nav>
   );
 }

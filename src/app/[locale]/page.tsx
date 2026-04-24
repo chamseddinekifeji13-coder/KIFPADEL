@@ -3,10 +3,20 @@ import { notFound } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SectionTitle } from "@/components/ui/section-title";
 import { IntentCard } from "@/components/ui/intent-card";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { 
+  Trophy, 
+  Search, 
+  Calendar, 
+  Sparkles, 
+  User, 
+  MapPin,
+  ArrowRight
+} from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
 
 type LocaleHomeProps = {
   params: Promise<{ locale: string }>;
@@ -20,49 +30,95 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   }
 
   const dictionary = await getDictionary(locale as Locale);
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   return (
-    <section className="space-y-3">
-      <Card className="bg-slate-900 text-slate-50 ring-slate-900">
-        <SectionTitle
-          title={dictionary.player.homeTitle}
-          subtitle={dictionary.player.homeSubtitle}
-          titleClassName="text-xl font-semibold text-slate-50"
-          subtitleClassName="text-sm text-slate-300"
-        />
-      </Card>
-      <div className="grid gap-3">
+    <div className="space-y-8 pb-20">
+      {/* Header / Hero */}
+      <header className="flex items-center justify-between py-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-slate-500">Bienvenue sur</p>
+          <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase">
+            Kif<span className="text-sky-600">padel</span>
+          </h1>
+        </div>
+        {user ? (
+          <Link href={`/${locale}/profile`}>
+            <Avatar src={null} alt="Me" size="lg" className="ring-4 ring-sky-50 shadow-sm" />
+          </Link>
+        ) : (
+          <Link href={`/${locale}/auth/sign-in`}>
+            <div className="h-12 w-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400">
+              <User className="h-6 w-6" />
+            </div>
+          </Link>
+        )}
+      </header>
+
+      {/* Main Section */}
+      <section className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 text-white">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500 rounded-full blur-[100px] opacity-20 -mr-20 -mt-20" />
+        
+        <div className="relative space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-widest text-sky-300">
+            <Sparkles className="h-3 w-3" />
+            Vibrez padel
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-4xl font-bold tracking-tight">Kiffe ta partie, trouve tes partenaires.</h2>
+            <p className="text-slate-400 text-sm max-w-[240px] leading-relaxed">
+              La plateforme n°1 en Tunisie pour réserver et jouer au Padel.
+            </p>
+          </div>
+
+          <Button className="bg-white text-slate-900 hover:bg-slate-100 rounded-2xl h-12 px-6 font-bold shadow-xl shadow-white/5 group">
+            Commencer à jouer
+            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Button>
+        </div>
+      </section>
+
+      {/* Navigation Cards */}
+      <div className="grid gap-4">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Que veux-tu faire ?</h3>
         <IntentCard
           href={`/${locale}/play-now`}
           title={dictionary.common.playNow}
           description={dictionary.common.playNowDescription}
+          icon={Trophy}
+          variant="secondary"
         />
-        <IntentCard
-          href={`/${locale}/find-players`}
-          title={dictionary.common.findPlayers}
-          description={dictionary.common.findPlayersDescription}
-        />
-        <IntentCard
-          href={`/${locale}/book`}
-          title={dictionary.common.bookCourt}
-          description={dictionary.common.bookCourtDescription}
-        />
-      </div>
-      <Card className="space-y-3">
-        <p className="text-sm text-slate-700">
-          {dictionary.onboarding.subtitle}
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Link href={`/${locale}/onboarding`} className="flex-1">
-            <Button className="w-full">{dictionary.common.onboardingCta}</Button>
-          </Link>
-          <Link href={`/${locale}/auth/sign-in`} className="flex-1">
-            <Button variant="secondary" className="w-full">
-              {dictionary.common.authCta}
-            </Button>
-          </Link>
+        <div className="grid grid-cols-2 gap-4">
+          <IntentCard
+            href={`/${locale}/find-players`}
+            title="Partenaires"
+            description="Trouve des joueurs"
+            icon={Search}
+          />
+          <IntentCard
+            href={`/${locale}/book`}
+            title="Réserver"
+            description="Choisis ton club"
+            icon={Calendar}
+          />
         </div>
+      </div>
+
+      {/* Local Info Card */}
+      <Card className="p-6 bg-emerald-50 border-emerald-100/50 rounded-[2rem] flex items-center gap-4 group">
+        <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center text-emerald-600 shadow-sm transition-transform group-hover:rotate-12">
+          <MapPin className="h-6 w-6" />
+        </div>
+        <div className="flex-1">
+          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/50">Clubs à proximité</p>
+          <p className="text-sm font-bold text-emerald-900 leading-tight">Découvre les 12 clubs ouverts à Tunis.</p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-emerald-400" />
       </Card>
-    </section>
+    </div>
   );
 }
+
+import { ChevronRight } from "lucide-react";
