@@ -7,7 +7,8 @@ import { MapPin, ArrowLeft, Calendar as CalendarIcon, InfoIcon, Clock } from "lu
 import Link from "next/link";
 import { SectionTitle } from "@/components/ui/section-title";
 import { cn } from "@/lib/utils/cn";
-import { TimeContainer } from "./time-container";
+import { TimeContainer } from "@/app/[locale]/(player)/book/[clubId]/time-container";
+
 
 type ClubDetailPageProps = {
   params: Promise<{ locale: string; clubId: string }>;
