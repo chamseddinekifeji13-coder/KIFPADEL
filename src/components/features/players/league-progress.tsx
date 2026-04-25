@@ -36,11 +36,13 @@ export function LeagueProgress({ score, currentLeague }: LeagueProgressProps) {
       <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50 p-0.5">
         <div 
           className={cn(
-            "h-full rounded-full transition-all duration-1000 ease-out shadow-sm w-[var(--league-progress)]",
+            "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
+
             currentLeague.toLowerCase() === "gold" ? "bg-amber-400" : 
             currentLeague.toLowerCase() === "silver" ? "bg-slate-400" : "bg-orange-400"
           )}
-          style={{ "--league-progress": `${progress}%` } as React.CSSProperties}
+          style={{ ["width" as string]: `${progress}%` }}
+
         />
 
       </div>

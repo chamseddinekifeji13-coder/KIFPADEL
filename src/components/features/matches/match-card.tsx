@@ -75,11 +75,14 @@ export function MatchCard({ match }: MatchCardProps) {
               <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div 
                   className={cn(
-                    "h-full rounded-full transition-all duration-1000 w-[var(--progress-width)]",
-                    progress === 100 ? "bg-slate-400" : "bg-sky-500 shadow-sm shadow-sky-200"
+                    "h-full rounded-full transition-all duration-1000 shadow-sm shadow-sky-200",
+                    progress === 100 ? "bg-slate-400 w-full" : 
+                    progress === 75 ? "bg-sky-500 w-3/4" :
+                    progress === 50 ? "bg-sky-500 w-1/2" :
+                    progress === 25 ? "bg-sky-500 w-1/4" : "bg-sky-500 w-0"
                   )}
-                  style={{ "--progress-width": `${progress}%` } as React.CSSProperties}
                 />
+
               </div>
             </div>
           </div>
