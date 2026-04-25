@@ -1,12 +1,13 @@
-import { isLocale, type Locale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
+import { isLocale } from "@/i18n/config";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { clubService } from "@/modules/clubs/service";
 import { getClubAvailability } from "@/modules/bookings/availability-service";
-import { TimeSlotGrid } from "@/components/features/bookings/time-slot-grid";
-import { MapPin, Info, ArrowLeft, Calendar as CalendarIcon, InfoIcon } from "lucide-react";
+import { MapPin, ArrowLeft, Calendar as CalendarIcon, InfoIcon, Clock } from "lucide-react";
 import Link from "next/link";
 import { SectionTitle } from "@/components/ui/section-title";
+import { cn } from "@/lib/utils/cn";
+import { TimeContainer } from "./time-container";
 
 type ClubDetailPageProps = {
   params: Promise<{ locale: string; clubId: string }>;
@@ -23,8 +24,6 @@ export default async function ClubDetailPage({
   const { date: dateQuery } = await searchParams;
   const selectedDate = dateQuery || new Date().toISOString().split("T")[0];
 
-  const dictionary = await getDictionary(locale as Locale);
-  
   // Fetch club data and availability
   const club = await clubService.getClubDetails(clubId).catch(() => null);
   if (!club) notFound();
@@ -49,7 +48,13 @@ export default async function ClubDetailPage({
           <ArrowLeft className="h-5 w-5" />
         </Link>
         {club.logo_url && (
-          <img src={club.logo_url} alt={club.name} className="h-full w-full object-cover" />
+          <Image 
+            src={club.logo_url} 
+            alt={club.name} 
+            fill 
+            className="object-cover"
+            priority
+          />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         <div className="absolute bottom-6 left-6 text-white space-y-1">
@@ -110,8 +115,3 @@ export default async function ClubDetailPage({
     </div>
   );
 }
-
-// Inline small client container for interactions
-import { Clock } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
-import { TimeContainer } from "./time-container";
