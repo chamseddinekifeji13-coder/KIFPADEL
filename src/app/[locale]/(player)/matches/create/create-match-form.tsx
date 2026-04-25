@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import { MapPin, Calendar, Clock, Trophy, ChevronRight } from "lucide-react";
+import { MapPin, Calendar, Trophy, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { type Club } from "@/modules/clubs/repository";
 
 interface CreateMatchFormProps {
-  clubs: any[];
+  clubs: Club[];
   locale: string;
 }
 

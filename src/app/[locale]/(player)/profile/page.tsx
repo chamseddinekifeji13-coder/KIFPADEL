@@ -1,11 +1,9 @@
-import { isLocale, type Locale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
+import { isLocale } from "@/i18n/config";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { playerService } from "@/modules/players/service";
 import { LeagueProgress } from "@/components/features/players/league-progress";
-import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { 
   Trophy, 
@@ -65,7 +63,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               <h2 className="text-xl font-bold">{profile.display_name}</h2>
             </div>
           </div>
-          <Badge variant={profile.league.toLowerCase() as any} className="border-white/20 backdrop-blur-sm px-4 py-1.5 uppercase tracking-wider">
+          <Badge variant={profile.league.toLowerCase() as BadgeProps["variant"]} className="border-white/20 backdrop-blur-sm px-4 py-1.5 uppercase tracking-wider">
             {profile.league}
           </Badge>
         </div>

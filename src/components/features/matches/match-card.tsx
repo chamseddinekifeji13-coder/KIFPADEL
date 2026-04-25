@@ -1,6 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Clock, MapPin, Users, ChevronRight } from "lucide-react";
+import { MapPin, ChevronRight } from "lucide-react";
+
+
 import { cn } from "@/lib/utils/cn";
 
 interface MatchCardProps {

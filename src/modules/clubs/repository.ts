@@ -3,7 +3,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 /**
  * Repository for Club related database operations.
  */
-export async function fetchClubs(city?: string) {
+export interface Club {
+  id: string;
+  name: string;
+  city: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export async function fetchClubs(city?: string): Promise<Club[]> {
+
   const supabase = await createSupabaseServerClient();
 
   let request = supabase.from("clubs").select("*");
