@@ -1,9 +1,8 @@
-import { isLocale, type Locale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
+import { isLocale } from "@/i18n/config";
 import { notFound } from "next/navigation";
 import { clubService } from "@/modules/clubs/service";
-import { SectionTitle } from "@/components/ui/section-title";
-import { ArrowLeft, Sparkles, MapPin, Trophy } from "lucide-react";
+import { type Club } from "@/modules/clubs/repository";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { CreateMatchForm } from "./create-match-form";
 
@@ -35,7 +34,8 @@ export default async function CreateMatchPage({ params }: CreateMatchPageProps) 
         <div className="relative space-y-3">
           <div className="flex items-center gap-2 text-sky-400">
             <Sparkles className="h-4 w-4" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Conseil d'expert</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Conseil d&apos;expert</span>
+
           </div>
           <p className="text-sm font-medium leading-relaxed opacity-90">
             Les matchs ouverts entre 18h et 21h se remplissent <b>3x plus vite</b>. Choisissez un créneau prisé pour jouer à coup sûr !
@@ -44,7 +44,8 @@ export default async function CreateMatchPage({ params }: CreateMatchPageProps) 
       </section>
 
       <section className="space-y-6">
-        <CreateMatchForm clubs={clubs as any} locale={locale} />
+        <CreateMatchForm clubs={clubs as Club[]} locale={locale} />
+
       </section>
     </div>
   );
