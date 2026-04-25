@@ -40,10 +40,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     <div className="flex-1 p-4 space-y-8 pb-20">
       <header className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-900">Mon Profil</h1>
-        <button className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+        <button 
+          aria-label="Paramètres du profil"
+          className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+        >
           <Settings className="h-5 w-5" />
         </button>
       </header>
+
 
       {/* Virtual Member Card */}
       <section className="relative overflow-hidden rounded-[2rem] aspect-[1.6/1] bg-slate-900 p-6 flex flex-col justify-between text-white shadow-2xl shadow-sky-900/20 group">

@@ -36,9 +36,13 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
           title="Parties Ouvertes"
           icon={<Trophy className="h-4 w-4" />}
         />
-        <button className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+        <button 
+          aria-label="Filtrer les matchs"
+          className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+        >
           <Filter className="h-4 w-4" />
         </button>
+
       </div>
 
       {matches.length === 0 ? (

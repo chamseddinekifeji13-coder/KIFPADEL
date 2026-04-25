@@ -73,8 +73,9 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase px-1">Date</label>
+            <label htmlFor="match-date" className="text-[10px] font-bold text-slate-500 uppercase px-1">Date</label>
             <input 
+              id="match-date"
               type="date" 
               required
               value={date}
@@ -83,8 +84,9 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase px-1">Heure</label>
+            <label htmlFor="match-time" className="text-[10px] font-bold text-slate-500 uppercase px-1">Heure</label>
             <input 
+              id="match-time"
               type="time" 
               required
               value={time}
