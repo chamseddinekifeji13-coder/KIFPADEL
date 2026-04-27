@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { IntentCard } from "@/components/ui/intent-card";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -14,7 +13,8 @@ import {
   Sparkles, 
   User, 
   MapPin,
-  ArrowRight
+  ArrowRight,
+  ChevronRight
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 
@@ -73,10 +73,13 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
             </p>
           </div>
 
-          <Button className="bg-white text-slate-900 hover:bg-slate-100 rounded-2xl h-12 px-6 font-bold shadow-xl shadow-white/5 group">
+          <Link
+            href={`/${locale}/play-now`}
+            className="inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 rounded-2xl h-12 px-6 font-bold shadow-xl shadow-white/5 group transition-colors"
+          >
             Commencer à jouer
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Button>
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
         </div>
       </section>
 
@@ -120,5 +123,3 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
     </div>
   );
 }
-
-import { ChevronRight } from "lucide-react";
