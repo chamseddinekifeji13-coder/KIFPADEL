@@ -28,11 +28,21 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/${locale}/login`);
+    redirect(`/${locale}/auth/sign-in`);
   }
 
-  const profile = await playerService.getPlayerProfile(user.id);
-  if (!profile) notFound();
+  let profile = null;
+  try {
+    profile = await playerService.getPlayerProfile(user.id);
+  } catch (err) {
+    console.error("Failed to fetch profile:", err);
+  }
+
+  if (!profile) {
+    // If no profile found in DB, we could redirect to onboarding
+    // For now, show notFound to avoid crash
+    notFound();
+  }
 
   return (
     <div className="flex-1 p-4 space-y-8 pb-20">

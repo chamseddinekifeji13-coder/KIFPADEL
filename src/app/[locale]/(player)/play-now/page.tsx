@@ -18,7 +18,12 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
   const dictionary = await getDictionary(locale as Locale);
 
   // Fetch real data from Supabase
-  const matches = await matchService.getOpenMatches();
+  let matches = [];
+  try {
+    matches = await matchService.getOpenMatches();
+  } catch (err) {
+    console.error("Failed to fetch matches:", err);
+  }
 
   return (
     <div className="flex-1 p-4 space-y-6">

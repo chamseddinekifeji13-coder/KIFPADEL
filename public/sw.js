@@ -1,4 +1,5 @@
-const CACHE_NAME = "kifpadel-static-v1";
+// Kifpadel Service Worker v1.1
+const CACHE_NAME = "kifpadel-static-v1.1";
 const APP_SHELL = ["/manifest.webmanifest", "/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -30,12 +31,15 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
 
-  // Skip Next.js internals, RSC requests, and non-same-origin requests
+  // Skip Next.js internals, RSC, API, and third-party scripts
   if (
     requestUrl.pathname.startsWith("/_next") ||
     requestUrl.pathname.startsWith("/api") ||
+    requestUrl.pathname.startsWith("/vitals") ||
     requestUrl.searchParams.has("_rsc") ||
-    requestUrl.origin !== self.location.origin
+    requestUrl.origin !== self.location.origin ||
+    requestUrl.hostname.includes("vercel") ||
+    requestUrl.hostname.includes("supabase")
   ) {
     return;
   }

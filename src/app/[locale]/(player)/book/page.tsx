@@ -16,7 +16,12 @@ export default async function BookPage({ params }: BookPageProps) {
   const dictionary = await getDictionary(locale as Locale);
 
   // Fetch real clubs from Supabase
-  const clubs = await clubService.getClubs();
+  let clubs = [];
+  try {
+    clubs = await clubService.getClubs();
+  } catch (err) {
+    console.error("Failed to fetch clubs:", err);
+  }
 
   return (
     <div className="flex-1 p-4 space-y-6">
