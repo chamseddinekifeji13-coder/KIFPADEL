@@ -20,22 +20,44 @@ export default async function FindPlayersPage({
 }: FindPlayersPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  
   const { q } = await searchParams;
-  const dictionary = await getDictionary(locale as Locale);
+  const fallback =
+    locale === "en"
+      ? {
+          title: "I am looking for players",
+          subtitle: "Find matching partners and opponents near you.",
+        }
+      : {
+          title: "Je cherche des joueurs",
+          subtitle: "Trouve des partenaires et adversaires compatibles près de toi.",
+        };
 
-  // Fetch real data from Supabase
-  const players = await playerService.getPlayers(q);
+  let title = fallback.title;
+  let subtitle = fallback.subtitle;
+
+  try {
+    const dictionary = await getDictionary(locale as Locale);
+    title = dictionary.player.findPlayersTitle ?? fallback.title;
+    subtitle = dictionary.player.findPlayersSubtitle ?? fallback.subtitle;
+  } catch {
+    // Keep local fallback to avoid breaking this critical MVP intent.
+  }
+
+  // Keep page resilient even if backend query temporarily fails.
+  let players: Awaited<ReturnType<typeof playerService.getPlayers>> = [];
+  try {
+    players = await playerService.getPlayers(q);
+  } catch {
+    players = [];
+  }
 
   return (
     <div className="flex-1 p-4 space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          {dictionary.player.findPlayersTitle}
+          {title}
         </h1>
-        <p className="text-sm text-slate-500">
-          Trouvez des partenaires de votre niveau et élargissez votre réseau.
-        </p>
+        <p className="text-sm text-slate-500">{subtitle}</p>
       </header>
 
       <div className="relative">
