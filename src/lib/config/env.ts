@@ -32,5 +32,7 @@ export const publicEnv: PublicEnv = {
 };
 
 export const serverEnv: ServerEnv = {
-  supabaseServiceRoleKey: getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  supabaseServiceRoleKey:
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    getRequiredEnv("SUPABASE_SECRET_KEY"),
 };
