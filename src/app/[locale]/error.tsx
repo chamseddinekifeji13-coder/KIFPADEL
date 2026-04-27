@@ -23,7 +23,7 @@ export default function Error({
           Une erreur est survenue
         </h2>
         <p className="text-sm text-slate-600">
-          Quelque chose s'est mal passé. Veuillez réessayer.
+          Quelque chose s&apos;est mal passé. Veuillez réessayer.
         </p>
         <button
           onClick={() => unstable_retry()}

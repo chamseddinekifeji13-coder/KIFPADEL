@@ -1,9 +1,20 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export interface Player {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  league: "Bronze" | "Silver" | "Gold";
+  trust_rating: number;
+  reliability: string;
+  trust_score: number;
+  created_at: string;
+}
+
 /**
  * Repository for Player/Profile related database operations.
  */
-export async function fetchPlayers(query?: string) {
+export async function fetchPlayers(query?: string): Promise<Player[]> {
   const supabase = await createSupabaseServerClient();
 
   let request = supabase

@@ -1,4 +1,4 @@
-import { addTrustEvent, updatePlayerLeague } from "./repository";
+import { addTrustEvent } from "./repository";
 
 export const LEAGUE_THRESHOLDS = {
   BRONZE: 0,

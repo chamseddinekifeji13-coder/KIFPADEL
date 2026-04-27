@@ -3,18 +3,16 @@
 import { useState } from "react";
 import { TimeSlotGrid } from "@/components/features/bookings/time-slot-grid";
 import { type TimeSlot } from "@/modules/bookings/availability-service";
-import { CheckCircle2, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 interface TimeContainerProps {
   slots: TimeSlot[];
-  club: any;
   date: string;
 }
 
-export function TimeContainer({ slots, club, date }: TimeContainerProps) {
+export function TimeContainer({ slots, date }: TimeContainerProps) {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
-  const slotData = slots.find(s => s.start === selectedSlot);
 
   return (
     <div className="space-y-6">

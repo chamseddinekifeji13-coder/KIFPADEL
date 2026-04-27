@@ -26,11 +26,11 @@ export function MainNav({ locale, labels }: MainNavProps) {
   const pathname = usePathname();
   
   const items = [
-    { href: `/${locale}`, label: "Accueil", icon: Home },
-    { href: `/${locale}/play-now`, label: "Jouer", icon: Trophy },
-    { href: `/${locale}/find-players`, label: "Joueurs", icon: Search },
-    { href: `/${locale}/book`, label: "Clubs", icon: Calendar },
-    { href: `/${locale}/profile`, label: "Profil", icon: User },
+    { href: `/${locale}`, label: labels.home, icon: Home },
+    { href: `/${locale}/play-now`, label: labels.play, icon: Trophy },
+    { href: `/${locale}/find-players`, label: labels.find, icon: Search },
+    { href: `/${locale}/book`, label: labels.book, icon: Calendar },
+    { href: `/${locale}/profile`, label: labels.dashboard, icon: User },
   ];
 
   return (

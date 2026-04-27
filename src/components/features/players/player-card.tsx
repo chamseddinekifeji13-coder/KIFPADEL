@@ -1,5 +1,5 @@
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Star, ShieldCheck } from "lucide-react";
 
@@ -28,7 +28,7 @@ export function PlayerCard({ player }: PlayerCardProps) {
           <h3 className="font-bold text-slate-900 truncate">
             {player.display_name}
           </h3>
-          <Badge variant={player.league.toLowerCase() as any}>
+          <Badge variant={player.league.toLowerCase() as BadgeProps["variant"]}>
             {player.league}
           </Badge>
         </div>

@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import { playerService } from "@/modules/players/service";
 import { PlayerCard } from "@/components/features/players/player-card";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { TextInput } from "@/components/ui/text-input";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 
 import { Search, Filter, Users } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
@@ -73,7 +72,7 @@ export default async function FindPlayersPage({
                   <Avatar src={player.avatar_url} alt={player.display_name} size="lg" className="ring-4 ring-sky-50" />
                   <div className="text-center space-y-1">
                     <p className="text-xs font-bold text-slate-900 truncate w-24">{player.display_name.split(' ')[0]}</p>
-                    <Badge variant={player.league.toLowerCase() as any} className="text-[8px] px-2">{player.league}</Badge>
+                    <Badge variant={player.league.toLowerCase() as BadgeProps["variant"]} className="text-[8px] px-2">{player.league}</Badge>
                   </div>
                 </div>
              ))}
@@ -84,12 +83,12 @@ export default async function FindPlayersPage({
 
       {players.length === 0 ? (
         <div className="py-12 text-center text-slate-500 italic">
-          Aucun joueur trouvé pour "{q}".
+          Aucun joueur trouvé pour &quot;{q}&quot;.
         </div>
       ) : (
         <div className="grid gap-3">
           {players.map((player) => (
-            <PlayerCard key={player.user_id} player={player as any} />
+            <PlayerCard key={player.user_id} player={player} />
           ))}
         </div>
       )}

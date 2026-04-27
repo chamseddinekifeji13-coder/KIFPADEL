@@ -110,7 +110,7 @@ export default async function ClubDetailPage({
             <p>Toutes les réservations sont pour une durée de <b>90 minutes</b>.</p>
           </div>
           
-          <TimeContainer slots={availability} club={club} date={selectedDate} />
+          <TimeContainer slots={availability} date={selectedDate} />
         </section>
       </div>
     </div>

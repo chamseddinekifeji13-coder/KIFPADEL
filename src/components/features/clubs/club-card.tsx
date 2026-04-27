@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Star, Laptop } from "lucide-react";
@@ -17,10 +18,11 @@ export function ClubCard({ club }: ClubCardProps) {
     <Card className="p-0 overflow-hidden hover:shadow-lg transition-all group cursor-pointer border-slate-100">
       <div className="relative aspect-video bg-slate-200 overflow-hidden">
         {club.logo_url ? (
-          <img
+          <Image
             src={club.logo_url}
             alt={club.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-sky-50 text-sky-200">

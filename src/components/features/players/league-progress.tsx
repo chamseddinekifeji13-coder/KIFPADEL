@@ -32,7 +32,7 @@ export function LeagueProgress({ score, currentLeague }: LeagueProgressProps) {
           {score} <span className="text-slate-400 font-medium">/ {nextThreshold} pts</span>
         </span>
       </div>
-      
+      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
         <div 
           className={cn(
             "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
@@ -61,7 +61,6 @@ export function LeagueProgress({ score, currentLeague }: LeagueProgressProps) {
             progress >= 5 ? "w-[5%]" : "w-0"
           )}
         />
-
       </div>
       
       <p className="text-[10px] text-slate-400 italic">

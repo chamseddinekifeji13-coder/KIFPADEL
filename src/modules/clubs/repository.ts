@@ -7,6 +7,8 @@ export interface Club {
   id: string;
   name: string;
   city: string;
+  type: "Outdoor" | "Indoor";
+  logo_url: string | null;
   is_active: boolean;
   created_at: string;
 }

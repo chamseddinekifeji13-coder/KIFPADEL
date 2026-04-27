@@ -57,7 +57,7 @@ export default async function BookPage({ params }: BookPageProps) {
 
       <div className="grid gap-6">
         {clubs.map((club) => (
-          <ClubCard key={club.id} club={club as any} />
+          <ClubCard key={club.id} club={club} />
         ))}
       </div>
     </div>

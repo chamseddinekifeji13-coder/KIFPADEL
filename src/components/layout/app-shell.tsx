@@ -1,5 +1,4 @@
 import { MainNav } from "@/components/features/main-nav";
-import { cn } from "@/lib/utils/cn";
 
 type AppShellProps = Readonly<{
   locale: string;
