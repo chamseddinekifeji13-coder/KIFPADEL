@@ -9,6 +9,7 @@ import { matchService } from "@/modules/matches/service";
 import { MatchCard } from "@/components/features/matches/match-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Trophy, Filter } from "lucide-react";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 type PlayNowPageProps = {
   params: Promise<{ locale: string }>;
@@ -32,16 +33,31 @@ export async function generateMetadata({ params }: PlayNowPageProps): Promise<Me
 export default async function PlayNowPage({ params }: PlayNowPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const dictionary = await getDictionary(locale as Locale);
 
-  // Fetch real data from Supabase
-  const matches = await matchService.getOpenMatches();
+  const fallbackTitle =
+    locale === "en" ? "Play now" : "Jouer maintenant";
+
+  let pageTitle = fallbackTitle;
+  try {
+    const dictionary = await getDictionary(locale as Locale);
+    pageTitle = dictionary.player?.playNowTitle ?? fallbackTitle;
+  } catch {
+    // keep fallback
+  }
+
+  let matches: Awaited<ReturnType<typeof matchService.getOpenMatches>> = [];
+  try {
+    matches = await matchService.getOpenMatches();
+  } catch (err) {
+    rethrowFrameworkError(err);
+    matches = [];
+  }
 
   return (
     <div className="flex-1 p-4 space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          {dictionary.player.playNowTitle}
+          {pageTitle}
         </h1>
         <p className="text-sm text-slate-500">
           Rejoignez une partie en cours et rencontrez de nouveaux joueurs.

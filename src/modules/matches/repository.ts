@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 export interface MatchPlayer {
   player_id: string;
@@ -23,70 +24,76 @@ export interface Match {
   clubs: MatchClub;
 }
 
+const MATCH_SELECT = `
+  *,
+  clubs (
+    id,
+    name,
+    city,
+    type
+  ),
+  match_players (
+    player_id
+  )
+`;
+
+function normalizeMatches(raw: unknown): (Match & { playerCount: number; clubName: string })[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as Match[])
+    .filter((m): m is Match => Boolean(m && typeof m === "object" && m.id))
+    .map((match) => ({
+      ...match,
+      playerCount: Array.isArray(match.match_players) ? match.match_players.length : 0,
+      clubName: match.clubs?.name ?? "Club Inconnu",
+    }));
+}
+
 /**
  * Repository for Match related database operations.
  */
 export async function fetchOpenMatches() {
-  const supabase = await createSupabaseServerClient();
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  // We fetch matches with club information and count of players
-  const { data, error } = await supabase
-    .from("matches")
-    .select(`
-      *,
-      clubs (
-        id,
-        name,
-        city,
-        type
-      ),
-      match_players (
-        player_id
-      )
-    `)
-    .eq("status", "open")
-    .order("starts_at", { ascending: true });
+    const { data, error } = await supabase
+      .from("matches")
+      .select(MATCH_SELECT)
+      .eq("status", "open")
+      .order("starts_at", { ascending: true });
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      console.warn("[matches.fetchOpenMatches] supabase error", error.message);
+      return [];
+    }
+
+    return normalizeMatches(data);
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[matches.fetchOpenMatches] unexpected error", err);
+    return [];
   }
-
-  // Transform to include player count
-  return (data as unknown as Match[]).map((match: Match) => ({
-    ...match,
-    playerCount: match.match_players?.length || 0,
-    clubName: match.clubs?.name || "Club Inconnu",
-  }));
 }
 
 export async function fetchOpenMatchesByClub(clubId: string) {
-  const supabase = await createSupabaseServerClient();
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from("matches")
-    .select(`
-      *,
-      clubs (
-        id,
-        name,
-        city,
-        type
-      ),
-      match_players (
-        player_id
-      )
-    `)
-    .eq("club_id", clubId)
-    .eq("status", "open")
-    .order("starts_at", { ascending: true });
+    const { data, error } = await supabase
+      .from("matches")
+      .select(MATCH_SELECT)
+      .eq("club_id", clubId)
+      .eq("status", "open")
+      .order("starts_at", { ascending: true });
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      console.warn("[matches.fetchOpenMatchesByClub] supabase error", error.message);
+      return [];
+    }
+
+    return normalizeMatches(data);
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[matches.fetchOpenMatchesByClub] unexpected error", err);
+    return [];
   }
-
-  return (data as unknown as Match[]).map((match: Match) => ({
-    ...match,
-    playerCount: match.match_players?.length || 0,
-    clubName: match.clubs?.name || "Club Inconnu",
-  }));
 }

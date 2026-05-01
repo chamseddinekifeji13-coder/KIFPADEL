@@ -7,6 +7,7 @@ import { clubService } from "@/modules/clubs/service";
 import { ClubCard } from "@/components/features/clubs/club-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { LayoutGrid, MapPin } from "lucide-react";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 type BookPageProps = {
   params: Promise<{ locale: string }>;
@@ -30,16 +31,31 @@ export async function generateMetadata({ params }: BookPageProps): Promise<Metad
 export default async function BookPage({ params }: BookPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const dictionary = await getDictionary(locale as Locale);
 
-  // Fetch real clubs from Supabase
-  const clubs = await clubService.getClubs();
+  const fallbackTitle =
+    locale === "en" ? "Book a court" : "Réserver un terrain";
+
+  let pageTitle = fallbackTitle;
+  try {
+    const dictionary = await getDictionary(locale as Locale);
+    pageTitle = dictionary.player?.bookTitle ?? fallbackTitle;
+  } catch {
+    // keep fallback
+  }
+
+  let clubs: Awaited<ReturnType<typeof clubService.getClubs>> = [];
+  try {
+    clubs = await clubService.getClubs();
+  } catch (err) {
+    rethrowFrameworkError(err);
+    clubs = [];
+  }
 
   return (
     <div className="flex-1 p-4 space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          {dictionary.player.bookTitle}
+          {pageTitle}
         </h1>
         <p className="text-sm text-slate-500">
           Réservez un terrain dans les meilleurs clubs de Padel.
@@ -79,11 +95,17 @@ export default async function BookPage({ params }: BookPageProps) {
         </div>
       </div>
 
-      <div className="grid gap-6">
-        {clubs.map((club) => (
-          <ClubCard key={club.id} club={club} />
-        ))}
-      </div>
+      {clubs.length === 0 ? (
+        <div className="py-12 text-center text-slate-500 italic">
+          Aucun club disponible pour le moment.
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {clubs.map((club) => (
+            <ClubCard key={club.id} club={club} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

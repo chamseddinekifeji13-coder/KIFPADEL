@@ -17,6 +17,7 @@ import {
   Star
 } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
@@ -42,15 +43,34 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/login`);
+  let userId: string | null = null;
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    userId = data?.user?.id ?? null;
+  } catch (err) {
+    rethrowFrameworkError(err);
+    userId = null;
   }
 
-  const profile = await playerService.getPlayerProfile(user.id);
+  if (!userId) {
+    redirect(`/${locale}/auth/sign-in?next=/${locale}/profile`);
+  }
+
+  let profile: Awaited<ReturnType<typeof playerService.getPlayerProfile>> | null = null;
+  try {
+    profile = await playerService.getPlayerProfile(userId);
+  } catch (err) {
+    rethrowFrameworkError(err);
+    profile = null;
+  }
   if (!profile) notFound();
+
+  const displayName = profile.display_name ?? "Joueur";
+  const league = profile.league ?? "Bronze";
+  const leagueLower = String(league).toLowerCase();
+  const reliabilityStatus = profile.reliability_status ?? "—";
+  const trustScore = Number.isFinite(profile.trust_score) ? profile.trust_score : 0;
 
   return (
     <div className="flex-1 p-4 space-y-8 pb-20">
@@ -78,11 +98,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400">Padel Member</p>
-              <h2 className="text-xl font-bold">{profile.display_name}</h2>
+              <h2 className="text-xl font-bold">{displayName}</h2>
             </div>
           </div>
-          <Badge variant={profile.league.toLowerCase() as BadgeProps["variant"]} className="border-white/20 backdrop-blur-sm px-4 py-1.5 uppercase tracking-wider">
-            {profile.league}
+          <Badge variant={leagueLower as BadgeProps["variant"]} className="border-white/20 backdrop-blur-sm px-4 py-1.5 uppercase tracking-wider">
+            {league}
           </Badge>
         </div>
 
@@ -91,7 +111,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Reliability</p>
             <div className="flex items-center gap-1.5 text-emerald-400">
               <ShieldCheck className="h-4 w-4" />
-              <span className="text-sm font-bold uppercase tracking-wide">{profile.reliability_status}</span>
+              <span className="text-sm font-bold uppercase tracking-wide">{reliabilityStatus}</span>
             </div>
           </div>
           <div className="text-right">
@@ -108,9 +128,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           icon={<Trophy className="h-4 w-4" />}
           className="bg-transparent p-0"
         />
-        <LeagueProgress 
-          score={profile.trust_score} 
-          currentLeague={profile.league} 
+        <LeagueProgress
+          score={trustScore}
+          currentLeague={league}
         />
       </Card>
 

@@ -10,6 +10,7 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 
 import { Search, Filter, Users } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 type FindPlayersPageProps = {
   params: Promise<{ locale: string }>;
@@ -64,7 +65,8 @@ export default async function FindPlayersPage({
   let players: Awaited<ReturnType<typeof playerService.getPlayers>> = [];
   try {
     players = await playerService.getPlayers(q);
-  } catch {
+  } catch (err) {
+    rethrowFrameworkError(err);
     players = [];
   }
 
