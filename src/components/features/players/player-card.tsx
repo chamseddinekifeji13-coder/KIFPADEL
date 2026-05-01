@@ -8,13 +8,18 @@ interface PlayerCardProps {
     user_id: string;
     display_name: string;
     avatar_url: string | null;
-    league: "Bronze" | "Silver" | "Gold";
-    trust_rating: number;
-    reliability: string;
+    league: "Bronze" | "Silver" | "Gold" | "Platinum";
+    trust_rating?: number | null;
+    reliability?: string | null;
   };
 }
 
 export function PlayerCard({ player }: PlayerCardProps) {
+  const trustRatingValue = Number.isFinite(player.trust_rating)
+    ? Number(player.trust_rating)
+    : 0;
+  const reliabilityLabel = player.reliability ?? "healthy";
+
   return (
     <Card className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
       <Avatar
@@ -36,11 +41,11 @@ export function PlayerCard({ player }: PlayerCardProps) {
         <div className="flex items-center gap-3 mt-1">
           <div className="flex items-center gap-1 text-xs text-slate-500">
             <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-            <span>{player.trust_rating.toFixed(1)}</span>
+            <span>{trustRatingValue.toFixed(1)}</span>
           </div>
           <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
             <ShieldCheck className="h-3 w-3" />
-            <span>{player.reliability}</span>
+            <span>{reliabilityLabel}</span>
           </div>
         </div>
       </div>

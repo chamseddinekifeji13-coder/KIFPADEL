@@ -4,11 +4,41 @@ export interface Player {
   user_id: string;
   display_name: string;
   avatar_url: string | null;
-  league: "Bronze" | "Silver" | "Gold";
+  league: "Bronze" | "Silver" | "Gold" | "Platinum";
   trust_rating: number;
   reliability: string;
-  trust_score: number;
-  created_at: string;
+}
+
+type ProfileRow = {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  league: string | null;
+  trust_rating: number | null;
+  trust_score: number | null;
+  reliability: string | null;
+  reliability_status: string | null;
+};
+
+function normalizeLeague(value: string | null): Player["league"] {
+  const normalized = (value ?? "").toLowerCase();
+  if (normalized === "silver") return "Silver";
+  if (normalized === "gold") return "Gold";
+  if (normalized === "platinum") return "Platinum";
+  return "Bronze";
+}
+
+function normalizePlayer(row: ProfileRow): Player {
+  const trustBase = row.trust_rating ?? row.trust_score ?? 0;
+
+  return {
+    user_id: row.user_id,
+    display_name: row.display_name ?? "Player",
+    avatar_url: row.avatar_url ?? null,
+    league: normalizeLeague(row.league),
+    trust_rating: Number(trustBase),
+    reliability: row.reliability ?? row.reliability_status ?? "healthy",
+  };
 }
 
 /**
@@ -32,7 +62,7 @@ export async function fetchPlayers(query?: string): Promise<Player[]> {
     throw new Error(error.message);
   }
 
-  return data;
+  return ((data ?? []) as ProfileRow[]).map(normalizePlayer);
 }
 
 export async function fetchPlayerById(userId: string) {
