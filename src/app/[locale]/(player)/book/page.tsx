@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
@@ -9,6 +11,21 @@ import { LayoutGrid, MapPin } from "lucide-react";
 type BookPageProps = {
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: BookPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn ? "Book a court" : "Réserver un terrain";
+  const description = isEn
+    ? "Book a padel court at the best clubs in Tunis, Sousse, Hammamet and Sfax."
+    : "Réservez un terrain de padel dans les meilleurs clubs de Tunis, Sousse, Hammamet et Sfax.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `/${locale}/book` },
+    openGraph: { title, description, url: `/${locale}/book` },
+  };
+}
 
 export default async function BookPage({ params }: BookPageProps) {
   const { locale } = await params;
@@ -29,11 +46,18 @@ export default async function BookPage({ params }: BookPageProps) {
         </p>
       </header>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+      <div
+        role="tablist"
+        aria-label="Filtrer par ville"
+        className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide"
+      >
         {["Tous", "Tunis", "Sousse", "Hammamet", "Sfax"].map((city, i) => (
           <button
             key={city}
-            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+            type="button"
+            role="tab"
+            aria-selected={i === 0}
+            className={`inline-flex items-center px-4 min-h-11 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
               i === 0
                 ? "bg-sky-600 text-white shadow-md shadow-sky-200"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
@@ -13,6 +15,21 @@ type FindPlayersPageProps = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ q?: string }>;
 };
+
+export async function generateMetadata({ params }: FindPlayersPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn ? "Find players" : "Trouver des joueurs";
+  const description = isEn
+    ? "Find compatible padel partners and opponents near you across Tunisia."
+    : "Trouvez des partenaires et adversaires de padel compatibles près de chez vous en Tunisie.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `/${locale}/find-players` },
+    openGraph: { title, description, url: `/${locale}/find-players` },
+  };
+}
 
 export default async function FindPlayersPage({
   params,
@@ -61,13 +78,22 @@ export default async function FindPlayersPage({
       </header>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <form action="">
+        <form action="" role="search">
+          <label htmlFor="find-players-search" className="sr-only">
+            Rechercher un joueur
+          </label>
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+          />
           <input
+            id="find-players-search"
             name="q"
+            type="search"
             defaultValue={q}
             placeholder="Rechercher un joueur..."
-            className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm"
+            aria-label="Rechercher un joueur"
+            className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm min-h-11"
           />
         </form>
       </div>
@@ -77,8 +103,12 @@ export default async function FindPlayersPage({
           title="Joueurs à proximité"
           icon={<Users className="h-4 w-4" />}
         />
-        <button className="flex items-center gap-1.5 text-xs font-bold text-slate-500 px-3 py-1.5 rounded-lg bg-slate-100">
-          <Filter className="h-3 w-3" />
+        <button
+          type="button"
+          aria-label="Ouvrir les filtres"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 px-3 rounded-lg bg-slate-100 min-h-11"
+        >
+          <Filter className="h-3 w-3" aria-hidden="true" />
           Filtres
         </button>
       </div>

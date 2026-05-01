@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
@@ -11,6 +13,21 @@ import { Trophy, Filter } from "lucide-react";
 type PlayNowPageProps = {
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: PlayNowPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn ? "Play now — Open matches" : "Jouer maintenant — Matchs ouverts";
+  const description = isEn
+    ? "Join an open padel match near you and meet new players in Tunisia's best clubs."
+    : "Rejoignez une partie de padel ouverte près de chez vous et rencontrez de nouveaux joueurs dans les meilleurs clubs de Tunisie.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `/${locale}/play-now` },
+    openGraph: { title, description, url: `/${locale}/play-now` },
+  };
+}
 
 export default async function PlayNowPage({ params }: PlayNowPageProps) {
   const { locale } = await params;
@@ -36,9 +53,10 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
           title="Parties Ouvertes"
           icon={<Trophy className="h-4 w-4" />}
         />
-        <button 
+        <button
+          type="button"
           aria-label="Filtrer les matchs"
-          className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
         >
           <Filter className="h-4 w-4" />
         </button>

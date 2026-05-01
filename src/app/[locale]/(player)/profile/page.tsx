@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { isLocale } from "@/i18n/config";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -5,12 +7,12 @@ import { playerService } from "@/modules/players/service";
 import { LeagueProgress } from "@/components/features/players/league-progress";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { 
-  Trophy, 
-  ShieldCheck, 
-  CreditCard, 
-  Settings, 
-  ChevronRight, 
+import {
+  Trophy,
+  ShieldCheck,
+  CreditCard,
+  Settings,
+  ChevronRight,
   History,
   Star
 } from "lucide-react";
@@ -19,6 +21,22 @@ import { SectionTitle } from "@/components/ui/section-title";
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn ? "My profile" : "Mon profil";
+  const description = isEn
+    ? "Manage your padel profile, league, ratings and account settings on Kifpadel."
+    : "Gérez votre profil padel, votre ligue, vos classements et les paramètres de votre compte sur Kifpadel.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `/${locale}/profile` },
+    robots: { index: false, follow: false },
+    openGraph: { title, description, url: `/${locale}/profile` },
+  };
+}
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;

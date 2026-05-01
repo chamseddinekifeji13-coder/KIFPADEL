@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -7,20 +9,43 @@ import { IntentCard } from "@/components/ui/intent-card";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { 
-  Trophy, 
-  Search, 
-  Calendar, 
-  Sparkles, 
-  User, 
+import {
+  Trophy,
+  Search,
+  Calendar,
+  Sparkles,
+  User,
   MapPin,
-  ArrowRight
+  ArrowRight,
+  ChevronRight,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 
 type LocaleHomeProps = {
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: LocaleHomeProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn
+    ? "Kifpadel — Book and play padel in Tunisia"
+    : "Kifpadel — Réservez et jouez au padel en Tunisie";
+  const description = isEn
+    ? "Book courts, find partners and join open padel matches in the best clubs across Tunisia."
+    : "Réservez des terrains, trouvez des partenaires et rejoignez des matchs ouverts dans les meilleurs clubs de padel de Tunisie.";
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical: `/${locale}` },
+    openGraph: {
+      title,
+      description,
+      url: `/${locale}`,
+      locale: isEn ? "en_US" : "fr_FR",
+    },
+  };
+}
 
 export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   const { locale } = await params;
@@ -44,14 +69,16 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           </h1>
         </div>
         {user ? (
-          <Link href={`/${locale}/profile`}>
-            <Avatar src={null} alt="Me" size="lg" className="ring-4 ring-sky-50 shadow-sm" />
+          <Link href={`/${locale}/profile`} aria-label="Mon profil">
+            <Avatar src={null} alt="" size="lg" className="ring-4 ring-sky-50 shadow-sm" />
           </Link>
         ) : (
-          <Link href={`/${locale}/auth/sign-in`}>
-            <div className="h-12 w-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400">
-              <User className="h-6 w-6" />
-            </div>
+          <Link
+            href={`/${locale}/auth/sign-in`}
+            aria-label="Se connecter"
+            className="h-12 w-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400"
+          >
+            <User className="h-6 w-6" aria-hidden="true" />
           </Link>
         )}
       </header>
@@ -115,10 +142,8 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/50">Clubs à proximité</p>
           <p className="text-sm font-bold text-emerald-900 leading-tight">Découvre les 12 clubs ouverts à Tunis.</p>
         </div>
-        <ChevronRight className="h-5 w-5 text-emerald-400" />
+        <ChevronRight className="h-5 w-5 text-emerald-400" aria-hidden="true" />
       </Card>
     </div>
   );
 }
-
-import { ChevronRight } from "lucide-react";
