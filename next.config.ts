@@ -33,6 +33,16 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: {
+    // Allow remote images from Vercel Blob (true user uploads) and Supabase Storage.
+    // Any host not listed here will fall back to the local /public placeholder via SafeImage.
+    remotePatterns: [
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+      { protocol: "https", hostname: "*.blob.vercel-storage.com" },
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "*.supabase.in" },
+    ],
+  },
   async headers() {
     return [
       {
