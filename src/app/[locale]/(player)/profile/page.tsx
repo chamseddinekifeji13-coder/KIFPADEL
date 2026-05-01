@@ -34,8 +34,27 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const user = await requireUser({ locale, redirectPath: "profile" });
 
-  const profile = await playerService.getPlayerProfile(user.id);
-  if (!profile) notFound();
+  const profile =
+    (await playerService.getPlayerProfile(user.id)) ??
+    ({
+      display_name:
+        (user.user_metadata?.display_name as string | undefined) ??
+        user.email?.split("@")[0] ??
+        "PLAYER",
+      elo_rank: 1200,
+      sport_rating: 1200,
+      rating_value: 1200,
+      matches_played: 0,
+      matches_count: 0,
+      wins_count: 0,
+      wins: 0,
+      losses_count: 0,
+      losses: 0,
+      current_streak: 0,
+      presence_rate: 100,
+      trust_score: 70,
+      reliability_status: "healthy",
+    } as const);
 
   const playerName = String(profile.display_name ?? "PLAYER");
   const eloRank = Number(
