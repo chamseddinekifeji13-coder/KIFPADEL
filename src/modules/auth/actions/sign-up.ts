@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
 export async function signUpAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
@@ -13,7 +13,7 @@ export async function signUpAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-up?error=missing_fields`);
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerActionClient();
   const { data, error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
