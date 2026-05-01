@@ -2,11 +2,13 @@ import { fetchBookingsByClubAndDate } from "./repository";
 import { fetchCourtsByClub } from "@/modules/clubs/repository";
 
 export interface TimeSlot {
-  start: string; // ISO string or HH:mm
+  time: string;        // HH:mm format for display
+  start: string;       // ISO string or HH:mm
   end: string;
   isAvailable: boolean;
   availableCourtIds: string[];
-  price?: number;
+  courtId: string;     // First available court for this slot
+  price: number;       // Price in DT
 }
 
 const DEFAULT_SLOTS = [
@@ -16,6 +18,7 @@ const DEFAULT_SLOTS = [
 
 /**
  * Service to handle complex availability calculations.
+ * Returns slots with the first available court and its price.
  */
 export async function getClubAvailability(clubId: string, date: string): Promise<TimeSlot[]> {
   const [courts, bookings] = await Promise.all([
@@ -28,7 +31,7 @@ export async function getClubAvailability(clubId: string, date: string): Promise
     const start = new Date(`${date}T${timeStr}:00`);
     const end = new Date(start.getTime() + 90 * 60000);
 
-    const availableCourtIds = courts
+    const availableCourts = courts
       .filter(court => {
         // Check if this court has a booking overlapping with this slot
         const isOccupied = bookings.some(booking => {
@@ -42,14 +45,22 @@ export async function getClubAvailability(clubId: string, date: string): Promise
         });
         
         return !isOccupied;
-      })
-      .map(court => court.id);
+      });
+
+    const availableCourtIds = availableCourts.map(court => court.id);
+    const firstAvailableCourt = availableCourts[0];
+    
+    // Get price from the first available court, default to 40 DT
+    const price = firstAvailableCourt?.price_per_slot ?? 40;
 
     return {
+      time: timeStr,
       start: timeStr,
       end: end.toTimeString().substring(0, 5),
       availableCourtIds,
-      isAvailable: availableCourtIds.length > 0
+      isAvailable: availableCourtIds.length > 0,
+      courtId: firstAvailableCourt?.id ?? "",
+      price,
     };
   });
 

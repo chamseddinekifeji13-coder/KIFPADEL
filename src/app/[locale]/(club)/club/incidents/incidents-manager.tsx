@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Clock,
@@ -13,9 +14,11 @@ import {
   ChevronDown,
   Ban,
   MessageSquare,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { reliabilityFromTrustScore, trustImpactFromEvent, decideSanction } from "@/domain/rules/trust";
+import { confirmIncidentAction } from "@/modules/clubs/actions";
 
 type Incident = {
   id: string;
@@ -28,6 +31,7 @@ type Incident = {
   type: "no_show" | "late_cancel" | "bad_behavior";
   date: string;
   bookingTime: string;
+  bookingId?: string;
   court: string;
   status: "pending" | "resolved";
   notes: string;
@@ -111,7 +115,12 @@ export function IncidentsManager({ incidents, locale }: IncidentsManagerProps) {
 }
 
 function IncidentCard({ incident }: { incident: Incident }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
+  const [actionState, setActionState] = useState<"idle" | "success" | "error">("idle");
+  const [actionMessage, setActionMessage] = useState("");
+
   const reliability = reliabilityFromTrustScore(incident.player.trustScore);
   const impact = trustImpactFromEvent(incident.type);
   const newScore = Math.max(0, incident.player.trustScore + impact.delta);
@@ -138,13 +147,27 @@ function IncidentCard({ incident }: { incident: Incident }) {
   const Icon = typeIcons[incident.type];
 
   const handleConfirmIncident = () => {
-    // TODO: Call API to confirm incident and apply trust penalty
-    alert(`Incident confirmé. Trust score: ${incident.player.trustScore} → ${newScore} (${impact.delta})`);
+    startTransition(async () => {
+      const result = await confirmIncidentAction(
+        incident.player.id,
+        incident.type,
+        incident.bookingId
+      );
+      if (result.ok) {
+        setActionState("success");
+        setActionMessage(`Trust score mis à jour: ${incident.player.trustScore} → ${newScore}`);
+        router.refresh();
+      } else {
+        setActionState("error");
+        setActionMessage(result.error);
+      }
+    });
   };
 
   const handleDismissIncident = () => {
-    // TODO: Call API to dismiss incident
-    alert("Incident annulé - pas de pénalité appliquée");
+    setActionState("success");
+    setActionMessage("Incident annulé - pas de pénalité");
+    // In production, this would also update the incident status in DB
   };
 
   return (
@@ -216,7 +239,7 @@ function IncidentCard({ incident }: { incident: Incident }) {
           )}
 
           {/* Impact Preview */}
-          {incident.status === "pending" && (
+          {incident.status === "pending" && actionState === "idle" && (
             <div className="p-4 rounded-xl bg-[var(--danger)]/5 border border-[var(--danger)]/20 space-y-3">
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-[var(--danger)]" />
@@ -250,19 +273,44 @@ function IncidentCard({ incident }: { incident: Incident }) {
             </div>
           )}
 
+          {/* Action Feedback */}
+          {actionState !== "idle" && (
+            <div className={cn(
+              "flex items-center gap-2 p-3 rounded-xl border",
+              actionState === "success" 
+                ? "bg-[var(--success)]/5 border-[var(--success)]/20 text-[var(--success)]"
+                : "bg-[var(--danger)]/5 border-[var(--danger)]/20 text-[var(--danger)]"
+            )}>
+              {actionState === "success" ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              <p className="text-sm font-medium">{actionMessage}</p>
+            </div>
+          )}
+
           {/* Actions */}
-          {incident.status === "pending" && (
+          {incident.status === "pending" && actionState === "idle" && (
             <div className="flex gap-3">
               <button
                 onClick={handleConfirmIncident}
-                className="flex-1 h-11 rounded-xl bg-[var(--danger)]/10 text-[var(--danger)] font-bold text-sm hover:bg-[var(--danger)]/20 transition-colors flex items-center justify-center gap-2"
+                disabled={isPending}
+                className="flex-1 h-11 rounded-xl bg-[var(--danger)]/10 text-[var(--danger)] font-bold text-sm hover:bg-[var(--danger)]/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <Ban className="h-4 w-4" />
-                Confirmer incident
+                {isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Ban className="h-4 w-4" />
+                    Confirmer incident
+                  </>
+                )}
               </button>
               <button
                 onClick={handleDismissIncident}
-                className="flex-1 h-11 rounded-xl bg-[var(--surface-elevated)] text-[var(--foreground-muted)] font-bold text-sm hover:text-white transition-colors flex items-center justify-center gap-2"
+                disabled={isPending}
+                className="flex-1 h-11 rounded-xl bg-[var(--surface-elevated)] text-[var(--foreground-muted)] font-bold text-sm hover:text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 Annuler
               </button>

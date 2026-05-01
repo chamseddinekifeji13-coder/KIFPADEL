@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { X, MapPin, Calendar, Clock, CreditCard, Banknote, Loader2, CheckCircle2 } from "lucide-react";
+import { X, MapPin, Calendar, Clock, CreditCard, Banknote, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface BookingConfirmSheetProps {
   isOpen: boolean;
@@ -12,6 +11,8 @@ interface BookingConfirmSheetProps {
   time: string;
   paymentMethod: "online" | "on_site" | null;
   price: number;
+  state?: "idle" | "loading" | "success" | "error";
+  errorMessage?: string | null;
 }
 
 export function BookingConfirmSheet({
@@ -23,26 +24,17 @@ export function BookingConfirmSheet({
   time,
   paymentMethod,
   price,
+  state = "idle",
+  errorMessage = null,
 }: BookingConfirmSheetProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-
   if (!isOpen) return null;
 
+  const isLoading = state === "loading";
+  const isSuccess = state === "success";
+  const isError = state === "error";
+
   const handleConfirm = async () => {
-    setIsLoading(true);
-    try {
-      await onConfirm();
-      setIsSuccess(true);
-      setTimeout(() => {
-        setIsSuccess(false);
-        onClose();
-      }, 2000);
-    } catch (error) {
-      console.error("[v0] Booking error:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    await onConfirm();
   };
 
   const formattedDate = new Date(date).toLocaleDateString("fr-FR", {
@@ -56,7 +48,7 @@ export function BookingConfirmSheet({
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={() => !isLoading && onClose()}
       />
       
       {/* Sheet */}
@@ -69,17 +61,21 @@ export function BookingConfirmSheet({
 
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">Confirmer la réservation</h2>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-[var(--background)] transition-colors"
-            >
-              <X className="h-5 w-5 text-[var(--foreground-muted)]" />
-            </button>
+            <h2 className="text-lg font-bold text-white">
+              {isSuccess ? "Réservation confirmée" : isError ? "Erreur" : "Confirmer la réservation"}
+            </h2>
+            {!isLoading && (
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-[var(--background)] transition-colors"
+              >
+                <X className="h-5 w-5 text-[var(--foreground-muted)]" />
+              </button>
+            )}
           </div>
 
           {/* Success State */}
-          {isSuccess ? (
+          {isSuccess && (
             <div className="py-8 flex flex-col items-center gap-4">
               <div className="h-16 w-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-emerald-400" />
@@ -87,11 +83,38 @@ export function BookingConfirmSheet({
               <div className="text-center">
                 <p className="text-lg font-bold text-white">Réservation confirmée</p>
                 <p className="text-sm text-[var(--foreground-muted)] mt-1">
-                  Vous recevrez un email de confirmation
+                  {paymentMethod === "online" 
+                    ? "Vous allez recevoir un lien de paiement par email"
+                    : "Présentez-vous au club à l'heure indiquée"}
                 </p>
               </div>
             </div>
-          ) : (
+          )}
+
+          {/* Error State */}
+          {isError && (
+            <div className="py-6">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-red-400">Erreur de réservation</p>
+                  <p className="text-xs text-red-400/80 mt-1">
+                    {errorMessage ?? "Une erreur est survenue. Veuillez réessayer."}
+                  </p>
+                </div>
+              </div>
+              
+              <button
+                onClick={onClose}
+                className="w-full mt-4 bg-[var(--border)] hover:bg-[var(--surface-elevated)] text-white h-12 rounded-xl text-sm font-bold transition-all"
+              >
+                Fermer
+              </button>
+            </div>
+          )}
+
+          {/* Normal / Loading State */}
+          {!isSuccess && !isError && (
             <>
               {/* Booking Details */}
               <div className="bg-[var(--background)] rounded-xl p-4 space-y-4">
@@ -137,7 +160,7 @@ export function BookingConfirmSheet({
               <button
                 onClick={handleConfirm}
                 disabled={isLoading}
-                className="w-full bg-[var(--gold)] hover:bg-[var(--gold-dark)] disabled:opacity-50 text-black h-14 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                className="w-full bg-[var(--gold)] hover:bg-[var(--gold-dark)] disabled:opacity-50 text-black h-14 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:active:scale-100"
               >
                 {isLoading ? (
                   <>
