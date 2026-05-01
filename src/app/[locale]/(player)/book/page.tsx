@@ -4,9 +4,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
 import { clubService } from "@/modules/clubs/service";
-import { ClubCard } from "@/components/features/clubs/club-card";
-import { SectionTitle } from "@/components/ui/section-title";
-import { LayoutGrid, MapPin } from "lucide-react";
+import { NearbyClubsBrowser } from "@/components/features/clubs/nearby-clubs-browser";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 type BookPageProps = {
@@ -62,50 +60,16 @@ export default async function BookPage({ params }: BookPageProps) {
         </p>
       </header>
 
-      <div
-        role="tablist"
-        aria-label="Filtrer par ville"
-        className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide"
-      >
-        {["Tous", "Tunis", "Sousse", "Hammamet", "Sfax"].map((city, i) => (
-          <button
-            key={city}
-            type="button"
-            role="tab"
-            aria-selected={i === 0}
-            className={`inline-flex items-center px-4 min-h-11 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-              i === 0
-                ? "bg-sky-600 text-white shadow-md shadow-sky-200"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            {city}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between">
-        <SectionTitle
-          title="Meilleurs Clubs"
-          icon={<LayoutGrid className="h-4 w-4" />}
-        />
-        <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          <MapPin className="h-3 w-3" />
-          À proximité
-        </div>
-      </div>
-
-      {clubs.length === 0 ? (
-        <div className="py-12 text-center text-slate-500 italic">
-          Aucun club disponible pour le moment.
-        </div>
-      ) : (
-        <div className="grid gap-6">
-          {clubs.map((club) => (
-            <ClubCard key={club.id} club={club} />
-          ))}
-        </div>
-      )}
+      <NearbyClubsBrowser
+        clubs={clubs.map((club) => ({
+          id: club.id,
+          name: club.name,
+          city: club.city,
+          type: club.type,
+          logo_url: club.logo_url,
+        }))}
+        locale={locale}
+      />
     </div>
   );
 }
