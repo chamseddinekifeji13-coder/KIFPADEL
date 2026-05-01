@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 
+type HeadingLevel = "h1" | "h2" | "h3" | "h4";
+
 type SectionTitleProps = Readonly<{
   title: string;
   subtitle?: string;
@@ -8,6 +10,7 @@ type SectionTitleProps = Readonly<{
   className?: string;
   titleClassName?: string;
   subtitleClassName?: string;
+  as?: HeadingLevel;
 }>;
 
 export function SectionTitle({
@@ -17,6 +20,7 @@ export function SectionTitle({
   className,
   titleClassName,
   subtitleClassName,
+  as: Heading = "h2",
 }: SectionTitleProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
@@ -26,9 +30,9 @@ export function SectionTitle({
         </div>
       )}
       <div className="space-y-0.5">
-        <h2 className={cn("text-lg font-bold text-slate-900", titleClassName)}>
+        <Heading className={cn("text-lg font-bold text-slate-900", titleClassName)}>
           {title}
-        </h2>
+        </Heading>
         {subtitle && (
           <p className={cn("text-sm text-slate-500 font-medium", subtitleClassName)}>
             {subtitle}

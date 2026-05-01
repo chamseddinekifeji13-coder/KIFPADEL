@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 export interface Player {
   user_id: string;
@@ -45,40 +46,54 @@ function normalizePlayer(row: ProfileRow): Player {
  * Repository for Player/Profile related database operations.
  */
 export async function fetchPlayers(query?: string): Promise<Player[]> {
-  const supabase = await createSupabaseServerClient();
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  let request = supabase
-    .from("profiles")
-    .select("*")
-    .order("trust_rating", { ascending: false });
+    let request = supabase
+      .from("profiles")
+      .select("*")
+      .order("trust_rating", { ascending: false });
 
-  if (query) {
-    request = request.ilike("display_name", `%${query}%`);
+    if (query) {
+      request = request.ilike("display_name", `%${query}%`);
+    }
+
+    const { data, error } = await request;
+
+    if (error) {
+      console.warn("[players.fetchPlayers] supabase error", error.message);
+      return [];
+    }
+
+    return ((data ?? []) as ProfileRow[]).map(normalizePlayer);
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[players.fetchPlayers] unexpected error", err);
+    return [];
   }
-
-  const { data, error } = await request;
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return ((data ?? []) as ProfileRow[]).map(normalizePlayer);
 }
 
 export async function fetchPlayerById(userId: string) {
-  const supabase = await createSupabaseServerClient();
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .single();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      console.warn("[players.fetchPlayerById] supabase error", error.message);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[players.fetchPlayerById] unexpected error", err);
+    return null;
   }
-
-  return data;
 }
 
 export async function addTrustEvent(payload: {

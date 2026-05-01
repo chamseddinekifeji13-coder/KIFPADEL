@@ -14,13 +14,17 @@ interface ClubCardProps {
 }
 
 export function ClubCard({ club }: ClubCardProps) {
+  const name = club.name ?? "Club";
+  const city = club.city ?? "";
+  const type = club.type ?? "Outdoor";
+  const logoUrl = club.logo_url ?? null;
   return (
     <Card className="p-0 overflow-hidden hover:shadow-lg transition-all group cursor-pointer border-slate-100">
       <div className="relative aspect-video bg-slate-200 overflow-hidden">
-        {club.logo_url ? (
+        {logoUrl ? (
           <Image
-            src={club.logo_url}
-            alt={club.name}
+            src={logoUrl}
+            alt={name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
@@ -31,7 +35,7 @@ export function ClubCard({ club }: ClubCardProps) {
         )}
         <div className="absolute top-3 left-3 flex gap-2">
           <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm">
-            {club.type}
+            {type}
           </Badge>
           <Badge variant="success" className="bg-emerald-500/90 text-white border-0 backdrop-blur-sm">
             Ouvert
@@ -43,11 +47,11 @@ export function ClubCard({ club }: ClubCardProps) {
         <div className="flex justify-between items-start">
           <div>
             <h3 className="font-bold text-slate-900 group-hover:text-sky-600 transition-colors">
-              {club.name}
+              {name}
             </h3>
             <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
               <MapPin className="h-3 w-3" />
-              <span>{club.city}, Tunisie</span>
+              <span>{city ? `${city}, Tunisie` : "Tunisie"}</span>
             </div>
           </div>
           <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded text-[10px] font-bold text-amber-600">
