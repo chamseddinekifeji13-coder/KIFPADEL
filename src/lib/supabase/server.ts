@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 
 import { publicEnv } from "@/lib/config/env";
 
-export async function createSupabaseServerClient() {
+export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
@@ -24,3 +24,6 @@ export async function createSupabaseServerClient() {
     },
   });
 }
+
+// Alias for backward compatibility
+export const createSupabaseServerClient = createClient;
