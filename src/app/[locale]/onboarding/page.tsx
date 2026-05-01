@@ -1,12 +1,8 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { SectionTitle } from "@/components/ui/section-title";
+import { notFound, redirect } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getAuthenticatedUser } from "@/modules/auth/service";
+import { OnboardingWizard } from "./onboarding-wizard";
 
 type OnboardingPageProps = Readonly<{
   params: Promise<{ locale: string }>;
@@ -18,56 +14,33 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
   const dictionary = await getDictionary(locale as Locale);
   const user = await getAuthenticatedUser();
 
+  if (!user) {
+    redirect(`/${locale}/auth/sign-in?next=/${locale}/onboarding`);
+  }
+
   return (
-    <section className="space-y-3">
-      <Card>
-        <SectionTitle
-          title={dictionary.onboarding.title}
-          subtitle={dictionary.onboarding.subtitle}
-        />
-      </Card>
-
-      {!user ? (
-        <Card className="space-y-2 bg-amber-50 ring-amber-100">
-          <p className="text-sm text-amber-800">{dictionary.errors.authRequired}</p>
-          <Link href={`/${locale}/auth/sign-in`}>
-            <Button className="w-full">{dictionary.auth.signInCta}</Button>
-          </Link>
-        </Card>
-      ) : null}
-
-      <Card className="space-y-3">
-        <p className="text-sm font-medium text-slate-800">{dictionary.onboarding.stepIntent}</p>
-        <div className="grid gap-2">
-          <Button variant="secondary" className="justify-start">
-            {dictionary.common.playNow}
-          </Button>
-          <Button variant="secondary" className="justify-start">
-            {dictionary.common.findPlayers}
-          </Button>
-          <Button variant="secondary" className="justify-start">
-            {dictionary.common.bookCourt}
-          </Button>
+    <div className="min-h-screen bg-[var(--background)] py-8">
+      <div className="max-w-md mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 text-[10px] font-bold uppercase tracking-widest text-[var(--gold)] mb-4">
+            Bienvenue
+          </div>
+          <h1 className="text-2xl font-bold text-white">
+            {dictionary.onboarding.title}
+          </h1>
+          <p className="text-[var(--foreground-muted)] text-sm mt-2">
+            {dictionary.onboarding.subtitle}
+          </p>
         </div>
-      </Card>
 
-      <Card className="space-y-3">
-        <p className="text-sm font-medium text-slate-800">{dictionary.onboarding.stepLevel}</p>
-        <p className="text-sm text-slate-600">N2-N3 (MVP preset)</p>
-      </Card>
-
-      <Card className="space-y-3">
-        <p className="text-sm font-medium text-slate-800">{dictionary.onboarding.stepClub}</p>
-        <p className="text-sm text-slate-600">Kif Padel Tunis</p>
-      </Card>
-
-      {user ? (
-        <Button className="w-full">{dictionary.onboarding.continueCta}</Button>
-      ) : (
-        <Button variant="secondary" className="w-full" type="button">
-          {dictionary.onboarding.continueCta}
-        </Button>
-      )}
-    </section>
+        <OnboardingWizard 
+          locale={locale} 
+          userId={user.id}
+          userEmail={user.email ?? ""}
+          dictionary={dictionary}
+        />
+      </div>
+    </div>
   );
 }

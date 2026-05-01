@@ -1,3 +1,5 @@
+import { Construction } from "lucide-react";
+
 type PlaceholderScreenProps = {
   title: string;
   subtitle: string;
@@ -5,9 +7,12 @@ type PlaceholderScreenProps = {
 
 export function PlaceholderScreen({ title, subtitle }: PlaceholderScreenProps) {
   return (
-    <section className="rounded-2xl bg-(--surface) p-5 shadow-sm ring-1 ring-slate-100">
-      <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
-      <p className="mt-2 text-sm text-slate-600">{subtitle}</p>
+    <section className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-8 text-center">
+      <div className="mx-auto w-12 h-12 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center mb-4">
+        <Construction className="h-6 w-6 text-[var(--gold)]" />
+      </div>
+      <h1 className="text-xl font-bold text-white">{title}</h1>
+      <p className="mt-2 text-sm text-[var(--foreground-muted)]">{subtitle}</p>
     </section>
   );
 }
