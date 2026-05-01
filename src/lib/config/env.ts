@@ -5,10 +5,6 @@ type PublicEnv = {
   supabaseAnonKey: string;
 };
 
-type ServerEnv = {
-  supabaseServiceRoleKey: string;
-};
-
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
 
@@ -31,6 +27,6 @@ export const publicEnv: PublicEnv = {
   supabaseAnonKey: getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
 };
 
-export const serverEnv: ServerEnv = {
-  supabaseServiceRoleKey: getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
-};
+export function getSupabaseServiceRoleKey(): string {
+  return getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+}
