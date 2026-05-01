@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { isLocale } from "@/i18n/config";
-import { notFound, redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
 import { playerService } from "@/modules/players/service";
 import { PlayerProfileCard } from "@/components/features/players/player-profile-card";
 import { ProfileStatsGrid } from "@/components/features/players/profile-stats-grid";
 import { TrustScoreCard } from "@/components/features/players/trust-score-card";
 import { TopRivals } from "@/components/features/players/top-rivals";
+import { requireUser } from "@/modules/auth/guards/require-user";
 
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
@@ -32,12 +32,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/auth/sign-in`);
-  }
+  const user = await requireUser({ locale, redirectPath: "profile" });
 
   const profile = await playerService.getPlayerProfile(user.id);
   if (!profile) notFound();
