@@ -64,7 +64,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 2xl:grid-cols-4">
         <StatCard
           label="Réservations aujourd'hui"
           value={stats.todayBookings}
@@ -93,7 +93,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
       </div>
 
       {/* Two Column Layout */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid gap-6 xl:grid-cols-2">
         {/* Today's Bookings */}
         <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
@@ -203,7 +203,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
       </div>
 
       {/* Payment Methods Summary */}
-      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
+      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="h-10 w-10 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center">
             <CreditCard className="h-5 w-5 text-[var(--gold)]" />
@@ -214,7 +214,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="p-4 rounded-xl bg-[var(--success)]/5 border border-[var(--success)]/20">
             <p className="text-2xl font-bold text-[var(--success)]">68%</p>
             <p className="text-sm text-[var(--foreground-muted)]">Paiement en ligne</p>
@@ -248,7 +248,7 @@ function StatCard({
   variant?: "default" | "warning";
 }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 sm:p-4 space-y-3 min-w-0">
       <div className="flex items-center justify-between">
         <div
           className={`h-8 w-8 rounded-lg flex items-center justify-center ${
@@ -267,11 +267,15 @@ function StatCard({
           </span>
         )}
       </div>
-      <div>
-        <p className={`text-2xl font-bold ${variant === "warning" ? "text-[var(--warning)]" : "text-white"}`}>
+      <div className="min-w-0">
+        <p
+          className={`text-xl sm:text-2xl font-bold leading-tight break-words ${variant === "warning" ? "text-[var(--warning)]" : "text-white"}`}
+        >
           {value}
         </p>
-        <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider mt-1">{label}</p>
+        <p className="mt-1 text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider leading-tight">
+          {label}
+        </p>
       </div>
     </div>
   );

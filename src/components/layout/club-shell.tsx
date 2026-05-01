@@ -44,7 +44,7 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
   return (
     <div className="min-h-screen bg-[var(--background)] flex">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)]">
+      <aside className="hidden lg:flex w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)]">
         {/* Logo / Club Header */}
         <div className="p-6 border-b border-[var(--border)]">
           <div className="flex items-center gap-3">
@@ -104,7 +104,7 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-b border-[var(--border)]">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-b border-[var(--border)]">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-lg bg-[var(--gold)] flex items-center justify-center">
@@ -122,13 +122,13 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
 
       {/* Main Content */}
       <main className="flex-1 md:overflow-y-auto">
-        <div className="p-6 pt-20 md:pt-6 pb-24 md:pb-6 max-w-5xl mx-auto">
+        <div className="mx-auto max-w-6xl p-4 pt-20 pb-24 sm:p-6 sm:pt-20 sm:pb-24 lg:p-6 lg:pt-6 lg:pb-6">
           {children}
         </div>
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)]">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)]">
         <div className="flex justify-around items-center h-16 px-2">
           {navItems.slice(0, 5).map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");

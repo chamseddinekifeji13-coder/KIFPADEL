@@ -13,9 +13,8 @@ import {
   Calendar,
   Sparkles,
   User,
-  MapPin,
+  Building2,
   ArrowRight,
-  ChevronRight,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 
@@ -55,13 +54,16 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   const dictionary = await getDictionary(locale as Locale);
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const isEn = locale === "en";
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="mx-auto w-full max-w-5xl space-y-8 pb-20">
       {/* Header / Hero */}
       <header className="flex items-center justify-between py-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-[var(--foreground-muted)]">Bienvenue sur</p>
+        <div className="space-y-1 text-center sm:text-left">
+          <p className="text-sm font-medium text-[var(--foreground-muted)]">
+            {isEn ? "Welcome to" : "Bienvenue sur"}
+          </p>
           <h1 className="text-3xl font-black tracking-tighter text-white uppercase">
             KIF<span className="text-[var(--gold)]">PADEL</span>
           </h1>
@@ -82,78 +84,134 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       </header>
 
       {/* Main Section - Premium Dark */}
-      <section className="relative overflow-hidden rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-8 text-white">
+      <section className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-white sm:p-8">
         {/* Gold accent */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-50" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--gold)] rounded-full blur-[100px] opacity-10 -mr-20 -mt-20" />
         
-        <div className="relative space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
+        <div className="relative mx-auto flex max-w-2xl flex-col items-center space-y-6 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
             <Sparkles className="h-3 w-3" />
-            Premium Padel
+            {isEn ? "Premium Padel" : "Premium Padel"}
           </div>
           
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tight text-balance">
-              Kiffe ta partie, trouve tes partenaires.
+              {isEn
+                ? "Enjoy your match, find your partners."
+                : "Kiffe ta partie, trouve tes partenaires."}
             </h2>
-            <p className="text-[var(--foreground-muted)] text-sm max-w-[280px] leading-relaxed">
-              La plateforme n°1 en Tunisie pour réserver et jouer au Padel.
+            <p className="max-w-xl text-sm leading-relaxed text-[var(--foreground-muted)]">
+              {isEn
+                ? "The #1 platform in Tunisia to book courts, join matches and grow your padel community."
+                : "La plateforme n°1 en Tunisie pour réserver, rejoindre des matchs et faire grandir votre communauté padel."}
             </p>
           </div>
 
           <Link 
             href={`/${locale}/play-now`}
-            className="inline-flex items-center gap-2 bg-[var(--gold)] hover:bg-[var(--gold-dark)] text-black rounded-xl h-12 px-6 font-bold transition-all active:scale-95 group"
+            className="group inline-flex h-12 items-center gap-2 rounded-xl bg-[var(--gold)] px-6 font-bold text-black transition-all hover:bg-[var(--gold-dark)] active:scale-95"
           >
-            Commencer à jouer
+            {isEn ? "Start playing" : "Commencer à jouer"}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
       </section>
 
-      {/* Navigation Cards */}
+      {/* Player / Club Spaces */}
+      <section className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+        <article className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+          <div className="space-y-1 text-center sm:text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
+              {isEn ? "Player Space" : "Espace Joueur"}
+            </p>
+            <h3 className="text-xl font-bold text-white">
+              {isEn ? "Find games and book fast" : "Trouve tes parties et réserve vite"}
+            </h3>
+          </div>
+          <div className="space-y-3">
+            <IntentCard
+              href={`/${locale}/play-now`}
+              title={dictionary.common.playNow}
+              description={dictionary.common.playNowDescription}
+              icon={Trophy}
+              variant="secondary"
+            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <IntentCard
+                href={`/${locale}/find-players`}
+                title={isEn ? "Partners" : "Partenaires"}
+                description={isEn ? "Find players nearby" : "Trouve des joueurs"}
+                icon={Search}
+              />
+              <IntentCard
+                href={`/${locale}/book`}
+                title={isEn ? "Book" : "Réserver"}
+                description={isEn ? "Pick your club" : "Choisis ton club"}
+                icon={Calendar}
+              />
+            </div>
+          </div>
+        </article>
+
+        <article className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+          <div className="space-y-1 text-center sm:text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
+              {isEn ? "Club Space" : "Espace Club"}
+            </p>
+            <h3 className="text-xl font-bold text-white">
+              {isEn ? "Manage operations with clarity" : "Pilote ton activité club avec clarté"}
+            </h3>
+          </div>
+          <div className="space-y-3">
+            <IntentCard
+              href={`/${locale}/club/dashboard`}
+              title={isEn ? "Club Dashboard" : "Dashboard Club"}
+              description={
+                isEn
+                  ? "Bookings, incidents, payments and operations."
+                  : "Réservations, incidents, paiements et pilotage."
+              }
+              icon={Building2}
+              variant="secondary"
+            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Link
+                href={`/${locale}/clubs/new`}
+                className="rounded-xl border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-4 py-3 text-sm font-semibold text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/20 text-center"
+              >
+                {isEn ? "Create a club" : "Créer un club"}
+              </Link>
+              <Link
+                href={`/${locale}/club/courts`}
+                className="rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:border-[var(--gold)]/30 text-center"
+              >
+                {isEn ? "Manage courts" : "Gérer les terrains"}
+              </Link>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      {/* Quick shortcuts */}
       <div className="grid gap-4">
-        <h3 className="text-xs font-bold text-[var(--foreground-muted)] uppercase tracking-widest px-1">
-          Que veux-tu faire ?
+        <h3 className="px-1 text-center text-xs font-bold uppercase tracking-widest text-[var(--foreground-muted)] sm:text-left">
+          {isEn ? "Quick access" : "Accès rapide"}
         </h3>
-        <IntentCard
-          href={`/${locale}/play-now`}
-          title={dictionary.common.playNow}
-          description={dictionary.common.playNowDescription}
-          icon={Trophy}
-          variant="secondary"
-        />
         <div className="grid grid-cols-2 gap-4">
           <IntentCard
             href={`/${locale}/find-players`}
-            title="Partenaires"
-            description="Trouve des joueurs"
+            title={isEn ? "Partners" : "Partenaires"}
+            description={isEn ? "Find players" : "Trouve des joueurs"}
             icon={Search}
           />
           <IntentCard
             href={`/${locale}/book`}
-            title="Réserver"
-            description="Choisis ton club"
+            title={isEn ? "Book" : "Réserver"}
+            description={isEn ? "Choose your club" : "Choisis ton club"}
             icon={Calendar}
           />
         </div>
-      </div>
-
-      {/* Local Info Card - Dark Theme */}
-      <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center gap-4 group hover:border-[var(--gold)]/30 transition-colors">
-        <div className="h-12 w-12 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)]">
-          <MapPin className="h-6 w-6" />
-        </div>
-        <div className="flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--foreground-muted)]">
-            Clubs à proximité
-          </p>
-          <p className="text-sm font-bold text-white leading-tight">
-            Découvre les 12 clubs ouverts à Tunis.
-          </p>
-        </div>
-        <ChevronRight className="h-5 w-5 text-[var(--foreground-muted)]" aria-hidden="true" />
       </div>
     </div>
   );
