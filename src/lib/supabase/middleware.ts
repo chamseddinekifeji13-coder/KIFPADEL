@@ -21,7 +21,10 @@ export async function updateSession(request: NextRequest) {
         });
 
         cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
+          response.cookies.set(name, value, {
+            ...options,
+            path: "/",
+          }),
         );
       },
     },
