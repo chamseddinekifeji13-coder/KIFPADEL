@@ -38,9 +38,9 @@ export function MainNav({ locale, labels }: MainNavProps) {
       aria-label="Navigation principale"
       className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md"
     >
-      <div className="bg-white/70 backdrop-blur-2xl border border-white/20 rounded-[2rem] p-2 shadow-2xl shadow-sky-900/10 flex justify-between items-center px-4 h-16">
+      <div className="bg-[var(--surface)]/95 backdrop-blur-2xl border border-[var(--border)] rounded-2xl p-2 shadow-2xl shadow-black/30 flex justify-between items-center px-4 h-16">
         {items.map((item) => {
-          const active = pathname === item.href;
+          const active = pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
 
           return (
@@ -51,12 +51,12 @@ export function MainNav({ locale, labels }: MainNavProps) {
               aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-1 transition-all duration-300 min-h-11 min-w-11 px-3",
-                active ? "text-sky-600 scale-110" : "text-slate-400 hover:text-slate-600"
+                active ? "text-[var(--gold)] scale-110" : "text-[var(--foreground-muted)] hover:text-white"
               )}
             >
               <Icon
                 aria-hidden="true"
-                className={cn("h-5 w-5 transition-all", active ? "fill-sky-600/10" : "")}
+                className={cn("h-5 w-5 transition-all", active ? "fill-[var(--gold)]/20" : "")}
               />
               <span
                 aria-hidden={!active}
@@ -70,7 +70,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
               {active && (
                 <div
                   aria-hidden="true"
-                  className="absolute -bottom-1 h-1 w-1 bg-sky-600 rounded-full"
+                  className="absolute -bottom-1 h-1 w-1 bg-[var(--gold)] rounded-full"
                 />
               )}
             </Link>
