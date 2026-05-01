@@ -1,7 +1,7 @@
-import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Star, Laptop } from "lucide-react";
+import { FALLBACK_CLUB, SafeImage } from "@/components/ui/safe-image";
 
 interface ClubCardProps {
   club: {
@@ -22,8 +22,9 @@ export function ClubCard({ club }: ClubCardProps) {
     <Card className="p-0 overflow-hidden hover:shadow-lg transition-all group cursor-pointer border-slate-100">
       <div className="relative aspect-video bg-slate-200 overflow-hidden">
         {logoUrl ? (
-          <Image
+          <SafeImage
             src={logoUrl}
+            fallbackSrc={FALLBACK_CLUB}
             alt={name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"

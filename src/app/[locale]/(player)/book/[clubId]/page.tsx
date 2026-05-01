@@ -1,6 +1,6 @@
 import { isLocale } from "@/i18n/config";
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import { FALLBACK_CLUB, SafeImage } from "@/components/ui/safe-image";
 import { clubService } from "@/modules/clubs/service";
 import { getClubAvailability } from "@/modules/bookings/availability-service";
 import { MapPin, ArrowLeft, Calendar as CalendarIcon, InfoIcon, Clock } from "lucide-react";
@@ -48,15 +48,14 @@ export default async function ClubDetailPage({
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        {club.logo_url && (
-          <Image 
-            src={club.logo_url} 
-            alt={club.name} 
-            fill 
-            className="object-cover"
-            priority
-          />
-        )}
+        <SafeImage
+          src={club.logo_url}
+          fallbackSrc={FALLBACK_CLUB}
+          alt={club.name}
+          fill
+          className="object-cover"
+          priority
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         <div className="absolute bottom-6 left-6 text-white space-y-1">
           <h1 className="text-3xl font-bold">{club.name}</h1>
