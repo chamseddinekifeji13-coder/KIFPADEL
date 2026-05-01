@@ -10,6 +10,14 @@ export interface Player {
   reliability: string;
 }
 
+export type TopRival = {
+  userId: string;
+  name: string;
+  wins: number;
+  losses: number;
+  encounters: number;
+};
+
 type ProfileRow = {
   user_id: string;
   display_name: string | null;
@@ -94,6 +102,68 @@ export async function fetchPlayerById(userId: string) {
     console.warn("[players.fetchPlayerById] unexpected error", err);
     return null;
   }
+}
+
+export async function fetchTopRivals(userId: string, limit = 3): Promise<TopRival[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: myParticipations, error: myMatchesError } = await supabase
+    .from("match_participants")
+    .select("match_id")
+    .eq("player_id", userId);
+
+  if (myMatchesError || !myParticipations || myParticipations.length === 0) {
+    return [];
+  }
+
+  const myMatchIds = [...new Set(myParticipations.map((entry) => entry.match_id))];
+
+  const { data: allParticipants, error: participantsError } = await supabase
+    .from("match_participants")
+    .select("match_id, player_id")
+    .in("match_id", myMatchIds);
+
+  if (participantsError || !allParticipants) {
+    return [];
+  }
+
+  const rivalCounts = new Map<string, number>();
+  allParticipants.forEach((row) => {
+    if (row.player_id !== userId) {
+      rivalCounts.set(row.player_id, (rivalCounts.get(row.player_id) ?? 0) + 1);
+    }
+  });
+
+  const rivalIds = [...rivalCounts.keys()];
+  if (rivalIds.length === 0) {
+    return [];
+  }
+
+  const { data: rivalProfiles } = await supabase
+    .from("profiles")
+    .select("user_id, display_name")
+    .in("user_id", rivalIds);
+
+  const nameById = new Map<string, string>();
+  (rivalProfiles ?? []).forEach((profile) => {
+    nameById.set(profile.user_id, profile.display_name ?? "Player");
+  });
+
+  const rivals = rivalIds
+    .map((id) => {
+      const encounters = rivalCounts.get(id) ?? 0;
+      return {
+        userId: id,
+        name: nameById.get(id) ?? "Player",
+        wins: 0,
+        losses: 0,
+        encounters,
+      };
+    })
+    .sort((a, b) => b.encounters - a.encounters)
+    .slice(0, limit);
+
+  return rivals;
 }
 
 export async function addTrustEvent(payload: {

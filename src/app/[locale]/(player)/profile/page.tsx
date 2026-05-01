@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { isLocale } from "@/i18n/config";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { playerService } from "@/modules/players/service";
-import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
-import { ChevronLeft, Trophy, Target, Zap, Calendar, Heart, Shield, TrendingUp } from "lucide-react";
+import { PlayerProfileCard } from "@/components/features/players/player-profile-card";
+import { ProfileStatsGrid } from "@/components/features/players/profile-stats-grid";
+import { TrustScoreCard } from "@/components/features/players/trust-score-card";
+import { TopRivals } from "@/components/features/players/top-rivals";
 
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
@@ -31,141 +32,73 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  let userId: string | null = null;
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data } = await supabase.auth.getUser();
-    userId = data?.user?.id ?? null;
-  } catch (err) {
-    rethrowFrameworkError(err);
-    userId = null;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/${locale}/auth/sign-in`);
   }
 
-  // Demo mode: show profile without auth for preview
-  const isDemo = !userId;
-  
-  let profile: Awaited<ReturnType<typeof playerService.getPlayerProfile>> | null = null;
-  if (userId) {
-    try {
-      profile = await playerService.getPlayerProfile(userId);
-    } catch (err) {
-      rethrowFrameworkError(err);
-      profile = null;
-    }
-  }
+  const profile = await playerService.getPlayerProfile(user.id);
+  if (!profile) notFound();
 
-  const displayName = profile?.display_name ?? "AHMED BENALI";
-  const trustScore = Number.isFinite(profile?.trust_score) ? profile.trust_score : 85;
-  const reliabilityStatus = profile?.reliability_status ?? "healthy";
+  const playerName = String(profile.display_name ?? "PLAYER");
+  const eloRank = Number(
+    profile.elo_rank ??
+      profile.sport_rating ??
+      profile.rating_value ??
+      1200,
+  );
 
-  // Mock stats
-  const playerStats = {
-    matchesPlayed: 24,
-    wins: 18,
-    losses: 6,
-    winRatio: "75%",
-    currentStreak: 4,
-    presence: "92%",
-    trustScore: trustScore,
-    eloRank: 1850,
-  };
+  const matchesPlayed = Number(profile.matches_played ?? profile.matches_count ?? 0);
+  const wins = Number(profile.wins_count ?? profile.wins ?? 0);
+  const losses = Number(profile.losses_count ?? profile.losses ?? 0);
+  const ratio = matchesPlayed > 0 ? `${Math.round((wins / matchesPlayed) * 100)}%` : "0%";
+  const streak = Number(profile.current_streak ?? 0);
+  const presence = Number(profile.presence_rate ?? 100);
+  const trustScore = Number(profile.trust_score ?? 70);
+  const reliabilityStatus = String(profile.reliability_status ?? "healthy");
 
-  const topRivals = [
-    { name: "Ahmed B.", record: "3-2" },
-    { name: "Youssef K.", record: "2-2" },
-    { name: "Sarah M.", record: "4-2" },
-    { name: "Mehdi T.", record: "1-2" },
-    { name: "Ines L.", record: "2-0" },
+  const statsItems = [
+    { label: "MATCHES", value: String(matchesPlayed) },
+    { label: "WINS", value: String(wins) },
+    { label: "LOSSES", value: String(losses) },
+    { label: "RATIO", value: ratio },
+    { label: "STREAK", value: String(streak) },
+    { label: "PRESENCE", value: `${presence}%` },
+    { label: "TRUST", value: `${Math.max(0, Math.min(100, trustScore))}` },
   ];
 
+  const topRivalsRaw = await playerService.getTopRivals(user.id, 3);
+  const topRivals = topRivalsRaw.map((rival) => ({
+    name: rival.name,
+    wins: rival.wins,
+    losses: rival.losses,
+    encounters: rival.encounters,
+  }));
+
   return (
-    <div className="min-h-screen bg-[var(--background)] py-8 px-4">
-      <div className="w-full max-w-lg mx-auto space-y-8">
-        
-        {/* Top Header - KIFPADEL Logo */}
-        <header className="flex items-center justify-between">
-          <Link 
-            href={`/${locale}`}
-            className="flex items-center gap-2 text-[var(--foreground-muted)] hover:text-white transition-colors"
-            aria-label="Back to home"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="text-xs font-medium uppercase tracking-wider">Accueil</span>
-          </Link>
-          <div className="flex items-center gap-1.5">
-            <div className="h-6 w-6 rounded-lg bg-[var(--gold)] flex items-center justify-center">
-              <span className="text-black font-black text-[10px]">KIF</span>
-            </div>
-            <span className="text-[var(--gold)] font-black text-sm tracking-tight uppercase">PADEL</span>
-          </div>
-          <div className="w-10" />
-        </header>
+    <div className="flex-1 bg-black px-4 py-8">
+      <div className="mx-auto flex w-full max-w-md flex-col space-y-7">
+        <PlayerProfileCard playerName={playerName} eloRank={eloRank} />
 
-        {/* Hero: Player Name + ELO Rank */}
-        <div className="space-y-4 text-center">
-          <div>
-            <p className="text-[11px] font-bold text-[var(--foreground-muted)] uppercase tracking-[0.15em] mb-2">
-              Profil Joueur
-            </p>
-            <h1 className="text-4xl font-black text-white uppercase tracking-tight text-balance">
-              {displayName}
-            </h1>
-          </div>
-          
-          <div className="inline-flex items-baseline gap-3 mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl px-5 py-3">
-            <span className="text-[10px] font-bold text-[var(--foreground-muted)] uppercase tracking-[0.1em]">
-              ELO Rank:
-            </span>
-            <span className="text-3xl font-black text-[var(--gold)] font-mono tracking-tighter">
-              {playerStats.eloRank.toString().padStart(4, "0")}
-            </span>
-          </div>
-        </div>
+        <ProfileStatsGrid items={statsItems} />
 
-        {/* Stats Grid - 7 Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: "Matchs", value: playerStats.matchesPlayed, icon: Trophy },
-            { label: "Victoires", value: playerStats.wins, icon: Target },
-            { label: "Défaites", value: playerStats.losses, icon: TrendingUp },
-            { label: "Ratio", value: playerStats.winRatio, icon: Zap },
-            { label: "Série", value: playerStats.currentStreak, icon: Calendar },
-            { label: "Présence", value: playerStats.presence, icon: Heart },
-            { label: "Confiance", value: playerStats.trustScore, icon: Shield },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2"
-            >
-              <stat.icon className="h-5 w-5 text-[var(--gold)]" />
-              <span className="text-2xl font-black text-white">{stat.value}</span>
-              <span className="text-[8px] font-bold text-[var(--foreground-muted)] uppercase tracking-widest">
-                {stat.label}
-              </span>
-            </div>
-          ))}
-        </div>
+        <TrustScoreCard
+          trustScore={trustScore}
+          reliabilityStatus={reliabilityStatus}
+        />
 
-        {/* Top Rivals Section */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 space-y-4">
-          <h3 className="text-xs font-bold text-[var(--gold)] uppercase tracking-[0.2em]">
-            Top Rivaux
-          </h3>
-          <div className="space-y-2">
-            {topRivals.map((rival, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between py-3 px-2 border-b border-[var(--border)] last:border-0"
-              >
-                <p className="text-sm font-bold text-white">{rival.name}</p>
-                <p className="text-xs font-mono text-[var(--gold)]">{rival.record}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <TopRivals rivals={topRivals} />
 
-        {/* Spacing for bottom nav */}
-        <div className="h-20" />
+        <section className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+            Settings
+          </p>
+          <p className="mt-1 text-xs text-white/55">
+            Les actions de compte restent secondaires sur cet écran.
+          </p>
+        </section>
       </div>
     </div>
   );

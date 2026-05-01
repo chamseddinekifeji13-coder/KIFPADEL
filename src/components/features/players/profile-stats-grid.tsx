@@ -1,55 +1,24 @@
-import { Trophy, Target, Percent, Calendar } from "lucide-react";
+type StatItem = {
+  label: string;
+  value: string;
+};
 
-interface ProfileStatsGridProps {
-  matchesPlayed: number;
-  wins: number;
-  winRate: number;
-  weeklyMatches: number;
-}
+type ProfileStatsGridProps = {
+  items: StatItem[];
+};
 
-export function ProfileStatsGrid({
-  matchesPlayed,
-  wins,
-  winRate,
-  weeklyMatches,
-}: ProfileStatsGridProps) {
-  const stats = [
-    {
-      label: "Matchs",
-      value: matchesPlayed,
-      icon: Trophy,
-    },
-    {
-      label: "Victoires",
-      value: wins,
-      icon: Target,
-    },
-    {
-      label: "Win Rate",
-      value: `${winRate}%`,
-      icon: Percent,
-    },
-    {
-      label: "Cette Semaine",
-      value: weeklyMatches,
-      icon: Calendar,
-    },
-  ];
-
+export function ProfileStatsGrid({ items }: ProfileStatsGridProps) {
   return (
-    <div className="grid grid-cols-4 gap-3">
-      {stats.map((stat) => (
-        <div
-          key={stat.label}
-          className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 flex flex-col items-center justify-center text-center"
+    <section className="grid grid-cols-2 gap-3">
+      {items.map((item) => (
+        <article
+          key={item.label}
+          className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-center"
         >
-          <stat.icon className="h-4 w-4 text-[var(--gold)] mb-2" />
-          <span className="text-xl font-black text-white">{stat.value}</span>
-          <span className="text-[9px] uppercase tracking-wider text-[var(--foreground-muted)] font-medium mt-0.5">
-            {stat.label}
-          </span>
-        </div>
+          <p className="text-2xl font-black tracking-tight text-white">{item.value}</p>
+          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-white/50">{item.label}</p>
+        </article>
       ))}
-    </div>
+    </section>
   );
 }
