@@ -1,5 +1,6 @@
-const CACHE_NAME = "kifpadel-static-v1";
+const CACHE_NAME = "kifpadel-static-v2";
 const APP_SHELL = ["/", "/fr", "/en", "/manifest.webmanifest", "/icons/icon.svg"];
+const STATIC_ASSET_EXTENSIONS = /\.(?:js|css|png|jpg|jpeg|gif|svg|webp|ico|woff2?)$/i;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -29,11 +30,28 @@ self.addEventListener("fetch", (event) => {
   }
 
   const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const isNavigationRequest = event.request.mode === "navigate";
+  const isStaticAsset = STATIC_ASSET_EXTENSIONS.test(requestUrl.pathname);
 
-  if (requestUrl.pathname.startsWith("/api")) {
+  if (!isSameOrigin || requestUrl.pathname.startsWith("/api")) {
     event.respondWith(
       fetch(event.request).catch(() => caches.match(event.request)),
     );
+    return;
+  }
+
+  // Never cache navigation responses (auth/session-sensitive pages).
+  if (isNavigationRequest) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match("/fr") || caches.match("/")),
+    );
+    return;
+  }
+
+  // Cache static assets only.
+  if (!isStaticAsset) {
+    event.respondWith(fetch(event.request));
     return;
   }
 
@@ -44,7 +62,7 @@ self.addEventListener("fetch", (event) => {
       }
 
       return fetch(event.request).then((networkResponse) => {
-        if (networkResponse.status === 200 && requestUrl.origin === self.location.origin) {
+        if (networkResponse.status === 200) {
           const copy = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
