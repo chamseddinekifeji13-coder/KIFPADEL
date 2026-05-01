@@ -14,21 +14,13 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import type { Dictionary } from "@/i18n/get-dictionary";
 
 type OnboardingWizardProps = {
   locale: string;
   userId: string;
   userEmail: string;
-  dictionary: {
-    onboarding: {
-      title: string;
-      subtitle: string;
-      stepIntent: string;
-      stepLevel: string;
-      stepClub: string;
-      continueCta: string;
-    };
-  };
+  dictionary: Dictionary;
 };
 
 type Step = "profile" | "phone" | "level" | "trust";
