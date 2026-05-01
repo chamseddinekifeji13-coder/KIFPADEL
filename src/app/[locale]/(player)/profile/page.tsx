@@ -8,7 +8,7 @@ import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 import { PlayerProfileCard } from "@/components/features/players/player-profile-card";
 import { TrustScoreCard } from "@/components/features/players/trust-score-card";
 import { ProfileStatsGrid } from "@/components/features/players/profile-stats-grid";
-import { ProfileSettingsList } from "@/components/features/players/profile-settings-list";
+import { TopRivals } from "@/components/features/players/top-rivals";
 
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
@@ -62,7 +62,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const trustScore = Number.isFinite(profile.trust_score) ? profile.trust_score : 70;
   const reliabilityStatus = profile.reliability_status ?? "healthy";
   
-  // Mock stats for now - these would come from actual match data
+  // Mock stats - would come from actual match data
   const playerStats = {
     matchesPlayed: 24,
     wins: 18,
@@ -71,33 +71,47 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     weeklyMatches: 3,
   };
 
+  // Mock rivals data
+  const topRivals = [
+    { name: "Ahmed B.", matchesVs: 5, wins: 3, losses: 2, eloVs: 1920 },
+    { name: "Youssef K.", matchesVs: 4, wins: 2, losses: 2, eloVs: 1870 },
+    { name: "Sarah M.", matchesVs: 6, wins: 4, losses: 2, eloVs: 1795 },
+    { name: "Mehdi T.", matchesVs: 3, wins: 1, losses: 2, eloVs: 1650 },
+    { name: "Ines L.", matchesVs: 2, wins: 2, losses: 0, eloVs: 1920 },
+  ];
+
   return (
-    <div className="flex-1 space-y-6 pb-24">
-      {/* Premium Player Card */}
-      <PlayerProfileCard
-        displayName={displayName}
-        league={league}
-        eloRank={playerStats.eloRank}
-        memberId={userId.slice(0, 8).toUpperCase()}
-      />
+    <div className="flex items-center justify-center min-h-screen py-8 px-4">
+      <div className="w-full max-w-lg space-y-6">
+        {/* Premium Player Card */}
+        <PlayerProfileCard
+          displayName={displayName}
+          league={league}
+          eloRank={playerStats.eloRank}
+          memberId={userId.slice(0, 8).toUpperCase()}
+        />
 
-      {/* Stats Grid */}
-      <ProfileStatsGrid
-        matchesPlayed={playerStats.matchesPlayed}
-        wins={playerStats.wins}
-        winRate={playerStats.winRate}
-        weeklyMatches={playerStats.weeklyMatches}
-      />
+        {/* Stats Grid */}
+        <ProfileStatsGrid
+          matchesPlayed={playerStats.matchesPlayed}
+          wins={playerStats.wins}
+          winRate={playerStats.winRate}
+          weeklyMatches={playerStats.weeklyMatches}
+        />
 
-      {/* Trust Score Section */}
-      <TrustScoreCard
-        trustScore={trustScore}
-        reliabilityStatus={reliabilityStatus}
-        locale={locale}
-      />
+        {/* Trust Score Section */}
+        <TrustScoreCard
+          trustScore={trustScore}
+          reliabilityStatus={reliabilityStatus}
+          locale={locale}
+        />
 
-      {/* Account Settings */}
-      <ProfileSettingsList locale={locale} />
+        {/* Top Rivals */}
+        <TopRivals rivals={topRivals} />
+
+        {/* Padding for nav */}
+        <div className="h-24" />
+      </div>
     </div>
   );
 }
