@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Calendar,
   Clock,
@@ -11,9 +12,11 @@ import {
   Shield,
   ChevronDown,
   Filter,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { reliabilityFromTrustScore } from "@/domain/rules/trust";
+import { confirmArrivalAction, reportNoShowAction } from "@/modules/clubs/actions";
 
 type Booking = {
   id: string;
@@ -21,11 +24,12 @@ type Booking = {
   endTime: string;
   court: string;
   player: {
+    id: string;
     name: string;
     trustScore: number;
     phone: string;
   };
-  status: "confirmed" | "pending" | "cancelled";
+  status: "confirmed" | "pending" | "cancelled" | "completed" | "no_show";
   paymentMethod: "online" | "on_site";
   amount: number;
 };
@@ -46,16 +50,6 @@ export function SlotsManager({ bookings, courts, locale }: SlotsManagerProps) {
     if (filterStatus && b.status !== filterStatus) return false;
     return true;
   });
-
-  const handleConfirmArrival = (bookingId: string) => {
-    // TODO: Call API to confirm player arrival
-    alert(`Arrivée confirmée pour la réservation ${bookingId}`);
-  };
-
-  const handleReportNoShow = (bookingId: string) => {
-    // TODO: Call API to report no-show
-    alert(`No-show signalé pour la réservation ${bookingId}`);
-  };
 
   return (
     <div className="space-y-6">
@@ -118,12 +112,7 @@ export function SlotsManager({ bookings, courts, locale }: SlotsManagerProps) {
       {/* Bookings List */}
       <div className="space-y-3">
         {filteredBookings.map((booking) => (
-          <BookingCard
-            key={booking.id}
-            booking={booking}
-            onConfirmArrival={handleConfirmArrival}
-            onReportNoShow={handleReportNoShow}
-          />
+          <BookingCard key={booking.id} booking={booking} />
         ))}
 
         {filteredBookings.length === 0 && (
@@ -140,16 +129,13 @@ export function SlotsManager({ bookings, courts, locale }: SlotsManagerProps) {
   );
 }
 
-function BookingCard({
-  booking,
-  onConfirmArrival,
-  onReportNoShow,
-}: {
-  booking: Booking;
-  onConfirmArrival: (id: string) => void;
-  onReportNoShow: (id: string) => void;
-}) {
+function BookingCard({ booking }: { booking: Booking }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
+  const [actionState, setActionState] = useState<"idle" | "success" | "error">("idle");
+  const [actionMessage, setActionMessage] = useState("");
+
   const reliability = reliabilityFromTrustScore(booking.player.trustScore);
 
   const trustColors: Record<string, string> = {
@@ -165,6 +151,36 @@ function BookingCard({
     restricted: "Restreint",
     blacklisted: "Blacklisté",
   };
+
+  const handleConfirmArrival = () => {
+    startTransition(async () => {
+      const result = await confirmArrivalAction(booking.id);
+      if (result.ok) {
+        setActionState("success");
+        setActionMessage("Arrivée confirmée");
+        router.refresh();
+      } else {
+        setActionState("error");
+        setActionMessage(result.error);
+      }
+    });
+  };
+
+  const handleReportNoShow = () => {
+    startTransition(async () => {
+      const result = await reportNoShowAction(booking.id, booking.player.id);
+      if (result.ok) {
+        setActionState("success");
+        setActionMessage("No-show enregistré - Trust impacté");
+        router.refresh();
+      } else {
+        setActionState("error");
+        setActionMessage(result.error);
+      }
+    });
+  };
+
+  const isActionable = booking.status === "confirmed" || booking.status === "pending";
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
@@ -201,8 +217,10 @@ function BookingCard({
               {booking.amount} DT
             </span>
           )}
-          {booking.status === "confirmed" ? (
+          {booking.status === "completed" ? (
             <CheckCircle2 className="h-5 w-5 text-[var(--success)]" />
+          ) : booking.status === "no_show" ? (
+            <XCircle className="h-5 w-5 text-[var(--danger)]" />
           ) : (
             <Clock className="h-5 w-5 text-[var(--warning)]" />
           )}
@@ -247,23 +265,56 @@ function BookingCard({
             </div>
           )}
 
+          {/* Action Feedback */}
+          {actionState !== "idle" && (
+            <div className={cn(
+              "flex items-center gap-2 p-3 rounded-xl border",
+              actionState === "success" 
+                ? "bg-[var(--success)]/5 border-[var(--success)]/20 text-[var(--success)]"
+                : "bg-[var(--danger)]/5 border-[var(--danger)]/20 text-[var(--danger)]"
+            )}>
+              {actionState === "success" ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              <p className="text-sm font-medium">{actionMessage}</p>
+            </div>
+          )}
+
           {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => onConfirmArrival(booking.id)}
-              className="flex-1 h-11 rounded-xl bg-[var(--success)]/10 text-[var(--success)] font-bold text-sm hover:bg-[var(--success)]/20 transition-colors flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              Confirmer arrivée
-            </button>
-            <button
-              onClick={() => onReportNoShow(booking.id)}
-              className="flex-1 h-11 rounded-xl bg-[var(--danger)]/10 text-[var(--danger)] font-bold text-sm hover:bg-[var(--danger)]/20 transition-colors flex items-center justify-center gap-2"
-            >
-              <XCircle className="h-4 w-4" />
-              No-show
-            </button>
-          </div>
+          {isActionable && actionState === "idle" && (
+            <div className="flex gap-3">
+              <button
+                onClick={handleConfirmArrival}
+                disabled={isPending}
+                className="flex-1 h-11 rounded-xl bg-[var(--success)]/10 text-[var(--success)] font-bold text-sm hover:bg-[var(--success)]/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Confirmer arrivée
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleReportNoShow}
+                disabled={isPending}
+                className="flex-1 h-11 rounded-xl bg-[var(--danger)]/10 text-[var(--danger)] font-bold text-sm hover:bg-[var(--danger)]/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4" />
+                    No-show
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

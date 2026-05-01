@@ -60,14 +60,18 @@ export type TimeSlot = {
   isOpen: boolean;
 };
 
+export type PaymentMethod = "online" | "on_site";
+
 export type Booking = {
   id: UUID;
   clubId: UUID;
   courtId: UUID;
-  createdBy: UUID;
+  playerId: UUID;
   startsAt: string;
   endsAt: string;
-  status: "pending" | "confirmed" | "cancelled";
+  totalPrice: number;
+  paymentMethod: PaymentMethod;
+  status: "pending" | "confirmed" | "cancelled" | "completed" | "no_show";
 };
 
 export type Match = {

@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { TimeSlotGrid } from "@/components/features/bookings/time-slot-grid";
 import { PaymentMethodSelector } from "@/components/features/bookings/payment-method-selector";
 import { BookingConfirmSheet } from "@/components/features/bookings/booking-confirm-sheet";
 import { type TimeSlot } from "@/modules/bookings/availability-service";
+import { createBookingAction } from "@/modules/bookings/actions";
 import { ChevronRight, ShieldAlert } from "lucide-react";
 
 interface TimeContainerProps {
   slots: TimeSlot[];
   date: string;
+  clubId: string;
   clubName: string;
   playerTrustScore?: number;
   playerReliability?: string;
@@ -18,45 +21,77 @@ interface TimeContainerProps {
 export function TimeContainer({ 
   slots, 
   date, 
+  clubId,
   clubName,
   playerTrustScore = 70,
   playerReliability = "healthy",
 }: TimeContainerProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
   const [showConfirmSheet, setShowConfirmSheet] = useState(false);
+  const [bookingState, setBookingState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Get the selected slot's data for price and court
+  const selectedSlotData = slots.find(s => s.time === selectedSlot);
+  const slotPrice = selectedSlotData?.price ?? 40;
+  const courtId = selectedSlotData?.courtId ?? "";
 
   // Determine if player is restricted (must pay online)
   const isRestricted = playerReliability === "restricted" || playerTrustScore < 45;
   const isBlacklisted = playerReliability === "blacklisted" || playerTrustScore < 25;
 
-  // Get slot price (default 40 DT, would come from slot.price in production)
-  const slotPrice = 40;
-
   const handleBookingClick = () => {
-    if (isBlacklisted) {
-      return; // Blocked
-    }
+    if (isBlacklisted) return;
     if (isRestricted && paymentMethod !== "online") {
-      // Force online payment for restricted players
       setPaymentMethod("online");
     }
+    setBookingState("idle");
+    setErrorMessage(null);
     setShowConfirmSheet(true);
   };
 
   const handleConfirmBooking = async () => {
-    // This would call the server action to create the booking
-    console.log("[v0] Booking confirmed:", {
-      slot: selectedSlot,
-      date,
-      paymentMethod,
-      price: slotPrice,
+    if (!selectedSlot || !paymentMethod || !courtId) return;
+
+    setBookingState("loading");
+    setErrorMessage(null);
+
+    // Calculate start and end times
+    const [hours, minutes] = selectedSlot.split(":").map(Number);
+    const startsAt = new Date(date);
+    startsAt.setHours(hours, minutes, 0, 0);
+    const endsAt = new Date(startsAt);
+    endsAt.setMinutes(endsAt.getMinutes() + 90); // 1.5 hour slots
+
+    startTransition(async () => {
+      const result = await createBookingAction({
+        clubId,
+        courtId,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        totalPrice: slotPrice,
+        paymentMethod,
+      });
+
+      if (result.ok) {
+        setBookingState("success");
+        // Reset after showing success
+        setTimeout(() => {
+          setShowConfirmSheet(false);
+          setSelectedSlot(null);
+          setPaymentMethod(null);
+          setBookingState("idle");
+          router.refresh(); // Refresh to update slot availability
+        }, 2000);
+      } else {
+        setBookingState("error");
+        setErrorMessage(result.error);
+      }
     });
-    
-    // For now, show success feedback
-    setShowConfirmSheet(false);
-    setSelectedSlot(null);
-    setPaymentMethod(null);
   };
 
   return (
@@ -105,7 +140,7 @@ export function TimeContainer({
               
               <button
                 onClick={handleBookingClick}
-                disabled={!paymentMethod}
+                disabled={!paymentMethod || isPending}
                 className="flex-1 bg-[var(--gold)] hover:bg-[var(--gold-dark)] disabled:bg-[var(--border)] disabled:text-[var(--foreground-muted)] text-black h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:active:scale-100"
               >
                 Réserver • {slotPrice} DT
@@ -119,13 +154,21 @@ export function TimeContainer({
       {/* Confirmation Sheet */}
       <BookingConfirmSheet
         isOpen={showConfirmSheet}
-        onClose={() => setShowConfirmSheet(false)}
+        onClose={() => {
+          if (bookingState !== "loading") {
+            setShowConfirmSheet(false);
+            setBookingState("idle");
+            setErrorMessage(null);
+          }
+        }}
         onConfirm={handleConfirmBooking}
         clubName={clubName}
         date={date}
         time={selectedSlot ?? ""}
         paymentMethod={paymentMethod}
         price={slotPrice}
+        state={bookingState}
+        errorMessage={errorMessage}
       />
     </div>
   );

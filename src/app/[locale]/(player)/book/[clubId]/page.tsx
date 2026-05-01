@@ -135,6 +135,7 @@ export default async function ClubDetailPage({
           <TimeContainer 
             slots={availability} 
             date={selectedDate}
+            clubId={clubId}
             clubName={club.name}
             playerTrustScore={playerTrustScore}
             playerReliability={playerReliability}

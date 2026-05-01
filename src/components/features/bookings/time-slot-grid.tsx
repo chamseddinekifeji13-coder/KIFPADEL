@@ -9,9 +9,9 @@ interface TimeSlotGridProps {
 
 export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProps) {
   // Group slots by time of day
-  const morning = slots.filter(s => parseInt(s.start.split(":")[0]) < 12);
-  const afternoon = slots.filter(s => parseInt(s.start.split(":")[0]) >= 12 && parseInt(s.start.split(":")[0]) < 18);
-  const evening = slots.filter(s => parseInt(s.start.split(":")[0]) >= 18);
+  const morning = slots.filter(s => parseInt(s.time.split(":")[0]) < 12);
+  const afternoon = slots.filter(s => parseInt(s.time.split(":")[0]) >= 12 && parseInt(s.time.split(":")[0]) < 18);
+  const evening = slots.filter(s => parseInt(s.time.split(":")[0]) >= 18);
 
   const renderGroup = (title: string, groupSlots: TimeSlot[]) => (
     <div className="space-y-3">
@@ -19,19 +19,19 @@ export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProp
       <div className="grid grid-cols-3 gap-2">
         {groupSlots.map((slot) => (
           <button
-            key={slot.start}
+            key={slot.time}
             disabled={!slot.isAvailable}
-            onClick={() => onSelect(slot.start)}
+            onClick={() => onSelect(slot.time)}
             className={cn(
               "py-3 rounded-xl text-sm font-bold border-2 transition-all duration-200",
               slot.isAvailable 
-                ? selectedSlot === slot.start
+                ? selectedSlot === slot.time
                   ? "bg-[var(--gold)]/10 border-[var(--gold)] text-[var(--gold)]"
                   : "bg-[var(--surface)] border-[var(--border)] text-white hover:border-[var(--foreground-muted)]"
                 : "bg-[var(--background)] border-[var(--border)] text-[var(--foreground-muted)] cursor-not-allowed opacity-40"
             )}
           >
-            {slot.start}
+            {slot.time}
           </button>
         ))}
       </div>
