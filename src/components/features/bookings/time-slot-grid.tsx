@@ -15,7 +15,7 @@ export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProp
 
   const renderGroup = (title: string, groupSlots: TimeSlot[]) => (
     <div className="space-y-3">
-      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">{title}</h3>
+      <h3 className="text-xs font-bold text-[var(--foreground-muted)] uppercase tracking-widest">{title}</h3>
       <div className="grid grid-cols-3 gap-2">
         {groupSlots.map((slot) => (
           <button
@@ -23,12 +23,12 @@ export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProp
             disabled={!slot.isAvailable}
             onClick={() => onSelect(slot.start)}
             className={cn(
-              "py-3 rounded-xl text-sm font-bold border transition-all duration-200",
+              "py-3 rounded-xl text-sm font-bold border-2 transition-all duration-200",
               slot.isAvailable 
                 ? selectedSlot === slot.start
-                  ? "bg-sky-600 border-sky-600 text-white shadow-lg shadow-sky-200 scale-[1.02]"
-                  : "bg-white border-slate-200 text-slate-700 hover:border-sky-300 hover:bg-sky-50"
-                : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed opacity-60"
+                  ? "bg-[var(--gold)]/10 border-[var(--gold)] text-[var(--gold)]"
+                  : "bg-[var(--surface)] border-[var(--border)] text-white hover:border-[var(--foreground-muted)]"
+                : "bg-[var(--background)] border-[var(--border)] text-[var(--foreground-muted)] cursor-not-allowed opacity-40"
             )}
           >
             {slot.start}
@@ -39,7 +39,7 @@ export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProp
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {morning.length > 0 && renderGroup("Matin", morning)}
       {afternoon.length > 0 && renderGroup("Après-midi", afternoon)}
       {evening.length > 0 && renderGroup("Soir", evening)}
