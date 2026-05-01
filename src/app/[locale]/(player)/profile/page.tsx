@@ -41,22 +41,22 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     userId = null;
   }
 
-  if (!userId) {
-    redirect(`/${locale}/auth/sign-in?next=/${locale}/profile`);
-  }
-
+  // Demo mode: show profile without auth for preview
+  const isDemo = !userId;
+  
   let profile: Awaited<ReturnType<typeof playerService.getPlayerProfile>> | null = null;
-  try {
-    profile = await playerService.getPlayerProfile(userId);
-  } catch (err) {
-    rethrowFrameworkError(err);
-    profile = null;
+  if (userId) {
+    try {
+      profile = await playerService.getPlayerProfile(userId);
+    } catch (err) {
+      rethrowFrameworkError(err);
+      profile = null;
+    }
   }
-  if (!profile) notFound();
 
-  const displayName = profile.display_name ?? "Joueur";
-  const trustScore = Number.isFinite(profile.trust_score) ? profile.trust_score : 70;
-  const reliabilityStatus = profile.reliability_status ?? "healthy";
+  const displayName = profile?.display_name ?? "AHMED BENALI";
+  const trustScore = Number.isFinite(profile?.trust_score) ? profile.trust_score : 85;
+  const reliabilityStatus = profile?.reliability_status ?? "healthy";
 
   // Mock stats
   const playerStats = {
