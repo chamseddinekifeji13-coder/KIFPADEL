@@ -107,12 +107,10 @@ export function OnboardingWizard({ locale, userId, userEmail, dictionary }: Onbo
     formData.append("phone", phone);
     formData.append("level", level);
     
-    try {
-      await completeOnboardingAction(formData);
-    } catch (err) {
-      console.error("Onboarding failed:", err);
-      setLoading(false);
-    }
+    // We don't catch here because redirect() throws a special error that Next.js needs to catch
+    await completeOnboardingAction(formData);
+    // If it reaches here, something went wrong as it should have redirected
+    setLoading(false);
   };
 
   return (
