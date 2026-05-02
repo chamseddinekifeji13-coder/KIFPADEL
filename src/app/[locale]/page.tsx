@@ -60,13 +60,20 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
     <div className="mx-auto w-full max-w-5xl space-y-10 pb-20">
       {/* Header / Hero */}
       <header className="flex items-center justify-between py-2 sm:py-4">
-        <div className="space-y-1 text-center">
-          <p className="text-sm font-medium text-[var(--foreground-muted)]">
-            {isEn ? "Welcome to" : "Bienvenue sur"}
-          </p>
-          <h1 className="text-4xl font-black tracking-tight text-white uppercase sm:text-5xl">
-            KIF<span className="text-[var(--gold)]">PADEL</span>
-          </h1>
+        <div className="flex items-center gap-3">
+          <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-[var(--surface)] border border-[var(--gold)]/20 shadow-lg shadow-[var(--gold)]/5">
+            <img 
+              src="/logo.png" 
+              alt="Kifpadel Logo" 
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-bold text-[var(--gold)] uppercase tracking-widest">Tunisia</p>
+            <h1 className="text-xl font-black tracking-tighter text-white uppercase leading-none">
+              KIF<span className="text-[var(--gold)]">PADEL</span>
+            </h1>
+          </div>
         </div>
         {user ? (
           <Link href={`/${locale}/profile`} aria-label="Mon profil">
@@ -96,110 +103,89 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           </div>
           
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight text-balance">
+            <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
               {isEn
-                ? "Enjoy your match, find your partners."
-                : "Kiffe ta partie, trouve tes partenaires."}
+                ? "The ultimate Padel experience"
+                : "L'expérience Padel ultime"}
             </h2>
-            <p className="max-w-xl text-sm leading-relaxed text-[var(--foreground-muted)]">
+            <p className="text-sm text-[var(--foreground-muted)] text-balance sm:text-base">
               {isEn
-                ? "The #1 platform in Tunisia to book courts, join matches and grow your padel community."
-                : "La plateforme n°1 en Tunisie pour réserver, rejoindre des matchs et faire grandir votre communauté padel."}
+                ? "Join the largest community of padel players in Tunisia. Book courts in seconds and find the perfect match."
+                : "Rejoignez la plus grande communauté de joueurs de padel en Tunisie. Réservez vos terrains en quelques secondes."}
             </p>
           </div>
 
-          <Link 
-            href={`/${locale}/play-now`}
-            className="group inline-flex h-12 items-center gap-2 rounded-xl bg-[var(--gold)] px-6 font-bold text-black transition-all hover:bg-[var(--gold-dark)] active:scale-95"
-          >
-            {isEn ? "Start playing" : "Commencer à jouer"}
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
+          {!user && (
+            <Link
+              href={`/${locale}/auth/sign-up`}
+              className="group relative flex h-14 items-center justify-center gap-2 rounded-2xl bg-[var(--gold)] px-8 text-sm font-bold text-black transition-all hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+            >
+              {isEn ? "Start Playing" : "Commencer à jouer"}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          )}
         </div>
       </section>
 
-      {/* Player / Club Spaces */}
-      <section className="grid gap-4 lg:grid-cols-2 lg:gap-6">
-        <article className="space-y-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl shadow-black/10 sm:p-6">
-          <div className="space-y-1 text-center sm:text-left">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
-              {isEn ? "Player Space" : "Espace Joueur"}
-            </p>
-            <h3 className="text-xl font-bold text-white">
-              {isEn ? "Find games and book fast" : "Trouve tes parties et réserve vite"}
-            </h3>
-          </div>
-          <div className="space-y-3">
-            <IntentCard
-              href={`/${locale}/dashboard`}
-              title={isEn ? "Player Dashboard" : "Dashboard Joueur"}
-              description={isEn ? "My matches, stats and level" : "Mes matchs, stats et niveau"}
-              icon={User}
-              variant="secondary"
-            />
-            <IntentCard
-              href={`/${locale}/play-now`}
-              title={dictionary.common.playNow}
-              description={dictionary.common.playNowDescription}
-              icon={Trophy}
-              variant="secondary"
-            />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <IntentCard
-                href={`/${locale}/find-players`}
-                title={isEn ? "Partners" : "Partenaires"}
-                description={isEn ? "Find players nearby" : "Trouve des joueurs"}
-                icon={Search}
-              />
-              <IntentCard
-                href={`/${locale}/book`}
-                title={isEn ? "Book" : "Réserver"}
-                description={isEn ? "Pick your club" : "Choisis ton club"}
-                icon={Calendar}
-              />
-            </div>
-          </div>
-        </article>
+      {/* Intent Grid */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <IntentCard
+          href={`/${locale}/book`}
+          title={dictionary.home.book_court}
+          description={dictionary.home.book_court_desc}
+          icon={Calendar}
+          variant="primary"
+        />
+        <IntentCard
+          href={`/${locale}/matches`}
+          title={dictionary.home.find_match}
+          description={dictionary.home.find_match_desc}
+          icon={Trophy}
+          variant="secondary"
+        />
+      </div>
 
-        <article className="space-y-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl shadow-black/10 sm:p-6">
-          <div className="space-y-1 text-center sm:text-left">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
-              {isEn ? "Club Space" : "Espace Club"}
-            </p>
-            <h3 className="text-xl font-bold text-white">
-              {isEn ? "Manage operations with clarity" : "Pilote ton activité club avec clarté"}
-            </h3>
+      {/* Secondary Actions */}
+      <div className="grid grid-cols-2 gap-4">
+        <Link
+          href={`/${locale}/clubs`}
+          className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:bg-[var(--surface-hover)]"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-[var(--gold)]">
+            <Building2 className="h-6 w-6" />
           </div>
-          <div className="space-y-3">
-            <IntentCard
-              href={`/${locale}/club/dashboard`}
-              title={isEn ? "Club Dashboard" : "Dashboard Club"}
-              description={
-                isEn
-                  ? "Bookings, incidents, payments and operations."
-                  : "Réservations, incidents, paiements et pilotage."
-              }
-              icon={Building2}
-              variant="secondary"
-            />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Link
-                href={`/${locale}/clubs/new`}
-                className="rounded-xl border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-4 py-3 text-sm font-semibold text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/20 text-center"
-              >
-                {isEn ? "Create a club" : "Créer un club"}
-              </Link>
-              <Link
-                href={`/${locale}/club/courts`}
-                className="rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:border-[var(--gold)]/30 text-center"
-              >
-                {isEn ? "Manage courts" : "Gérer les terrains"}
-              </Link>
-            </div>
+          <span className="text-sm font-bold text-white">
+            {isEn ? "Browse Clubs" : "Explorer les clubs"}
+          </span>
+        </Link>
+        <Link
+          href={`/${locale}/search`}
+          className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:bg-[var(--surface-hover)]"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-[var(--gold)]">
+            <Search className="h-6 w-6" />
           </div>
-        </article>
-      </section>
+          <span className="text-sm font-bold text-white">
+            {isEn ? "Find Players" : "Trouver des joueurs"}
+          </span>
+        </Link>
+      </div>
 
+      {/* Trust Indicator */}
+      <div className="flex flex-col items-center justify-center space-y-4 pt-10 text-center">
+        <div className="flex -space-x-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-8 w-8 rounded-full border-2 border-[var(--background)] bg-[var(--surface)] overflow-hidden">
+              <img src={`https://i.pravatar.cc/100?u=padel${i}`} alt="" className="h-full w-full object-cover opacity-80" />
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-[var(--foreground-muted)]">
+          {isEn 
+            ? "Trusted by 10,000+ players in Tunisia" 
+            : "Déjà 10,000+ joueurs nous font confiance"}
+        </p>
+      </div>
     </div>
   );
 }
