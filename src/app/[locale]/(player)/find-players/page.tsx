@@ -39,26 +39,11 @@ export default async function FindPlayersPage({
 }: FindPlayersPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-<<<<<<< HEAD
-  
-  const sp = await searchParams;
-  const q = typeof sp.q === 'string' ? sp.q : undefined;
-  
-  const dictionary = await getDictionary(locale as Locale);
 
-  // Fetch real data from Supabase with heavy protection
-  let players: Player[] = [];
-  try {
-    const data = await playerService.getPlayers(q);
-    if (Array.isArray(data)) {
-      players = data.filter(p => p && typeof p === 'object' && p.user_id);
-    }
-  } catch (err) {
-    console.error("Failed to fetch players in FindPlayersPage:", err);
-=======
-  const { q } = await searchParams;
-  const fallback =
-    locale === "en"
+  const sp = await searchParams;
+  const q = typeof sp.q === "string" ? sp.q : undefined;
+
+  const fallback = locale === "en"
       ? {
           title: "I am looking for players",
           subtitle: "Find matching partners and opponents near you.",
@@ -70,34 +55,33 @@ export default async function FindPlayersPage({
 
   let title = fallback.title;
   let subtitle = fallback.subtitle;
+  let dictionary: any = {};
 
   try {
-    const dictionary = await getDictionary(locale as Locale);
-    title = dictionary.player.findPlayersTitle ?? fallback.title;
-    subtitle = dictionary.player.findPlayersSubtitle ?? fallback.subtitle;
+    dictionary = await getDictionary(locale as Locale);
+    title = dictionary.player?.findPlayersTitle ?? fallback.title;
+    subtitle = dictionary.player?.findPlayersSubtitle ?? fallback.subtitle;
   } catch {
-    // Keep local fallback to avoid breaking this critical MVP intent.
+    // Keep local fallback
   }
 
-  // Keep page resilient even if backend query temporarily fails.
-  let players: Awaited<ReturnType<typeof playerService.getPlayers>> = [];
+  // Fetch real data from Supabase with heavy protection
+  let players: Player[] = [];
   try {
-    players = await playerService.getPlayers(q);
+    const data = await playerService.getPlayers(q);
+    if (Array.isArray(data)) {
+      players = data.filter((p) => p && typeof p === "object" && p.user_id);
+    }
   } catch (err) {
     rethrowFrameworkError(err);
-    players = [];
->>>>>>> b2609a9c71c35b9c11096306995ce2453a1b02ac
+    console.error("Failed to fetch players in FindPlayersPage:", err);
   }
 
   return (
     <div className="flex-1 p-4 space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-<<<<<<< HEAD
-          {dictionary.player?.findPlayersTitle || "Trouver des joueurs"}
-=======
           {title}
->>>>>>> b2609a9c71c35b9c11096306995ce2453a1b02ac
         </h1>
         <p className="text-sm text-slate-500">{subtitle}</p>
       </header>
@@ -149,7 +133,7 @@ export default async function FindPlayersPage({
                 <div key={player.user_id} className="min-w-[140px] flex flex-col items-center gap-3 p-5 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
                   <Avatar src={player.avatar_url} alt={player.display_name || "Joueur"} size="lg" className="ring-4 ring-sky-50" />
                   <div className="text-center space-y-1">
-                    <p className="text-xs font-bold text-slate-900 truncate w-24">{(player.display_name || "Joueur").split(' ')[0]}</p>
+                    <p className="text-xs font-bold text-slate-900 truncate w-24">{(player.display_name || "Joueur").split(" ")[0]}</p>
                     <Badge variant={(player.league || "Bronze").toLowerCase() as BadgeProps["variant"]} className="text-[8px] px-2">{player.league || "Bronze"}</Badge>
                   </div>
                 </div>
@@ -157,7 +141,6 @@ export default async function FindPlayersPage({
            </div>
         </section>
       )}
-
 
       {players.length === 0 ? (
         <div className="py-12 text-center text-slate-500 italic">

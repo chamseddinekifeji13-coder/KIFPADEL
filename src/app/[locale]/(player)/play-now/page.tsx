@@ -35,16 +35,7 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-<<<<<<< HEAD
-  // Fetch real data from Supabase
-  let matches: MatchWithDetails[] = [];
-  try {
-    matches = await matchService.getOpenMatches();
-  } catch (err) {
-    console.error("Failed to fetch matches:", err);
-=======
-  const fallbackTitle =
-    locale === "en" ? "Play now" : "Jouer maintenant";
+  const fallbackTitle = locale === "en" ? "Play now" : "Jouer maintenant";
 
   let pageTitle = fallbackTitle;
   try {
@@ -54,13 +45,12 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
     // keep fallback
   }
 
-  let matches: Awaited<ReturnType<typeof matchService.getOpenMatches>> = [];
+  let matches: MatchWithDetails[] = [];
   try {
     matches = await matchService.getOpenMatches();
   } catch (err) {
     rethrowFrameworkError(err);
-    matches = [];
->>>>>>> b2609a9c71c35b9c11096306995ce2453a1b02ac
+    console.error("Failed to fetch matches:", err);
   }
 
   return (
@@ -86,7 +76,6 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
         >
           <Filter className="h-4 w-4" />
         </button>
-
       </div>
 
       {matches.length === 0 ? (
@@ -100,7 +89,6 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
             </button>
           </Link>
         </div>
-
       ) : (
         <div className="grid gap-4">
           {matches.map((match) => (
