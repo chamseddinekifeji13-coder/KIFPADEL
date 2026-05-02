@@ -60,11 +60,11 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
     <div className="mx-auto w-full max-w-5xl space-y-10 pb-20">
       {/* Header / Hero */}
       <header className="flex items-center justify-between py-2 sm:py-4">
-        <div className="space-y-1 text-center sm:text-left">
+        <div className="space-y-1 text-center">
           <p className="text-sm font-medium text-[var(--foreground-muted)]">
             {isEn ? "Welcome to" : "Bienvenue sur"}
           </p>
-          <h1 className="text-3xl font-black tracking-tighter text-white uppercase">
+          <h1 className="text-4xl font-black tracking-tight text-white uppercase sm:text-5xl">
             KIF<span className="text-[var(--gold)]">PADEL</span>
           </h1>
         </div>
@@ -200,26 +200,6 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
         </article>
       </section>
 
-      {/* Quick shortcuts */}
-      <div className="grid gap-4">
-        <h3 className="px-1 text-center text-xs font-bold uppercase tracking-widest text-[var(--foreground-muted)] sm:text-left">
-          {isEn ? "Quick access" : "Accès rapide"}
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <IntentCard
-            href={`/${locale}/find-players`}
-            title={isEn ? "Partners" : "Partenaires"}
-            description={isEn ? "Find players" : "Trouve des joueurs"}
-            icon={Search}
-          />
-          <IntentCard
-            href={`/${locale}/book`}
-            title={isEn ? "Book" : "Réserver"}
-            description={isEn ? "Choose your club" : "Choisis ton club"}
-            icon={Calendar}
-          />
-        </div>
-      </div>
     </div>
   );
 }

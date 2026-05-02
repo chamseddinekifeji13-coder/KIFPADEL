@@ -42,23 +42,42 @@ export async function completeOnboardingAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-in`);
   }
 
-  // Upsert profile (create or update)
-  const { error } = await supabase
-    .from("profiles")
-    .upsert({
-      id: user.id,
-      display_name: displayName,
-      city: city,
-      phone: phone,
-      league: league,
-      trust_score: trustScore,
-      verification_level: phone ? 2 : 1,
-    }, { onConflict: "id" });
+  const profilePayload = {
+    display_name: displayName,
+    city,
+    phone,
+    league,
+    trust_score: trustScore,
+    verification_level: phone ? 2 : 1,
+  };
 
-  if (error) {
-    console.error("Onboarding error:", error);
-    const encodedError = encodeURIComponent(error.message);
+  // Avoid upsert here: some environments can keep stale schema cache for conflict keys.
+  const { data: updatedRows, error: updateError } = await supabase
+    .from("profiles")
+    .update(profilePayload)
+    .eq("id", user.id)
+    .select("id");
+
+  if (updateError) {
+    console.error("Onboarding update error:", updateError);
+    const encodedError = encodeURIComponent(updateError.message);
     redirect(`/${locale}/onboarding?error=${encodedError}`);
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    const { error: insertError } = await supabase
+      .from("profiles")
+      .insert({
+        id: user.id,
+        email: user.email,
+        ...profilePayload,
+      });
+
+    if (insertError) {
+      console.error("Onboarding insert error:", insertError);
+      const encodedError = encodeURIComponent(insertError.message);
+      redirect(`/${locale}/onboarding?error=${encodedError}`);
+    }
   }
 
   redirect(`/${locale}/dashboard`);
