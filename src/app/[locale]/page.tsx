@@ -131,15 +131,15 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <IntentCard
           href={`/${locale}/book`}
-          title={dictionary.home.book_court}
-          description={dictionary.home.book_court_desc}
+          title={dictionary.common.bookCourt}
+          description={dictionary.common.bookCourtDescription}
           icon={Calendar}
           variant="primary"
         />
         <IntentCard
           href={`/${locale}/matches`}
-          title={dictionary.home.find_match}
-          description={dictionary.home.find_match_desc}
+          title={dictionary.common.playNow}
+          description={dictionary.common.playNowDescription}
           icon={Trophy}
           variant="secondary"
         />
