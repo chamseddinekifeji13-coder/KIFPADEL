@@ -11,6 +11,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type AdminPlayersPageProps = {
   params: Promise<{ locale: string }>;
@@ -112,8 +113,14 @@ export default async function AdminPlayersPage({ params }: AdminPlayersPageProps
                     <div className="flex items-center gap-2">
                       <div className="w-12 h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full rounded-full w-[var(--progress)] ${player.trustScore > 70 ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                          style={{ "--progress": `${player.trustScore}%` } as React.CSSProperties}
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            player.trustScore > 70 ? 'bg-emerald-500' : 'bg-amber-500',
+                            player.trustScore > 90 ? 'w-full' : 
+                            player.trustScore > 75 ? 'w-[75%]' : 
+                            player.trustScore > 50 ? 'w-[50%]' : 
+                            player.trustScore > 25 ? 'w-[25%]' : 'w-[10%]'
+                          )}
                         />
                       </div>
                       <span className="text-xs font-bold text-slate-700">{player.trustScore}</span>

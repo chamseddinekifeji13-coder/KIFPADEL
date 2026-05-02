@@ -59,10 +59,9 @@ export function MainNav({ locale, labels }: MainNavProps) {
                 className={cn("h-5 w-5 transition-all", active ? "fill-[var(--gold)]/20" : "")}
               />
               <span
-                aria-hidden={!active ? "true" : "false"}
                 className={cn(
                   "text-[9px] font-bold uppercase tracking-tighter transition-all",
-                  active ? "opacity-100" : "opacity-0 h-0",
+                  active ? "opacity-100 block" : "hidden",
                 )}
               >
                 {item.label}
