@@ -130,8 +130,13 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
         </div>
         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden mb-8">
           <div 
-            className="h-full bg-gradient-to-r from-[var(--gold-dark)] to-[var(--gold)] transition-all duration-500 ease-out" 
-            style={{ width: `${progress}%` }}
+            className={cn(
+              "h-full bg-gradient-to-r from-[var(--gold-dark)] to-[var(--gold)] transition-all duration-500 ease-out",
+              progress === 25 ? "w-1/4" :
+              progress === 50 ? "w-1/2" :
+              progress === 75 ? "w-3/4" :
+              progress === 100 ? "w-full" : "w-0"
+            )}
           />
         </div>
       </div>
