@@ -131,6 +131,13 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           </div>
           <div className="space-y-3">
             <IntentCard
+              href={`/${locale}/dashboard`}
+              title={isEn ? "Player Dashboard" : "Dashboard Joueur"}
+              description={isEn ? "My matches, stats and level" : "Mes matchs, stats et niveau"}
+              icon={User}
+              variant="secondary"
+            />
+            <IntentCard
               href={`/${locale}/play-now`}
               title={dictionary.common.playNow}
               description={dictionary.common.playNowDescription}

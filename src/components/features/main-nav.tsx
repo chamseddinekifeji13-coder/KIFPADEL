@@ -30,7 +30,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
     { href: `/${locale}/play-now`, label: labels.play, icon: Trophy },
     { href: `/${locale}/find-players`, label: labels.find, icon: Search },
     { href: `/${locale}/book`, label: labels.book, icon: Calendar },
-    { href: `/${locale}/profile`, label: labels.dashboard, icon: User },
+    { href: `/${locale}/dashboard`, label: labels.dashboard, icon: User },
   ];
 
   return (
