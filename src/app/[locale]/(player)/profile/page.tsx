@@ -40,9 +40,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   }
 
   if (!profile) {
-    // If no profile found in DB, we could redirect to onboarding
-    // For now, show notFound to avoid crash
-    notFound();
+    redirect(`/${locale}/onboarding`);
   }
 
   return (
