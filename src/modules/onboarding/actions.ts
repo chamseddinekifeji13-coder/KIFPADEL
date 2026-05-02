@@ -54,7 +54,6 @@ export async function completeOnboardingAction(formData: FormData) {
       league: league,
       trust_score: trustScore,
       verification_level: phone ? 2 : 1,
-      updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
 
   if (error) {
