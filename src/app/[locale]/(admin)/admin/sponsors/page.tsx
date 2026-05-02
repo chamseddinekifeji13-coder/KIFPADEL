@@ -41,10 +41,16 @@ function SponsorCard({ name, status, logo }: { name: string, status: string, log
           <span className="text-[10px] font-bold uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{status}</span>
         </div>
         <div className="flex gap-2">
-          <button className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200">
+          <button 
+            aria-label="Modifier le sponsor"
+            className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200"
+          >
             <Edit2 className="h-3.5 w-3.5" />
           </button>
-          <button className="h-8 w-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 hover:bg-rose-100">
+          <button 
+            aria-label="Supprimer le sponsor"
+            className="h-8 w-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 hover:bg-rose-100"
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>

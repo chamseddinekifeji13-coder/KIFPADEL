@@ -115,8 +115,8 @@ export default async function AdminPlayersPage({ params }: AdminPlayersPageProps
                     <div className="flex items-center gap-2">
                       <div className="w-12 h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full rounded-full ${player.trustScore > 70 ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                          style={{ width: `${player.trustScore}%` }}
+                          className={`h-full rounded-full w-[var(--progress)] ${player.trustScore > 70 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                          style={{ "--progress": `${player.trustScore}%` } as React.CSSProperties}
                         />
                       </div>
                       <span className="text-xs font-bold text-slate-700">{player.trustScore}</span>

@@ -134,7 +134,10 @@ export default async function AdminClubsPage({ params }: AdminClubsPageProps) {
                   <p className="text-xs font-bold text-slate-400 uppercase">Terrains</p>
                   <p className="font-black text-slate-900">{club.courts}</p>
                 </div>
-                <button className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all">
+                <button 
+                  aria-label="Voir les détails du club"
+                  className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
+                >
                   <ArrowUpRight className="h-4 w-4" />
                 </button>
               </div>
