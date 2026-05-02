@@ -19,9 +19,6 @@ import type { Dictionary } from "@/i18n/get-dictionary";
 
 type OnboardingWizardProps = {
   locale: string;
-  userId: string;
-  userEmail: string;
-  dictionary: Dictionary;
 };
 
 type Step = "profile" | "phone" | "level" | "trust";
