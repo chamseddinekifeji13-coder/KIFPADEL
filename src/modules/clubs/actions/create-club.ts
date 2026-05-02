@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
 export async function createClubAction(formData: FormData) {
@@ -14,6 +15,7 @@ export async function createClubAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerActionClient();
+  const adminClient = createSupabaseAdminClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -22,7 +24,8 @@ export async function createClubAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-in?error=auth_required&next=/${locale}/clubs/new`);
   }
 
-  const { data: createdClub, error: clubError } = await supabase
+  // Create club with service role to bypass restrictive RLS defaults.
+  const { data: createdClub, error: clubError } = await adminClient
     .from("clubs")
     .insert({
       name,
@@ -33,12 +36,13 @@ export async function createClubAction(formData: FormData) {
     .single();
 
   if (clubError || !createdClub) {
+    console.error("[createClubAction] club creation failed", clubError);
     redirect(`/${locale}/clubs/new?error=create_failed`);
   }
 
   const clubId = createdClub.id as string;
 
-  const { error: membershipError } = await supabase.from("club_memberships").upsert(
+  const { error: membershipError } = await adminClient.from("club_memberships").upsert(
     {
       club_id: clubId,
       player_id: user.id,
@@ -52,15 +56,25 @@ export async function createClubAction(formData: FormData) {
 
   if (membershipError) {
     // Best-effort cleanup to avoid orphan club if membership fails.
-    await supabase.from("clubs").delete().eq("id", clubId);
+    console.error("[createClubAction] membership creation failed", membershipError);
+    await adminClient.from("clubs").delete().eq("id", clubId);
     redirect(`/${locale}/clubs/new?error=membership_failed`);
   }
 
-  await supabase
+  // Best effort profile update; support both schema variants.
+  const updateById = await adminClient
     .from("profiles")
     .update({ main_club_id: clubId })
     .eq("id", user.id)
     .is("main_club_id", null);
+
+  if (updateById.error) {
+    await adminClient
+      .from("profiles")
+      .update({ main_club_id: clubId })
+      .eq("user_id", user.id)
+      .is("main_club_id", null);
+  }
 
   redirect(`/${locale}/club/dashboard?created=1`);
 }
