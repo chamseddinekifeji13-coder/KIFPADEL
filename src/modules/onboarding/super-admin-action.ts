@@ -86,10 +86,7 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
       .maybeSingle();
     roleUpdated = !setRoleByUserId.error && Boolean(setRoleByUserId.data);
   }
-
-  if (!roleUpdated) {
-    redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
-  }
+  // Do not hard-fail here: some environments may not expose global_role yet.
 
   const adminClient = createSupabaseAdminClient();
 
@@ -111,6 +108,10 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
   }
 
   if (!clubId) {
+    // If we could set global role, we can still continue to admin.
+    if (roleUpdated) {
+      redirect(`/${locale}/admin?onboarded=1`);
+    }
     redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
   }
 
