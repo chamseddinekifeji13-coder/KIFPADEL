@@ -42,23 +42,38 @@ export async function createClubAction(formData: FormData) {
 
   const clubId = createdClub.id as string;
 
-  const { error: membershipError } = await adminClient.from("club_memberships").upsert(
-    {
-      club_id: clubId,
-      player_id: user.id,
-      role: "club_manager",
-      is_primary: true,
-    },
-    {
-      onConflict: "club_id,player_id",
-    },
-  );
+  // Avoid upsert conflict metadata dependency; insert first, then fallback update.
+  const { error: membershipInsertError } = await adminClient.from("club_memberships").insert({
+    club_id: clubId,
+    player_id: user.id,
+    role: "club_manager",
+    is_primary: true,
+  });
 
-  if (membershipError) {
-    // Best-effort cleanup to avoid orphan club if membership fails.
-    console.error("[createClubAction] membership creation failed", membershipError);
-    await adminClient.from("clubs").delete().eq("id", clubId);
-    redirect(`/${locale}/clubs/new?error=membership_failed`);
+  if (membershipInsertError) {
+    const { data: existingMembership, error: membershipReadError } = await adminClient
+      .from("club_memberships")
+      .select("id")
+      .eq("club_id", clubId)
+      .eq("player_id", user.id)
+      .maybeSingle();
+
+    if (membershipReadError || !existingMembership?.id) {
+      console.error("[createClubAction] membership creation failed", membershipInsertError);
+      await adminClient.from("clubs").delete().eq("id", clubId);
+      redirect(`/${locale}/clubs/new?error=membership_failed`);
+    }
+
+    const { error: membershipUpdateError } = await adminClient
+      .from("club_memberships")
+      .update({ role: "club_manager", is_primary: true })
+      .eq("id", existingMembership.id);
+
+    if (membershipUpdateError) {
+      console.error("[createClubAction] membership update failed", membershipUpdateError);
+      await adminClient.from("clubs").delete().eq("id", clubId);
+      redirect(`/${locale}/clubs/new?error=membership_failed`);
+    }
   }
 
   // Best effort profile update; support both schema variants.
