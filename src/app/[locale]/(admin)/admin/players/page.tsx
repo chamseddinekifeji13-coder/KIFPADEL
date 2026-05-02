@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
-import { isLocale, type Locale } from "@/i18n/config";
+import { isLocale } from "@/i18n/config";
 import { notFound } from "next/navigation";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Card } from "@/components/ui/card";
 import { 
-  Users, 
   Search, 
   Filter, 
-  MoreVertical, 
-  Shield, 
   UserMinus, 
   Mail,
   ExternalLink

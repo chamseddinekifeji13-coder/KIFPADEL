@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { 
   Building2, 
   Search, 
-  Filter, 
   CheckCircle2, 
   Clock, 
   MapPin,

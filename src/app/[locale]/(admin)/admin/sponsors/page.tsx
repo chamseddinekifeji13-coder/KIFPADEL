@@ -1,7 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Award, Plus, Trash2, Edit2 } from "lucide-react";
-import Image from "next/image";
 
 export default function AdminSponsorsPage() {
   return (
@@ -18,15 +17,15 @@ export default function AdminSponsorsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <SponsorCard name="Ooredoo" status="Actif" logo="/sponsors/ooredoo.png" />
-        <SponsorCard name="Biars" status="Actif" logo="/sponsors/biars.png" />
-        <SponsorCard name="Sabrine" status="Actif" logo="/sponsors/sabrine.png" />
+        <SponsorCard name="Ooredoo" status="Actif" />
+        <SponsorCard name="Biars" status="Actif" />
+        <SponsorCard name="Sabrine" status="Actif" />
       </div>
     </div>
   );
 }
 
-function SponsorCard({ name, status, logo }: { name: string, status: string, logo: string }) {
+function SponsorCard({ name, status }: { name: string, status: string }) {
   return (
     <Card className="overflow-hidden">
       <div className="aspect-video bg-slate-100 flex items-center justify-center p-8">
