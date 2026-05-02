@@ -13,7 +13,7 @@ import { signInAction } from "@/modules/auth/actions/sign-in";
 
 type SignInPageProps = Readonly<{
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ error?: string; status?: string }>;
+  searchParams: Promise<{ error?: string; status?: string; next?: string }>;
 }>;
 
 export async function generateMetadata({ params }: SignInPageProps): Promise<Metadata> {
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: SignInPageProps): Promise<Met
 
 export default async function SignInPage({ params, searchParams }: SignInPageProps) {
   const { locale } = await params;
-  const { error, status } = await searchParams;
+  const { error, status, next } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
 
@@ -69,6 +69,7 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
       <Card>
         <form action={signInAction} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />
+          <input type="hidden" name="next" value={next ?? `/${locale}/profile`} />
           <div className="space-y-1">
             <label htmlFor="email" className="text-xs font-medium text-slate-700">
               {dictionary.auth.emailLabel}
