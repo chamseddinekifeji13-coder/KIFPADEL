@@ -7,7 +7,17 @@ export async function completeOnboardingAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const displayName = String(formData.get("displayName") ?? "").trim();
   const city = String(formData.get("city") ?? "Tunis").trim();
-  const level = String(formData.get("level") ?? "Bronze");
+  const phone = String(formData.get("phone") ?? "").trim();
+  const rawLevel = String(formData.get("level") ?? "beginner");
+
+  // Map UI level IDs to database league names
+  const levelMap: Record<string, string> = {
+    beginner: "Bronze",
+    intermediate: "Silver",
+    advanced: "Gold",
+    expert: "Platinum",
+  };
+  const league = levelMap[rawLevel] || "Bronze";
 
   if (!displayName) {
     redirect(`/${locale}/onboarding?error=missing_name`);
@@ -26,8 +36,9 @@ export async function completeOnboardingAction(formData: FormData) {
     .update({
       display_name: displayName,
       city: city,
-      league: level,
-      verification_level: 1, // Basic verification after onboarding
+      phone: phone,
+      league: league,
+      verification_level: phone ? 2 : 1, // Higher verification level if phone provided
     })
     .eq("user_id", user.id);
 

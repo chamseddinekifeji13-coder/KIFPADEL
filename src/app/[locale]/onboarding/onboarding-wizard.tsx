@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { completeOnboardingAction } from "@/modules/onboarding/actions";
 import type { Dictionary } from "@/i18n/get-dictionary";
 
 type OnboardingWizardProps = {
@@ -98,9 +99,20 @@ export function OnboardingWizard({ locale, userId, userEmail, dictionary }: Onbo
 
   const handleComplete = async () => {
     setLoading(true);
-    // TODO: Call API to save profile
-    await new Promise((r) => setTimeout(r, 1500));
-    router.push(`/${locale}/profile`);
+    
+    const formData = new FormData();
+    formData.append("locale", locale);
+    formData.append("displayName", displayName);
+    formData.append("city", city);
+    formData.append("phone", phone);
+    formData.append("level", level);
+    
+    try {
+      await completeOnboardingAction(formData);
+    } catch (err) {
+      console.error("Onboarding failed:", err);
+      setLoading(false);
+    }
   };
 
   return (
