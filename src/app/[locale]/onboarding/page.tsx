@@ -34,12 +34,7 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
           </p>
         </div>
 
-        <OnboardingWizard 
-          locale={locale} 
-          userId={user.id}
-          userEmail={user.email ?? ""}
-          dictionary={dictionary}
-        />
+        <OnboardingWizard locale={locale} />
       </div>
     </div>
   );

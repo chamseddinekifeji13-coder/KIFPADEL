@@ -37,8 +37,7 @@ const CITIES = [
   "Tunis", "La Marsa", "Carthage", "Sidi Bou Said", "Sousse", "Sfax", "Hammamet", "Nabeul"
 ];
 
-export function OnboardingWizard({ locale, userId, userEmail, dictionary }: OnboardingWizardProps) {
-  const router = useRouter();
+export function OnboardingWizard({ locale }: OnboardingWizardProps) {
   const [step, setStep] = useState<Step>("profile");
   const [loading, setLoading] = useState(false);
   
@@ -123,8 +122,13 @@ export function OnboardingWizard({ locale, userId, userEmail, dictionary }: Onbo
         </div>
         <div className="h-1 bg-[var(--border)] rounded-full overflow-hidden">
           <div 
-            className="h-full bg-[var(--gold)] transition-all duration-500"
-            style={{ width: `${progress}%` }}
+            className={cn(
+              "h-full bg-[var(--gold)] transition-all duration-500",
+              progress === 25 ? "w-[25%]" :
+              progress === 50 ? "w-[50%]" :
+              progress === 75 ? "w-[75%]" :
+              progress === 100 ? "w-full" : "w-0"
+            )}
           />
         </div>
       </div>
