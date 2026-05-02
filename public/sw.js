@@ -1,4 +1,4 @@
-const CACHE_NAME = "kifpadel-static-v3";
+const CACHE_NAME = "kifpadel-static-v4";
 const APP_SHELL = ["/manifest.webmanifest", "/icons/icon.svg"];
 const STATIC_ASSET_EXTENSIONS = /\.(?:js|css|png|jpg|jpeg|gif|svg|webp|ico|woff2?)$/i;
 
@@ -39,7 +39,9 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (requestUrl.pathname.startsWith("/_next") || requestUrl.searchParams.has("_rsc")) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request) || Response.error()),
+    );
     return;
   }
 
@@ -55,7 +57,9 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (!isStaticAsset) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request) || Response.error()),
+    );
     return;
   }
 
@@ -65,13 +69,15 @@ self.addEventListener("fetch", (event) => {
         return cachedResponse;
       }
 
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse.status === 200) {
-          const copy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        }
-        return networkResponse;
-      });
+      return fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => Response.error());
     }),
   );
 });
