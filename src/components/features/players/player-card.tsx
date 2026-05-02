@@ -8,7 +8,7 @@ interface PlayerCardProps {
     user_id: string;
     display_name: string;
     avatar_url: string | null;
-    league: "Bronze" | "Silver" | "Gold";
+    league: "Bronze" | "Silver" | "Gold" | "Platinum";
     trust_rating: number;
     reliability: string;
   };
