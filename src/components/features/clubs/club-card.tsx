@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Star, Laptop } from "lucide-react";
 
-interface ClubCardProps {
+export interface ClubCardProps {
   club: {
     id: string;
     name: string;
@@ -12,6 +12,8 @@ interface ClubCardProps {
     type?: string;
     logo_url?: string | null;
   };
+  distanceKm?: number | null;
+  directionsHref?: string;
   locale?: string;
 }
 
