@@ -57,9 +57,9 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   const isEn = locale === "en";
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 pb-20">
+    <div className="mx-auto w-full max-w-5xl space-y-10 pb-20">
       {/* Header / Hero */}
-      <header className="flex items-center justify-between py-4">
+      <header className="flex items-center justify-between py-2 sm:py-4">
         <div className="space-y-1 text-center sm:text-left">
           <p className="text-sm font-medium text-[var(--foreground-muted)]">
             {isEn ? "Welcome to" : "Bienvenue sur"}
@@ -84,7 +84,7 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       </header>
 
       {/* Main Section - Premium Dark */}
-      <section className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-white sm:p-8">
+      <section className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 text-white shadow-2xl shadow-black/20 sm:p-8">
         {/* Gold accent */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-50" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--gold)] rounded-full blur-[100px] opacity-10 -mr-20 -mt-20" />
@@ -120,7 +120,7 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
 
       {/* Player / Club Spaces */}
       <section className="grid gap-4 lg:grid-cols-2 lg:gap-6">
-        <article className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+        <article className="space-y-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl shadow-black/10 sm:p-6">
           <div className="space-y-1 text-center sm:text-left">
             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
               {isEn ? "Player Space" : "Espace Joueur"}
@@ -154,7 +154,7 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           </div>
         </article>
 
-        <article className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+        <article className="space-y-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl shadow-black/10 sm:p-6">
           <div className="space-y-1 text-center sm:text-left">
             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
               {isEn ? "Club Space" : "Espace Club"}
@@ -198,7 +198,7 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
         <h3 className="px-1 text-center text-xs font-bold uppercase tracking-widest text-[var(--foreground-muted)] sm:text-left">
           {isEn ? "Quick access" : "Accès rapide"}
         </h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <IntentCard
             href={`/${locale}/find-players`}
             title={isEn ? "Partners" : "Partenaires"}

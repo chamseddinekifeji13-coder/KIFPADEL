@@ -121,15 +121,15 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 md:overflow-y-auto">
+      <main className="flex-1 lg:overflow-y-auto">
         <div className="mx-auto max-w-6xl p-4 pt-20 pb-24 sm:p-6 sm:pt-20 sm:pb-24 lg:p-6 lg:pt-6 lg:pb-6">
           {children}
         </div>
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)]">
-        <div className="flex justify-around items-center h-16 px-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl lg:hidden">
+        <div className="flex h-16 items-center justify-around px-2 pb-[max(env(safe-area-inset-bottom),0px)]">
           {navItems.slice(0, 5).map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;

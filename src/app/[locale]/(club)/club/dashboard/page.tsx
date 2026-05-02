@@ -54,7 +54,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 lg:space-y-10">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white">{dictionary.club.dashboardTitle}</h1>
@@ -64,7 +64,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 2xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           label="Réservations aujourd'hui"
           value={stats.todayBookings}
@@ -95,7 +95,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
       {/* Two Column Layout */}
       <div className="grid gap-6 xl:grid-cols-2">
         {/* Today's Bookings */}
-        <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
+        <section className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-xl shadow-black/10">
           <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-lg bg-[var(--gold)]/10 flex items-center justify-center">
@@ -148,7 +148,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
         </section>
 
         {/* Incidents & Trust Alerts */}
-        <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
+        <section className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-xl shadow-black/10">
           <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-lg bg-[var(--warning)]/10 flex items-center justify-center">
@@ -203,7 +203,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
       </div>
 
       {/* Payment Methods Summary */}
-      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 sm:p-6">
+      <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl shadow-black/10 sm:p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="h-10 w-10 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center">
             <CreditCard className="h-5 w-5 text-[var(--gold)]" />
@@ -248,7 +248,7 @@ function StatCard({
   variant?: "default" | "warning";
 }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 sm:p-4 space-y-3 min-w-0">
+    <div className="min-w-0 space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg shadow-black/10 sm:p-4">
       <div className="flex items-center justify-between">
         <div
           className={`h-8 w-8 rounded-lg flex items-center justify-center ${
