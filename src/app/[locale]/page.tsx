@@ -61,11 +61,11 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       {/* Header / Hero */}
       <header className="flex items-center justify-between py-2 sm:py-4">
         <div className="flex items-center gap-3">
-          <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-[var(--surface)] border border-[var(--gold)]/20 shadow-lg shadow-[var(--gold)]/5">
+          <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-[var(--surface)] border border-[var(--gold)]/20 shadow-lg shadow-[var(--gold)]/5 p-1">
             <img 
-              src="/logo.png" 
+              src="/icons/icon.svg" 
               alt="Kifpadel Logo" 
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
             />
           </div>
           <div className="space-y-0.5">
