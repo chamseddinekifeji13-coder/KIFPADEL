@@ -59,7 +59,7 @@ export async function createClubAction(formData: FormData) {
   await supabase
     .from("profiles")
     .update({ main_club_id: clubId })
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .is("main_club_id", null);
 
   redirect(`/${locale}/club/dashboard?created=1`);

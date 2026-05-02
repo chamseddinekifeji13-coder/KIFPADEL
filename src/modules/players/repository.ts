@@ -23,7 +23,7 @@ export type TopRival = {
 };
 
 type ProfileRow = {
-  user_id: string;
+  id: string;
   display_name: string | null;
   email?: string | null;
   avatar_url: string | null;
@@ -47,7 +47,7 @@ function normalizePlayer(row: ProfileRow): Player {
   const trustBase = row.trust_rating ?? row.trust_score ?? 0;
 
   return {
-    user_id: row.user_id,
+    user_id: row.id,
     display_name: row.display_name ?? "Player",
     email: row.email ?? "",
     avatar_url: row.avatar_url ?? null,
@@ -98,7 +98,7 @@ export async function fetchPlayerById(userId: string): Promise<Player | null> {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", userId)
+      .eq("id", userId)
       .single();
 
     if (error) {
@@ -152,12 +152,12 @@ export async function fetchTopRivals(userId: string, limit = 3): Promise<TopRiva
 
     const { data: rivalProfiles } = await supabase
       .from("profiles")
-      .select("user_id, display_name")
-      .in("user_id", rivalIds);
+      .select("id, display_name")
+      .in("id", rivalIds);
 
     const nameById = new Map<string, string>();
     (rivalProfiles ?? []).forEach((profile) => {
-      nameById.set(profile.user_id, profile.display_name ?? "Player");
+      nameById.set(profile.id, profile.display_name ?? "Player");
     });
 
     const rivals = rivalIds
@@ -201,7 +201,7 @@ export async function addTrustEvent(payload: {
   const { data: profile } = await supabase
     .from("profiles")
     .select("trust_score")
-    .eq("user_id", payload.player_id)
+    .eq("id", payload.player_id)
     .single();
 
   const newScore = (profile?.trust_score || 0) + payload.delta;
@@ -210,7 +210,7 @@ export async function addTrustEvent(payload: {
   const { error: profileError } = await supabase
     .from("profiles")
     .update({ trust_score: newScore })
-    .eq("user_id", payload.player_id);
+    .eq("id", payload.player_id);
 
   if (profileError) throw new Error(profileError.message);
 
@@ -223,7 +223,7 @@ export async function updatePlayerLeague(playerId: string, league: string) {
   const { error } = await supabase
     .from("profiles")
     .update({ league })
-    .eq("user_id", playerId);
+    .eq("id", playerId);
 
   if (error) throw new Error(error.message);
 }

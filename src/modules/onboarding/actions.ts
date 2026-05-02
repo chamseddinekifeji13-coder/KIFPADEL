@@ -46,14 +46,14 @@ export async function completeOnboardingAction(formData: FormData) {
   const { error } = await supabase
     .from("profiles")
     .upsert({
-      user_id: user.id,
+      id: user.id,
       display_name: displayName,
       city: city,
       phone: phone,
       league: league,
       trust_score: trustScore,
       verification_level: phone ? 2 : 1,
-    }, { onConflict: 'user_id' });
+    }, { onConflict: "id" });
 
   if (error) {
     console.error("Onboarding error:", error);
