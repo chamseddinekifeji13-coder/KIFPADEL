@@ -5,12 +5,37 @@ import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
+function normalizeSecret(value: string) {
+  return value
+    .normalize("NFKC")
+    .trim()
+    .replace(/^['"]+|['"]+$/g, "");
+}
+
+function getConfiguredSecret() {
+  const candidates = [
+    process.env.SUPER_ADMIN_ONBOARDING_KEY,
+    process.env.SUPER_ADMIN_SECRET,
+    process.env.ADMIN_ONBOARDING_KEY,
+    // Fallback for misconfigured environments.
+    process.env.NEXT_PUBLIC_SUPER_ADMIN_ONBOARDING_KEY,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && candidate.trim().length > 0) {
+      return normalizeSecret(candidate);
+    }
+  }
+
+  return "";
+}
+
 export async function completeSuperAdminOnboardingAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
-  const secret = String(formData.get("secret") ?? "").trim();
+  const secret = normalizeSecret(String(formData.get("secret") ?? ""));
   const displayName = String(formData.get("displayName") ?? "").trim();
 
-  const expectedSecret = process.env.SUPER_ADMIN_ONBOARDING_KEY?.trim();
+  const expectedSecret = getConfiguredSecret();
   if (!expectedSecret) {
     redirect(`/${locale}/onboarding/super-admin?error=feature_not_configured`);
   }
