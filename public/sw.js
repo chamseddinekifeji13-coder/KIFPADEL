@@ -1,6 +1,26 @@
-const CACHE_NAME = "kifpadel-static-v4";
+const CACHE_NAME = "kifpadel-static-v5";
 const APP_SHELL = ["/manifest.webmanifest", "/icons/icon.svg"];
 const STATIC_ASSET_EXTENSIONS = /\.(?:js|css|png|jpg|jpeg|gif|svg|webp|ico|woff2?)$/i;
+const OFFLINE_RESPONSE = new Response("Offline", {
+  status: 503,
+  statusText: "Service Unavailable",
+  headers: {
+    "Content-Type": "text/plain; charset=utf-8",
+  },
+});
+
+async function matchOrOffline(request) {
+  const cached = await caches.match(request);
+  return cached ?? OFFLINE_RESPONSE;
+}
+
+async function getNavigationFallback() {
+  const fr = await caches.match("/fr");
+  if (fr) return fr;
+  const root = await caches.match("/");
+  if (root) return root;
+  return OFFLINE_RESPONSE;
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -40,7 +60,7 @@ self.addEventListener("fetch", (event) => {
 
   if (requestUrl.pathname.startsWith("/_next") || requestUrl.searchParams.has("_rsc")) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request) || Response.error()),
+      fetch(event.request).catch(() => matchOrOffline(event.request)),
     );
     return;
   }
@@ -51,14 +71,14 @@ self.addEventListener("fetch", (event) => {
 
   if (isNavigationRequest) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match("/fr") || caches.match("/")),
+      fetch(event.request).catch(() => getNavigationFallback()),
     );
     return;
   }
 
   if (!isStaticAsset) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request) || Response.error()),
+      fetch(event.request).catch(() => matchOrOffline(event.request)),
     );
     return;
   }
@@ -77,7 +97,7 @@ self.addEventListener("fetch", (event) => {
           }
           return networkResponse;
         })
-        .catch(() => Response.error());
+        .catch(() => matchOrOffline(event.request));
     }),
   );
 });
