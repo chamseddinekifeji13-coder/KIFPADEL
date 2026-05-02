@@ -12,22 +12,22 @@ type IntentCardProps = {
 
 export function IntentCard({ href, title, description, icon: Icon, variant = "primary" }: IntentCardProps) {
   const variants = {
-    primary: "bg-white border-slate-100 hover:border-sky-200 shadow-sm",
-    secondary: "bg-slate-900 border-slate-800 text-white hover:bg-slate-800",
-    accent: "bg-emerald-50 content-emerald-900 border-emerald-100 hover:bg-emerald-100"
+    primary: "bg-surface border-gold/10 hover:border-gold/30 shadow-sm",
+    secondary: "bg-gold border-gold text-black hover:bg-gold-light",
+    accent: "bg-surface content-white border-gold/10 hover:bg-gold/5"
   };
 
   const iconColors = {
-    primary: "bg-sky-50 text-sky-600",
-    secondary: "bg-white/10 text-white",
-    accent: "bg-white text-emerald-600"
+    primary: "bg-gold/10 text-gold",
+    secondary: "bg-black/10 text-black",
+    accent: "bg-gold/10 text-gold"
   };
 
   return (
     <Link
       href={href}
       className={cn(
-        "group relative flex items-center gap-4 rounded-3xl border p-5 transition-all duration-300 hover:shadow-xl hover:shadow-sky-500/5",
+        "group relative flex items-center gap-4 rounded-3xl border p-5 transition-all duration-300 hover:shadow-2xl hover:shadow-gold/10 hover:-translate-y-1 active:scale-[0.98]",
         variants[variant]
       )}
     >
@@ -36,16 +36,16 @@ export function IntentCard({ href, title, description, icon: Icon, variant = "pr
       </div>
       
       <div className="flex-1 space-y-1">
-        <h3 className={cn("font-bold tracking-tight", variant === "secondary" ? "text-white" : "text-slate-900")}>
+        <h3 className={cn("font-bold tracking-tight", variant === "secondary" ? "text-black" : "text-white")}>
           {title}
         </h3>
-        <p className={cn("text-xs leading-relaxed opacity-70", variant === "secondary" ? "text-slate-300" : "text-slate-500")}>
+        <p className={cn("text-xs leading-relaxed opacity-70", variant === "secondary" ? "text-black/70" : "text-white/60")}>
           {description}
         </p>
       </div>
 
-      <div className="h-8 w-8 flex items-center justify-center rounded-full bg-slate-50 group-hover:bg-white group-hover:shadow-sm transition-all">
-        <ChevronRight className={cn("h-4 w-4 transition-transform group-hover:translate-x-0.5", variant === "secondary" ? "text-slate-900" : "text-slate-400")} />
+      <div className={cn("h-8 w-8 flex items-center justify-center rounded-full transition-all", variant === "secondary" ? "bg-black/10 group-hover:bg-black/20" : "bg-gold/10 group-hover:bg-gold group-hover:text-black text-gold")}>
+        <ChevronRight className={cn("h-4 w-4 transition-transform group-hover:translate-x-0.5", variant === "secondary" ? "text-black" : "text-gold group-hover:text-black")} />
       </div>
     </Link>
   );

@@ -26,21 +26,21 @@ export function PlayerCard({ player }: PlayerCardProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-slate-900 truncate">
-            {player.display_name}
+            {player.display_name || "Joueur"}
           </h3>
-          <Badge variant={player.league.toLowerCase() as BadgeProps["variant"]}>
-            {player.league}
+          <Badge variant={(player.league || "Bronze").toLowerCase() as BadgeProps["variant"]}>
+            {player.league || "Bronze"}
           </Badge>
         </div>
         
         <div className="flex items-center gap-3 mt-1">
           <div className="flex items-center gap-1 text-xs text-slate-500">
             <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-            <span>{player.trust_rating.toFixed(1)}</span>
+            <span>{(player.trust_rating || 0).toFixed(1)}</span>
           </div>
           <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
             <ShieldCheck className="h-3 w-3" />
-            <span>{player.reliability}</span>
+            <span>{player.reliability || "Stable"}</span>
           </div>
         </div>
       </div>

@@ -1,57 +1,69 @@
 import { fetchBookingsByClubAndDate } from "./repository";
-import { fetchCourtsByClub } from "@/modules/clubs/repository";
+import { fetchCourtsByClub, fetchClubById, type Club } from "@/modules/clubs/repository";
 
 export interface TimeSlot {
-  start: string; // ISO string or HH:mm
+  start: string; // HH:mm
   end: string;
   isAvailable: boolean;
   availableCourtIds: string[];
   price?: number;
 }
 
-const DEFAULT_SLOTS = [
-  "08:00", "09:30", "11:00", "12:30", "14:00", 
-  "15:30", "17:00", "18:30", "20:00", "21:30"
-];
-
 /**
  * Service to handle complex availability calculations.
  */
 export async function getClubAvailability(clubId: string, date: string): Promise<TimeSlot[]> {
-  const [courts, bookings] = await Promise.all([
+  const [club, courts, bookings] = await Promise.all([
+    fetchClubById(clubId) as Promise<Club>,
     fetchCourtsByClub(clubId),
     fetchBookingsByClubAndDate(clubId, date)
   ]);
 
-  const slots: TimeSlot[] = DEFAULT_SLOTS.map(timeStr => {
-    // Construct full ISO strings for comparison
-    const start = new Date(`${date}T${timeStr}:00`);
-    const end = new Date(start.getTime() + 90 * 60000);
+  if (!club) return [];
+
+  const slotDuration = club.slot_duration_minutes || 90;
+  const openingTime = club.opening_time || "08:00";
+  const closingTime = club.closing_time || "23:00";
+
+  // Generate slots dynamically
+  const slots: TimeSlot[] = [];
+  let current = new Date(`${date}T${openingTime}:00`);
+  const endOfDay = new Date(`${date}T${closingTime}:00`);
+
+  while (current < endOfDay) {
+    const startStr = current.toTimeString().substring(0, 5);
+    const end = new Date(current.getTime() + slotDuration * 60000);
+    const endStr = end.toTimeString().substring(0, 5);
+
+    // Stop if the slot goes beyond closing time
+    if (end > endOfDay) break;
 
     const availableCourtIds = courts
       .filter(court => {
-        // Check if this court has a booking overlapping with this slot
+        // Check overlap
         const isOccupied = bookings.some(booking => {
           if (booking.court_id !== court.id) return false;
           
           const bookingStart = new Date(booking.starts_at);
           const bookingEnd = new Date(booking.ends_at);
           
-          // Overlap logic: (StartA < EndB) && (EndA > StartB)
-          return start < bookingEnd && end > bookingStart;
+          return current < bookingEnd && end > bookingStart;
         });
         
         return !isOccupied;
       })
       .map(court => court.id);
 
-    return {
-      start: timeStr,
-      end: end.toTimeString().substring(0, 5),
+    slots.push({
+      start: startStr,
+      end: endStr,
       availableCourtIds,
       isAvailable: availableCourtIds.length > 0
-    };
-  });
+    });
+
+    // Move to next slot
+    current = new Date(current.getTime() + slotDuration * 60000);
+  }
 
   return slots;
 }

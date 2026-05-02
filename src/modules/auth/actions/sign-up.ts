@@ -9,20 +9,25 @@ export async function signUpAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  if (!email || !password) {
+  if (!email) {
     redirect(`/${locale}/auth/sign-up?error=missing_fields`);
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  
+  // Magic Link flow (signInWithOtp with email)
+  const { error } = await supabase.auth.signInWithOtp({ 
+    email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/onboarding`,
+    }
+  });
 
   if (error) {
+    console.error("Auth error:", error);
     redirect(`/${locale}/auth/sign-up?error=signup_failed`);
   }
 
-  if (!data.session) {
-    redirect(`/${locale}/auth/sign-in?status=check_email`);
-  }
-
-  redirect(`/${locale}/onboarding`);
+  // Redirect to sign-in page with a success message
+  redirect(`/${locale}/auth/sign-in?status=check_email`);
 }

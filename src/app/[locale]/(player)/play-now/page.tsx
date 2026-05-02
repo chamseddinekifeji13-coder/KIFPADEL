@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { matchService } from "@/modules/matches/service";
+import { MatchWithDetails } from "@/modules/matches/repository";
 import { MatchCard } from "@/components/features/matches/match-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Trophy, Filter } from "lucide-react";
@@ -18,7 +19,7 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
   const dictionary = await getDictionary(locale as Locale);
 
   // Fetch real data from Supabase
-  let matches = [];
+  let matches: MatchWithDetails[] = [];
   try {
     matches = await matchService.getOpenMatches();
   } catch (err) {
@@ -65,7 +66,7 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
       ) : (
         <div className="grid gap-4">
           {matches.map((match) => (
-            <MatchCard key={match.id} match={match} />
+            <MatchCard key={match.id} match={match} locale={locale} />
           ))}
         </div>
       )}

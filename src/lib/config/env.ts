@@ -13,11 +13,8 @@ function getRequiredEnv(name: string): string {
   const value = process.env[name];
 
   if (!value) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error(`Missing required environment variable: ${name}`);
-    }
-    console.warn(`⚠️  Missing env: ${name} — using placeholder`);
-    return `MISSING_${name}`;
+    console.error(`❌ CRITICAL: Missing required environment variable: ${name}`);
+    return "";
   }
 
   return value;

@@ -3,11 +3,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export interface Player {
   user_id: string;
   display_name: string;
+  email: string;
   avatar_url: string | null;
   league: "Bronze" | "Silver" | "Gold";
   trust_rating: number;
-  reliability: string;
   trust_score: number;
+  reliability_status?: string;
   created_at: string;
 }
 
@@ -35,7 +36,7 @@ export async function fetchPlayers(query?: string): Promise<Player[]> {
   return data;
 }
 
-export async function fetchPlayerById(userId: string) {
+export async function fetchPlayerById(userId: string): Promise<Player> {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
@@ -48,7 +49,7 @@ export async function fetchPlayerById(userId: string) {
     throw new Error(error.message);
   }
 
-  return data;
+  return data as Player;
 }
 
 export async function addTrustEvent(payload: {

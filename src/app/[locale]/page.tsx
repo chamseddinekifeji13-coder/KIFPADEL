@@ -35,29 +35,35 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
 
   return (
     <div className="space-y-8 pb-20">
-      {/* Header / Hero */}
-      <header className="flex items-center justify-between py-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-slate-500">Bienvenue sur</p>
-          <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase">
-            Kif<span className="text-sky-600">padel</span>
-          </h1>
-        </div>
+      {/* Premium Header / Hero */}
+      <header className="flex flex-col items-center justify-center pt-8 pb-4 text-center relative">
         {user ? (
-          <Link href={`/${locale}/profile`}>
-            <Avatar src={null} alt="Me" size="lg" className="ring-4 ring-sky-50 shadow-sm" />
+          <Link href={`/${locale}/profile`} className="absolute top-4 right-4">
+            <Avatar src={null} alt="Me" size="sm" className="ring-2 ring-gold/20 shadow-sm" />
           </Link>
         ) : (
-          <Link href={`/${locale}/auth/sign-in`}>
-            <div className="h-12 w-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400">
-              <User className="h-6 w-6" />
+          <Link href={`/${locale}/auth/sign-in`} className="absolute top-4 right-4">
+            <div className="h-8 w-8 rounded-full bg-surface border border-gold/20 flex items-center justify-center text-gold">
+              <User className="h-4 w-4" />
             </div>
           </Link>
         )}
+        
+        <div className="mb-4 relative">
+          <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full" />
+          <Trophy className="h-16 w-16 text-gold relative z-10 drop-shadow-lg" strokeWidth={1.5} />
+        </div>
+        
+        <h1 className="text-4xl font-black tracking-widest text-white uppercase mt-2">
+          KIFPADEL
+        </h1>
+        <p className="text-xs font-medium tracking-[0.3em] text-gold uppercase mt-2 opacity-90">
+          Social Padel Club
+        </p>
       </header>
 
       {/* Main Section */}
-      <section className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 text-white">
+      <section className="relative overflow-hidden rounded-[2.5rem] bg-surface border border-gold/10 p-8 text-white shadow-2xl shadow-gold/5">
         <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500 rounded-full blur-[100px] opacity-20 -mr-20 -mt-20" />
         
         <div className="relative space-y-6">
@@ -110,15 +116,15 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       </div>
 
       {/* Local Info Card */}
-      <Card className="p-6 bg-emerald-50 border-emerald-100/50 rounded-[2rem] flex items-center gap-4 group">
-        <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center text-emerald-600 shadow-sm transition-transform group-hover:rotate-12">
+      <Card className="p-6 bg-surface border-gold/10 rounded-[2rem] flex items-center gap-4 group hover:border-gold/30 transition-all">
+        <div className="h-12 w-12 rounded-2xl bg-gold/10 flex items-center justify-center text-gold shadow-sm transition-transform group-hover:rotate-12 group-hover:bg-gold group-hover:text-black">
           <MapPin className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/50">Clubs à proximité</p>
-          <p className="text-sm font-bold text-emerald-900 leading-tight">Découvre les 12 clubs ouverts à Tunis.</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-gold/50">Clubs à proximité</p>
+          <p className="text-sm font-bold text-white leading-tight">Découvre les 12 clubs ouverts à Tunis.</p>
         </div>
-        <ChevronRight className="h-5 w-5 text-emerald-400" />
+        <ChevronRight className="h-5 w-5 text-gold/40 group-hover:text-gold transition-colors" />
       </Card>
     </div>
   );

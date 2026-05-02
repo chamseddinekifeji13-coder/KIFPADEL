@@ -48,23 +48,26 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
       ) : null}
 
       <Card>
-        <form action={signInAction} className="space-y-3">
+        <form action={signInAction} className="space-y-4">
           <input type="hidden" name="locale" value={locale} />
-          <div className="space-y-1">
-            <label htmlFor="email" className="text-xs font-medium text-slate-700">
+          <div className="space-y-1.5">
+            <label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-slate-500">
               {dictionary.auth.emailLabel}
             </label>
-            <TextInput id="email" name="email" type="email" placeholder="you@example.com" />
+            <TextInput 
+              id="email" 
+              name="email" 
+              type="email" 
+              placeholder="votre@email.com"
+              required 
+            />
           </div>
-          <div className="space-y-1">
-            <label htmlFor="password" className="text-xs font-medium text-slate-700">
-              {dictionary.auth.passwordLabel}
-            </label>
-            <TextInput id="password" name="password" type="password" placeholder="••••••••" />
-          </div>
-          <Button type="submit" className="w-full">
-            {dictionary.auth.signInCta}
+          <Button type="submit" className="w-full py-6 text-sm font-bold shadow-lg shadow-sky-900/10 transition-all hover:scale-[1.02] active:scale-[0.98]">
+            {dictionary.auth.magicLinkCta || "Recevoir mon lien de connexion"}
           </Button>
+          <p className="text-[10px] text-center text-slate-400">
+            Un lien de connexion sécurisé vous sera envoyé par email.
+          </p>
         </form>
       </Card>
 

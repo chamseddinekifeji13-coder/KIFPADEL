@@ -23,10 +23,15 @@ export interface Match {
   clubs: MatchClub;
 }
 
+export interface MatchWithDetails extends Match {
+  playerCount: number;
+  clubName: string;
+}
+
 /**
  * Repository for Match related database operations.
  */
-export async function fetchOpenMatches() {
+export async function fetchOpenMatches(): Promise<MatchWithDetails[]> {
   const supabase = await createSupabaseServerClient();
 
   // We fetch matches with club information and count of players
@@ -59,7 +64,7 @@ export async function fetchOpenMatches() {
   }));
 }
 
-export async function fetchOpenMatchesByClub(clubId: string) {
+export async function fetchOpenMatchesByClub(clubId: string): Promise<MatchWithDetails[]> {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase

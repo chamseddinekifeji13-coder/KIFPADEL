@@ -10,6 +10,9 @@ export interface Club {
   type: "Outdoor" | "Indoor";
   logo_url: string | null;
   is_active: boolean;
+  slot_duration_minutes: number;
+  opening_time: string;
+  closing_time: string;
   created_at: string;
 }
 

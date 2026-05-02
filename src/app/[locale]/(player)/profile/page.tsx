@@ -2,6 +2,7 @@ import { isLocale } from "@/i18n/config";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { playerService } from "@/modules/players/service";
+import { Player } from "@/modules/players/repository";
 import { LeagueProgress } from "@/components/features/players/league-progress";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -31,7 +32,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     redirect(`/${locale}/auth/sign-in`);
   }
 
-  let profile = null;
+  let profile: Player | null = null;
   try {
     profile = await playerService.getPlayerProfile(user.id);
   } catch (err) {

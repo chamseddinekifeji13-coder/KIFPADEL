@@ -2,6 +2,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
 import { clubService } from "@/modules/clubs/service";
+import { type Club } from "@/modules/clubs/repository";
 import { ClubCard } from "@/components/features/clubs/club-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { LayoutGrid, MapPin } from "lucide-react";
@@ -16,7 +17,7 @@ export default async function BookPage({ params }: BookPageProps) {
   const dictionary = await getDictionary(locale as Locale);
 
   // Fetch real clubs from Supabase
-  let clubs = [];
+  let clubs: Club[] = [];
   try {
     clubs = await clubService.getClubs();
   } catch (err) {
@@ -62,7 +63,7 @@ export default async function BookPage({ params }: BookPageProps) {
 
       <div className="grid gap-6">
         {clubs.map((club) => (
-          <ClubCard key={club.id} club={club} />
+          <ClubCard key={club.id} club={club} locale={locale} />
         ))}
       </div>
     </div>
