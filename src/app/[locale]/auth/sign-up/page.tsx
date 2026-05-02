@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -14,6 +16,22 @@ type SignUpPageProps = Readonly<{
   searchParams: Promise<{ error?: string }>;
 }>;
 
+export async function generateMetadata({ params }: SignUpPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn ? "Create your account" : "Créer un compte";
+  const description = isEn
+    ? "Create a free Kifpadel account to book padel courts and meet players in Tunisia."
+    : "Créez gratuitement votre compte Kifpadel pour réserver des terrains et rencontrer des joueurs en Tunisie.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `/${locale}/auth/sign-up` },
+    robots: { index: false, follow: true },
+    openGraph: { title, description, url: `/${locale}/auth/sign-up` },
+  };
+}
+
 export default async function SignUpPage({ params, searchParams }: SignUpPageProps) {
   const { locale } = await params;
   const { error } = await searchParams;
@@ -24,6 +42,7 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
     <section className="space-y-3">
       <Card>
         <SectionTitle
+          as="h1"
           title={dictionary.auth.signUpTitle}
           subtitle={dictionary.auth.signUpSubtitle}
         />

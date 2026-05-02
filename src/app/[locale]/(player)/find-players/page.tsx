@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
@@ -9,11 +11,27 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 
 import { Search, Filter, Users } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 type FindPlayersPageProps = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
+
+export async function generateMetadata({ params }: FindPlayersPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn ? "Find players" : "Trouver des joueurs";
+  const description = isEn
+    ? "Find compatible padel partners and opponents near you across Tunisia."
+    : "Trouvez des partenaires et adversaires de padel compatibles près de chez vous en Tunisie.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `/${locale}/find-players` },
+    openGraph: { title, description, url: `/${locale}/find-players` },
+  };
+}
 
 export default async function FindPlayersPage({
   params,
@@ -21,6 +39,7 @@ export default async function FindPlayersPage({
 }: FindPlayersPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
+<<<<<<< HEAD
   
   const sp = await searchParams;
   const q = typeof sp.q === 'string' ? sp.q : undefined;
@@ -36,27 +55,70 @@ export default async function FindPlayersPage({
     }
   } catch (err) {
     console.error("Failed to fetch players in FindPlayersPage:", err);
+=======
+  const { q } = await searchParams;
+  const fallback =
+    locale === "en"
+      ? {
+          title: "I am looking for players",
+          subtitle: "Find matching partners and opponents near you.",
+        }
+      : {
+          title: "Je cherche des joueurs",
+          subtitle: "Trouve des partenaires et adversaires compatibles près de toi.",
+        };
+
+  let title = fallback.title;
+  let subtitle = fallback.subtitle;
+
+  try {
+    const dictionary = await getDictionary(locale as Locale);
+    title = dictionary.player.findPlayersTitle ?? fallback.title;
+    subtitle = dictionary.player.findPlayersSubtitle ?? fallback.subtitle;
+  } catch {
+    // Keep local fallback to avoid breaking this critical MVP intent.
+  }
+
+  // Keep page resilient even if backend query temporarily fails.
+  let players: Awaited<ReturnType<typeof playerService.getPlayers>> = [];
+  try {
+    players = await playerService.getPlayers(q);
+  } catch (err) {
+    rethrowFrameworkError(err);
+    players = [];
+>>>>>>> b2609a9c71c35b9c11096306995ce2453a1b02ac
   }
 
   return (
     <div className="flex-1 p-4 space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+<<<<<<< HEAD
           {dictionary.player?.findPlayersTitle || "Trouver des joueurs"}
+=======
+          {title}
+>>>>>>> b2609a9c71c35b9c11096306995ce2453a1b02ac
         </h1>
-        <p className="text-sm text-slate-500">
-          Trouvez des partenaires de votre niveau et élargissez votre réseau.
-        </p>
+        <p className="text-sm text-slate-500">{subtitle}</p>
       </header>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <form action="">
+        <form action="" role="search">
+          <label htmlFor="find-players-search" className="sr-only">
+            Rechercher un joueur
+          </label>
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+          />
           <input
+            id="find-players-search"
             name="q"
+            type="search"
             defaultValue={q}
             placeholder="Rechercher un joueur..."
-            className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm"
+            aria-label="Rechercher un joueur"
+            className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm min-h-11"
           />
         </form>
       </div>
@@ -66,8 +128,12 @@ export default async function FindPlayersPage({
           title="Joueurs à proximité"
           icon={<Users className="h-4 w-4" />}
         />
-        <button className="flex items-center gap-1.5 text-xs font-bold text-slate-500 px-3 py-1.5 rounded-lg bg-slate-100">
-          <Filter className="h-3 w-3" />
+        <button
+          type="button"
+          aria-label="Ouvrir les filtres"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 px-3 rounded-lg bg-slate-100 min-h-11"
+        >
+          <Filter className="h-3 w-3" aria-hidden="true" />
           Filtres
         </button>
       </div>

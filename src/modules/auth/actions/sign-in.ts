@@ -1,24 +1,21 @@
 "use server";
 
 import { redirect } from "next/navigation";
-
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
 export async function signInAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  if (!email) {
+  if (!email || !password) {
     redirect(`/${locale}/auth/sign-in?error=missing_fields`);
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithOtp({
+  const supabase = await createSupabaseServerActionClient();
+  const { error } = await supabase.auth.signInWithPassword({
     email,
-    options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/dashboard`,
-    }
+    password,
   });
 
   if (error) {
@@ -26,5 +23,5 @@ export async function signInAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-in?error=invalid_credentials`);
   }
 
-  redirect(`/${locale}/auth/sign-in?status=check_email`);
+  redirect(`/${locale}/profile`);
 }

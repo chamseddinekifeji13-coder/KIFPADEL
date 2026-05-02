@@ -8,5 +8,15 @@
   "openMatchesTitle": "Matchs ouverts",
   "openMatchesSubtitle": "Publication et suivi des matchs ouverts du club.",
   "incidentsTitle": "Incidents",
-  "incidentsSubtitle": "Signalements, sanctions progressives et suivi trust score."
+  "incidentsSubtitle": "Signalements, sanctions progressives et suivi trust score.",
+  "createTitle": "Créer un club",
+  "createSubtitle": "Ajoutez votre club et devenez automatiquement club manager.",
+  "createNameLabel": "Nom du club",
+  "createCityLabel": "Ville",
+  "createCta": "Créer le club",
+  "createHint": "Vous pourrez ensuite ajouter les terrains et les créneaux.",
+  "createBackToDashboard": "Aller au dashboard club",
+  "createMissingFields": "Merci de remplir le nom du club et la ville.",
+  "createFailed": "Impossible de créer le club pour le moment. Réessayez.",
+  "createMembershipFailed": "Le club a été créé puis annulé car l'assignation manager a échoué."
 }

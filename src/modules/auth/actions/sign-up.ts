@@ -1,23 +1,21 @@
 "use server";
 
 import { redirect } from "next/navigation";
-
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
 export async function signUpAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  if (!email) {
+  if (!email || !password) {
     redirect(`/${locale}/auth/sign-up?error=missing_fields`);
   }
 
-  const supabase = await createSupabaseServerClient();
-  
-  // Magic Link flow (signInWithOtp with email)
-  const { error } = await supabase.auth.signInWithOtp({ 
-    email,
+  const supabase = await createSupabaseServerActionClient();
+  const { error } = await supabase.auth.signUp({ 
+    email, 
+    password,
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/onboarding`,
     }

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -14,6 +16,22 @@ type SignInPageProps = Readonly<{
   searchParams: Promise<{ error?: string; status?: string }>;
 }>;
 
+export async function generateMetadata({ params }: SignInPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn ? "Sign in" : "Se connecter";
+  const description = isEn
+    ? "Sign in to your Kifpadel account to book courts and join open matches."
+    : "Connectez-vous à votre compte Kifpadel pour réserver des terrains et rejoindre des matchs ouverts.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `/${locale}/auth/sign-in` },
+    robots: { index: false, follow: true },
+    openGraph: { title, description, url: `/${locale}/auth/sign-in` },
+  };
+}
+
 export default async function SignInPage({ params, searchParams }: SignInPageProps) {
   const { locale } = await params;
   const { error, status } = await searchParams;
@@ -24,6 +42,7 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
     <section className="space-y-3">
       <Card>
         <SectionTitle
+          as="h1"
           title={dictionary.auth.signInTitle}
           subtitle={dictionary.auth.signInSubtitle}
         />

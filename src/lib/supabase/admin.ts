@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { publicEnv, serverEnv } from "@/lib/config/env";
+import { getSupabaseServiceRoleKey, publicEnv } from "@/lib/config/env";
 
 /**
  * Creates a Supabase client with the service role key.
@@ -7,7 +7,9 @@ import { publicEnv, serverEnv } from "@/lib/config/env";
  * that need to bypass RLS.
  */
 export function createSupabaseAdminClient() {
-  return createClient(publicEnv.supabaseUrl, serverEnv.supabaseServiceRoleKey, {
+  const serviceRoleKey = getSupabaseServiceRoleKey();
+
+  return createClient(publicEnv.supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

@@ -8,5 +8,15 @@
   "openMatchesTitle": "Open matches",
   "openMatchesSubtitle": "Publish and monitor open club matches.",
   "incidentsTitle": "Incidents",
-  "incidentsSubtitle": "Reports, progressive sanctions and trust tracking."
+  "incidentsSubtitle": "Reports, progressive sanctions and trust tracking.",
+  "createTitle": "Create a club",
+  "createSubtitle": "Add your club and become club manager automatically.",
+  "createNameLabel": "Club name",
+  "createCityLabel": "City",
+  "createCta": "Create club",
+  "createHint": "You can then add courts and time slots.",
+  "createBackToDashboard": "Go to club dashboard",
+  "createMissingFields": "Please fill in the club name and city.",
+  "createFailed": "Unable to create the club right now. Please try again.",
+  "createMembershipFailed": "The club creation was rolled back because manager assignment failed."
 }

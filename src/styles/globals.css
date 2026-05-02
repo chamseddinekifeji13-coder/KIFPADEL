@@ -1,15 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --background: #000000;
+  /* Premium Dark Theme - Black/Gold/White */
+  --background: #0a0a0a;
+  --background-elevated: #141414;
   --foreground: #ffffff;
-  --surface: #111111;
-  --gold: #D4AF37;
-  --gold-light: #F3E5AB;
-  --gold-dark: #996515;
-  --primary: #D4AF37;
-  --primary-strong: #996515;
+  --foreground-muted: #a3a3a3;
+  --surface: #1a1a1a;
+  --surface-elevated: #262626;
+  --border: #2a2a2a;
+  --border-subtle: #1f1f1f;
+  
+  /* Brand Colors */
+  --gold: #d4af37;
+  --gold-light: #f4d03f;
+  --gold-dark: #b8960c;
+  
+  /* Status Colors */
   --success: #22c55e;
+  --success-muted: #166534;
+  --warning: #f59e0b;
+  --warning-muted: #92400e;
+  --danger: #ef4444;
+  --danger-muted: #991b1b;
+  
+  /* Legacy compatibility */
+  --primary: var(--gold);
+  --primary-strong: var(--gold-dark);
 }
 
 @theme inline {
@@ -19,6 +36,9 @@
   --color-gold-light: var(--gold-light);
   --color-gold-dark: var(--gold-dark);
   --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-muted: var(--foreground-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -37,4 +57,29 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Premium selection highlight */
+::selection {
+  background: var(--gold);
+  color: var(--background);
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground-muted);
 }

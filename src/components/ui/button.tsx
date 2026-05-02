@@ -7,6 +7,8 @@ type ButtonProps = Readonly<{
   type?: "button" | "submit" | "reset";
   variant?: ButtonVariant;
   className?: string;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  disabled?: boolean;
 }>;
 
 const variants: Record<ButtonVariant, string> = {
@@ -22,12 +24,16 @@ export function Button({
   type = "button",
   variant = "primary",
   className,
+  onClick,
+  disabled,
 }: ButtonProps) {
   return (
     <button
       type={type}
+      onClick={onClick}
+      disabled={disabled}
       className={cn(
-        "inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold transition",
+        "inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
         variants[variant],
         className,
       )}

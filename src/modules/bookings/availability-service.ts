@@ -2,15 +2,18 @@ import { fetchBookingsByClubAndDate } from "./repository";
 import { fetchCourtsByClub, fetchClubById, type Club } from "@/modules/clubs/repository";
 
 export interface TimeSlot {
-  start: string; // HH:mm
-  end: string;
+  time: string;        // HH:mm format for display
+  start: string;       // HH:mm
+  end: string;         // HH:mm
   isAvailable: boolean;
   availableCourtIds: string[];
-  price?: number;
+  courtId: string;     // First available court for this slot
+  price: number;       // Price in DT
 }
 
 /**
  * Service to handle complex availability calculations.
+ * Returns slots with the first available court and its price.
  */
 export async function getClubAvailability(clubId: string, date: string): Promise<TimeSlot[]> {
   const [club, courts, bookings] = await Promise.all([
@@ -38,7 +41,7 @@ export async function getClubAvailability(clubId: string, date: string): Promise
     // Stop if the slot goes beyond closing time
     if (end > endOfDay) break;
 
-    const availableCourtIds = courts
+    const availableCourts = courts
       .filter(court => {
         // Check overlap
         const isOccupied = bookings.some(booking => {
@@ -51,14 +54,22 @@ export async function getClubAvailability(clubId: string, date: string): Promise
         });
         
         return !isOccupied;
-      })
-      .map(court => court.id);
+      });
+
+    const availableCourtIds = availableCourts.map(court => court.id);
+    const firstAvailableCourt = availableCourts[0];
+    
+    // Get price from the first available court, default to 40 DT
+    const price = firstAvailableCourt?.price_per_slot ?? 40;
 
     slots.push({
+      time: startStr,
       start: startStr,
       end: endStr,
       availableCourtIds,
-      isAvailable: availableCourtIds.length > 0
+      isAvailable: availableCourtIds.length > 0,
+      courtId: firstAvailableCourt?.id ?? "",
+      price,
     });
 
     // Move to next slot
