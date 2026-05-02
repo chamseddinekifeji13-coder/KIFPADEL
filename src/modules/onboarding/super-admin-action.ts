@@ -30,6 +30,17 @@ function getConfiguredSecret() {
   return "";
 }
 
+async function updateProfileByKnownKeys(
+  adminClient: ReturnType<typeof createSupabaseAdminClient>,
+  userId: string,
+  payload: Record<string, unknown>,
+) {
+  const byId = await adminClient.from("profiles").update(payload).eq("id", userId);
+  if (!byId.error) return;
+
+  await adminClient.from("profiles").update(payload).eq("user_id", userId);
+}
+
 export async function completeSuperAdminOnboardingAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const secret = normalizeSecret(String(formData.get("secret") ?? ""));
@@ -56,17 +67,11 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
   const adminClient = createSupabaseAdminClient();
 
   if (displayName) {
-    await adminClient
-      .from("profiles")
-      .update({ display_name: displayName })
-      .eq("id", user.id);
+    await updateProfileByKnownKeys(adminClient, user.id, { display_name: displayName });
   }
 
   // Best effort: set the global role when available.
-  await adminClient
-    .from("profiles")
-    .update({ global_role: "super_admin" })
-    .eq("id", user.id);
+  await updateProfileByKnownKeys(adminClient, user.id, { global_role: "super_admin" });
 
   const { data: firstClub } = await adminClient
     .from("clubs")
@@ -89,20 +94,39 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
     redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
   }
 
-  const { error: membershipError } = await adminClient
+  const { data: existingMembership, error: membershipReadError } = await adminClient
     .from("club_memberships")
-    .upsert(
-      {
+    .select("id")
+    .eq("club_id", clubId)
+    .eq("player_id", user.id)
+    .maybeSingle();
+
+  if (membershipReadError) {
+    redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
+  }
+
+  if (existingMembership?.id) {
+    const { error: membershipUpdateError } = await adminClient
+      .from("club_memberships")
+      .update({ role: "platform_admin", is_primary: false })
+      .eq("id", existingMembership.id);
+
+    if (membershipUpdateError) {
+      redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
+    }
+  } else {
+    const { error: membershipInsertError } = await adminClient
+      .from("club_memberships")
+      .insert({
         club_id: clubId,
         player_id: user.id,
         role: "platform_admin",
         is_primary: false,
-      },
-      { onConflict: "club_id,player_id" },
-    );
+      });
 
-  if (membershipError) {
-    redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
+    if (membershipInsertError) {
+      redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
+    }
   }
 
   redirect(`/${locale}/admin?onboarded=1`);
