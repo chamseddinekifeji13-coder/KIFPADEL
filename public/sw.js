@@ -1,33 +1,24 @@
-const CACHE_PREFIX = "kifpadel-static-";
+/**
+ * Kifpadel Service Worker Kill-Switch
+ * This file is designed to unregister any active service workers and clear caches.
+ */
 
-self.addEventListener("install", (event) => {
-  // Kill-switch release: activate immediately to remove stale SW logic.
-  event.waitUntil(self.skipWaiting());
+self.addEventListener("install", () => {
+  self.skipWaiting();
 });
-
-async function clearKifpadelCaches() {
-  const keys = await caches.keys();
-  await Promise.all(
-    keys.filter((key) => key.startsWith(CACHE_PREFIX)).map((key) => caches.delete(key)),
-  );
-}
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    (async () => {
-      await clearKifpadelCaches();
-      await self.registration.unregister();
-      await self.clients.claim();
-    })(),
+    caches.keys().then((names) => {
+      return Promise.all(names.map((name) => caches.delete(name)));
+    }).then(() => {
+      return self.registration.unregister();
+    }).then(() => {
+      return self.clients.claim();
+    })
   );
 });
 
-self.addEventListener("fetch", () => {
-  // Intentionally no interception. Let browser/network handle all requests.
-  return;
-});
-self.addEventListener("message", (event) => {
-  if (event.data === "SKIP_WAITING") {
-    self.skipWaiting();
-  }
-});
+// Do NOT add a fetch listener. 
+// Adding an empty fetch listener can still trigger interception logic in some browsers.
+// By removing it, the browser will handle all requests normally via the network.
