@@ -107,9 +107,16 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
     formData.append("level", level);
     
     // We don't catch here because redirect() throws a special error that Next.js needs to catch
-    await completeOnboardingAction(formData);
-    // If it reaches here, something went wrong as it should have redirected
-    setLoading(false);
+    try {
+      await completeOnboardingAction(formData);
+    } catch (err) {
+      // If it's a redirect error, re-throw it so Next.js can handle it
+      if (err instanceof Error && err.message === "NEXT_REDIRECT") {
+        throw err;
+      }
+      console.error("Onboarding failed:", err);
+      setLoading(false);
+    }
   };
 
   return (
@@ -168,7 +175,7 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
         )}
 
         {step === "trust" && (
-          <TrustStep phoneVerified={phoneVerified} />
+          <TrustStep phoneVerified={phoneVerified} level={level} />
         )}
       </div>
 
@@ -424,7 +431,19 @@ function LevelStep({
 }
 
 // Trust Step
-function TrustStep({ phoneVerified }: { phoneVerified: boolean }) {
+function TrustStep({ phoneVerified, level }: { phoneVerified: boolean; level: string }) {
+  const levelBonuses: Record<string, number> = {
+    beginner: 5,
+    intermediate: 10,
+    advanced: 15,
+    expert: 20,
+  };
+  
+  const baseScore = 50;
+  const phoneBonus = phoneVerified ? 20 : 0;
+  const levelBonus = levelBonuses[level] || 0;
+  const totalScore = baseScore + phoneBonus + levelBonus;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -438,7 +457,7 @@ function TrustStep({ phoneVerified }: { phoneVerified: boolean }) {
       </div>
 
       <div className="p-6 rounded-xl bg-[var(--background)] border border-[var(--border)] text-center">
-        <p className="text-5xl font-black text-[var(--gold)]">{phoneVerified ? 80 : 70}</p>
+        <p className="text-5xl font-black text-[var(--gold)]">{totalScore}</p>
         <p className="text-sm text-[var(--foreground-muted)] mt-2">Score de départ</p>
       </div>
 

@@ -10,6 +10,18 @@ export async function completeOnboardingAction(formData: FormData) {
   const phone = String(formData.get("phone") ?? "").trim();
   const rawLevel = String(formData.get("level") ?? "beginner");
 
+  // Calculate trust score
+  let trustScore = 50; // Base score
+  if (phone) trustScore += 20; // Phone bonus
+  
+  const levelBonuses: Record<string, number> = {
+    beginner: 5,
+    intermediate: 10,
+    advanced: 15,
+    expert: 20,
+  };
+  trustScore += levelBonuses[rawLevel] || 0;
+
   // Map UI level IDs to database league names
   const levelMap: Record<string, string> = {
     beginner: "Bronze",
@@ -30,17 +42,20 @@ export async function completeOnboardingAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-in`);
   }
 
-  // Update profile
+  // Upsert profile (create or update)
   const { error } = await supabase
     .from("profiles")
-    .update({
+    .upsert({
+      user_id: user.id,
+      email: user.email,
       display_name: displayName,
       city: city,
       phone: phone,
       league: league,
-      verification_level: phone ? 2 : 1, // Higher verification level if phone provided
-    })
-    .eq("user_id", user.id);
+      trust_score: trustScore,
+      verification_level: phone ? 2 : 1,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
 
   if (error) {
     console.error("Onboarding error:", error);
