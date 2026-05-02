@@ -3,6 +3,7 @@ type PublicEnv = {
   defaultLocale: "fr" | "en";
   supabaseUrl: string;
   supabaseAnonKey: string;
+  siteUrl: string;
 };
 
 function firstNonEmpty(...names: string[]): { value: string; name: string } | null {
@@ -81,6 +82,11 @@ export const publicEnv: PublicEnv = {
     process.env.NEXT_PUBLIC_DEFAULT_LOCALE === "en" ? "en" : "fr",
   supabaseUrl: resolveSupabaseUrl(),
   supabaseAnonKey: resolveSupabaseAnonKey(),
+  siteUrl: firstNonEmpty(
+    "NEXT_PUBLIC_SITE_URL",
+    "VERCEL_URL",
+    "URL"
+  )?.value.replace(/\/+$/, "") || (process.env.NODE_ENV === "production" ? "https://www.kifpadel.tn" : "http://localhost:3000"),
 };
 
 export const serverEnv = {

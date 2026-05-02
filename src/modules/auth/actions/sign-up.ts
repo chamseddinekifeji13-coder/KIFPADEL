@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { publicEnv } from "@/lib/config/env";
 
 export async function signUpAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
@@ -17,7 +18,7 @@ export async function signUpAction(formData: FormData) {
     email, 
     password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/onboarding`,
+      emailRedirectTo: `${publicEnv.siteUrl}/auth/callback?next=/onboarding`,
     }
   });
 

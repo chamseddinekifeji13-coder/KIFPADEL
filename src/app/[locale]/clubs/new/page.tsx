@@ -10,6 +10,8 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { createClubAction } from "@/modules/clubs/actions/create-club";
+ 
+export const dynamic = "force-dynamic";
 
 type NewClubPageProps = Readonly<{
   params: Promise<{ locale: string }>;
