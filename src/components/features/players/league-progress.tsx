@@ -36,8 +36,8 @@ export function LeagueProgress({ score, currentLeague }: LeagueProgressProps) {
         <div 
           className={cn(
             "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
-            (currentLeague || "Bronze").toLowerCase() === "gold" ? "bg-amber-400" : 
-            (currentLeague || "Bronze").toLowerCase() === "silver" ? "bg-slate-400" : "bg-orange-400",
+            currentLeague.toLowerCase() === "gold" ? "bg-amber-400" : 
+            currentLeague.toLowerCase() === "silver" ? "bg-slate-400" : "bg-orange-400",
             // Mapping progress to nearest 5% fixed classes to avoid inline styles
             progress >= 100 ? "w-full" :
             progress >= 95 ? "w-[95%]" :

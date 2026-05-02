@@ -59,26 +59,23 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
       ) : null}
 
       <Card>
-        <form action={signUpAction} className="space-y-4">
+        <form action={signUpAction} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div className="space-y-1">
+            <label htmlFor="email" className="text-xs font-medium text-slate-700">
               {dictionary.auth.emailLabel}
             </label>
-            <TextInput 
-              id="email" 
-              name="email" 
-              type="email" 
-              placeholder="votre@email.com"
-              required 
-            />
+            <TextInput id="email" name="email" type="email" placeholder="you@example.com" />
           </div>
-          <Button type="submit" className="w-full py-6 text-sm font-bold shadow-lg shadow-sky-900/10 transition-all hover:scale-[1.02] active:scale-[0.98]">
-            {dictionary.auth.magicLinkCta || "Recevoir mon lien de connexion"}
+          <div className="space-y-1">
+            <label htmlFor="password" className="text-xs font-medium text-slate-700">
+              {dictionary.auth.passwordLabel}
+            </label>
+            <TextInput id="password" name="password" type="password" placeholder="••••••••" />
+          </div>
+          <Button type="submit" className="w-full">
+            {dictionary.auth.signUpCta}
           </Button>
-          <p className="text-[10px] text-center text-slate-400">
-            Un lien magique vous sera envoyé pour une connexion sécurisée sans mot de passe.
-          </p>
         </form>
       </Card>
 

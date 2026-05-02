@@ -1,26 +1,48 @@
+import type { Metadata } from "next";
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Card } from "@/components/ui/card";
 import { IntentCard } from "@/components/ui/intent-card";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { 
-  Trophy, 
-  Search, 
-  Calendar, 
-  Sparkles, 
-  User, 
-  MapPin,
+import {
+  Trophy,
+  Search,
+  Calendar,
+  Sparkles,
+  User,
+  Building2,
   ArrowRight,
-  ChevronRight
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 
 type LocaleHomeProps = {
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: LocaleHomeProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn
+    ? "KIFPADEL — Book and play padel in Tunisia"
+    : "KIFPADEL — Réservez et jouez au padel en Tunisie";
+  const description = isEn
+    ? "Book courts, find partners and join open padel matches in the best clubs across Tunisia."
+    : "Réservez des terrains, trouvez des partenaires et rejoignez des matchs ouverts dans les meilleurs clubs de padel de Tunisie.";
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical: `/${locale}` },
+    openGraph: {
+      title,
+      description,
+      url: `/${locale}`,
+      locale: isEn ? "en_US" : "fr_FR",
+    },
+  };
+}
 
 export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   const { locale } = await params;
@@ -32,100 +54,165 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   const dictionary = await getDictionary(locale as Locale);
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const isEn = locale === "en";
 
   return (
-    <div className="space-y-8 pb-20">
-      {/* Premium Header / Hero */}
-      <header className="flex flex-col items-center justify-center pt-8 pb-4 text-center relative">
+    <div className="mx-auto w-full max-w-5xl space-y-10 pb-20">
+      {/* Header / Hero */}
+      <header className="flex items-center justify-between py-2 sm:py-4">
+        <div className="space-y-1 text-center sm:text-left">
+          <p className="text-sm font-medium text-[var(--foreground-muted)]">
+            {isEn ? "Welcome to" : "Bienvenue sur"}
+          </p>
+          <h1 className="text-3xl font-black tracking-tighter text-white uppercase">
+            KIF<span className="text-[var(--gold)]">PADEL</span>
+          </h1>
+        </div>
         {user ? (
-          <Link href={`/${locale}/profile`} className="absolute top-4 right-4">
-            <Avatar src={null} alt="Me" size="sm" className="ring-2 ring-gold/20 shadow-sm" />
+          <Link href={`/${locale}/profile`} aria-label="Mon profil">
+            <Avatar src={null} alt="" size="lg" className="ring-2 ring-[var(--gold)]/20" />
           </Link>
         ) : (
-          <Link href={`/${locale}/auth/sign-in`} className="absolute top-4 right-4">
-            <div className="h-8 w-8 rounded-full bg-surface border border-gold/20 flex items-center justify-center text-gold">
-              <User className="h-4 w-4" />
-            </div>
+          <Link
+            href={`/${locale}/auth/sign-in`}
+            aria-label="Se connecter"
+            className="h-12 w-12 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-[var(--foreground-muted)] hover:text-white transition-colors"
+          >
+            <User className="h-6 w-6" aria-hidden="true" />
           </Link>
         )}
-        
-        <div className="mb-4 relative">
-          <div className="absolute inset-0 bg-gold/20 blur-2xl rounded-full" />
-          <Trophy className="h-16 w-16 text-gold relative z-10 drop-shadow-lg" strokeWidth={1.5} />
-        </div>
-        
-        <h1 className="text-4xl font-black tracking-widest text-white uppercase mt-2">
-          KIFPADEL
-        </h1>
-        <p className="text-xs font-medium tracking-[0.3em] text-gold uppercase mt-2 opacity-90">
-          Social Padel Club
-        </p>
       </header>
 
-      {/* Main Section */}
-      <section className="relative overflow-hidden rounded-[2.5rem] bg-surface border border-gold/10 p-8 text-white shadow-2xl shadow-gold/5">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500 rounded-full blur-[100px] opacity-20 -mr-20 -mt-20" />
+      {/* Main Section - Premium Dark */}
+      <section className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 text-white shadow-2xl shadow-black/20 sm:p-8">
+        {/* Gold accent */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-50" />
+        <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--gold)] rounded-full blur-[100px] opacity-10 -mr-20 -mt-20" />
         
-        <div className="relative space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-widest text-sky-300">
+        <div className="relative mx-auto flex max-w-2xl flex-col items-center space-y-6 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
             <Sparkles className="h-3 w-3" />
-            Vibrez padel
+            {isEn ? "Premium Padel" : "Premium Padel"}
           </div>
           
           <div className="space-y-2">
-            <h2 className="text-4xl font-bold tracking-tight">Kiffe ta partie, trouve tes partenaires.</h2>
-            <p className="text-slate-400 text-sm max-w-[240px] leading-relaxed">
-              La plateforme n°1 en Tunisie pour réserver et jouer au Padel.
+            <h2 className="text-3xl font-bold tracking-tight text-balance">
+              {isEn
+                ? "Enjoy your match, find your partners."
+                : "Kiffe ta partie, trouve tes partenaires."}
+            </h2>
+            <p className="max-w-xl text-sm leading-relaxed text-[var(--foreground-muted)]">
+              {isEn
+                ? "The #1 platform in Tunisia to book courts, join matches and grow your padel community."
+                : "La plateforme n°1 en Tunisie pour réserver, rejoindre des matchs et faire grandir votre communauté padel."}
             </p>
           </div>
 
-          <Link
+          <Link 
             href={`/${locale}/play-now`}
-            className="inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 rounded-2xl h-12 px-6 font-bold shadow-xl shadow-white/5 group transition-colors"
+            className="group inline-flex h-12 items-center gap-2 rounded-xl bg-[var(--gold)] px-6 font-bold text-black transition-all hover:bg-[var(--gold-dark)] active:scale-95"
           >
-            Commencer à jouer
+            {isEn ? "Start playing" : "Commencer à jouer"}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
       </section>
 
-      {/* Navigation Cards */}
+      {/* Player / Club Spaces */}
+      <section className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+        <article className="space-y-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl shadow-black/10 sm:p-6">
+          <div className="space-y-1 text-center sm:text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
+              {isEn ? "Player Space" : "Espace Joueur"}
+            </p>
+            <h3 className="text-xl font-bold text-white">
+              {isEn ? "Find games and book fast" : "Trouve tes parties et réserve vite"}
+            </h3>
+          </div>
+          <div className="space-y-3">
+            <IntentCard
+              href={`/${locale}/play-now`}
+              title={dictionary.common.playNow}
+              description={dictionary.common.playNowDescription}
+              icon={Trophy}
+              variant="secondary"
+            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <IntentCard
+                href={`/${locale}/find-players`}
+                title={isEn ? "Partners" : "Partenaires"}
+                description={isEn ? "Find players nearby" : "Trouve des joueurs"}
+                icon={Search}
+              />
+              <IntentCard
+                href={`/${locale}/book`}
+                title={isEn ? "Book" : "Réserver"}
+                description={isEn ? "Pick your club" : "Choisis ton club"}
+                icon={Calendar}
+              />
+            </div>
+          </div>
+        </article>
+
+        <article className="space-y-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl shadow-black/10 sm:p-6">
+          <div className="space-y-1 text-center sm:text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
+              {isEn ? "Club Space" : "Espace Club"}
+            </p>
+            <h3 className="text-xl font-bold text-white">
+              {isEn ? "Manage operations with clarity" : "Pilote ton activité club avec clarté"}
+            </h3>
+          </div>
+          <div className="space-y-3">
+            <IntentCard
+              href={`/${locale}/club/dashboard`}
+              title={isEn ? "Club Dashboard" : "Dashboard Club"}
+              description={
+                isEn
+                  ? "Bookings, incidents, payments and operations."
+                  : "Réservations, incidents, paiements et pilotage."
+              }
+              icon={Building2}
+              variant="secondary"
+            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Link
+                href={`/${locale}/clubs/new`}
+                className="rounded-xl border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-4 py-3 text-sm font-semibold text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/20 text-center"
+              >
+                {isEn ? "Create a club" : "Créer un club"}
+              </Link>
+              <Link
+                href={`/${locale}/club/courts`}
+                className="rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:border-[var(--gold)]/30 text-center"
+              >
+                {isEn ? "Manage courts" : "Gérer les terrains"}
+              </Link>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      {/* Quick shortcuts */}
       <div className="grid gap-4">
-        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Que veux-tu faire ?</h3>
-        <IntentCard
-          href={`/${locale}/play-now`}
-          title={dictionary.common.playNow}
-          description={dictionary.common.playNowDescription}
-          icon={Trophy}
-          variant="secondary"
-        />
-        <div className="grid grid-cols-2 gap-4">
+        <h3 className="px-1 text-center text-xs font-bold uppercase tracking-widest text-[var(--foreground-muted)] sm:text-left">
+          {isEn ? "Quick access" : "Accès rapide"}
+        </h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <IntentCard
             href={`/${locale}/find-players`}
-            title="Partenaires"
-            description="Trouve des joueurs"
+            title={isEn ? "Partners" : "Partenaires"}
+            description={isEn ? "Find players" : "Trouve des joueurs"}
             icon={Search}
           />
           <IntentCard
             href={`/${locale}/book`}
-            title="Réserver"
-            description="Choisis ton club"
+            title={isEn ? "Book" : "Réserver"}
+            description={isEn ? "Choose your club" : "Choisis ton club"}
             icon={Calendar}
           />
         </div>
       </div>
-
-      {/* Local Info Card */}
-      <Card className="p-6 bg-surface border-gold/10 rounded-[2rem] flex items-center gap-4 group hover:border-gold/30 transition-all">
-        <div className="h-12 w-12 rounded-2xl bg-gold/10 flex items-center justify-center text-gold shadow-sm transition-transform group-hover:rotate-12 group-hover:bg-gold group-hover:text-black">
-          <MapPin className="h-6 w-6" />
-        </div>
-        <div className="flex-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gold/50">Clubs à proximité</p>
-          <p className="text-sm font-bold text-white leading-tight">Découvre les 12 clubs ouverts à Tunis.</p>
-        </div>
-        <ChevronRight className="h-5 w-5 text-gold/40 group-hover:text-gold transition-colors" />
-      </Card>
     </div>
   );
 }

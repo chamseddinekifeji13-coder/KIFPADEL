@@ -4,9 +4,5 @@
   "stepIntent": "Choisis ton intention principale",
   "stepLevel": "Indique ton niveau initial",
   "stepClub": "Ajoute ton club principal (optionnel)",
-  "displayNameLabel": "Nom d'affichage",
-  "cityLabel": "Ville",
-  "levelLabel": "Niveau estimé",
-  "completeProfileCta": "Finaliser mon profil",
   "continueCta": "Continuer"
 }

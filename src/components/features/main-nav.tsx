@@ -34,27 +34,44 @@ export function MainNav({ locale, labels }: MainNavProps) {
   ];
 
   return (
-    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md">
-      <div className="bg-surface/80 backdrop-blur-2xl border border-gold/10 rounded-[2rem] p-2 shadow-2xl shadow-black flex justify-between items-center px-4 h-16">
+    <nav
+      aria-label="Navigation principale"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md"
+    >
+      <div className="bg-[var(--surface)]/95 backdrop-blur-2xl border border-[var(--border)] rounded-2xl p-2 shadow-2xl shadow-black/30 flex justify-between items-center px-4 h-16">
         {items.map((item) => {
-          const active = pathname === item.href;
+          const active = pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
-          
+
           return (
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.label}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1 transition-all duration-300 px-3",
-                active ? "text-gold scale-110" : "text-white/40 hover:text-white/70"
+                "relative flex flex-col items-center justify-center gap-1 transition-all duration-300 min-h-11 min-w-11 px-3",
+                active ? "text-[var(--gold)] scale-110" : "text-[var(--foreground-muted)] hover:text-white"
               )}
             >
-              <Icon className={cn("h-5 w-5 transition-all", active ? "fill-gold/10" : "")} />
-              <span className={cn("text-[9px] font-bold uppercase tracking-tighter transition-all", active ? "opacity-100" : "opacity-0 h-0")}>
+              <Icon
+                aria-hidden="true"
+                className={cn("h-5 w-5 transition-all", active ? "fill-[var(--gold)]/20" : "")}
+              />
+              <span
+                aria-hidden={!active}
+                className={cn(
+                  "text-[9px] font-bold uppercase tracking-tighter transition-all",
+                  active ? "opacity-100" : "opacity-0 h-0",
+                )}
+              >
                 {item.label}
               </span>
               {active && (
-                <div className="absolute -bottom-1 h-1 w-1 bg-gold rounded-full" />
+                <div
+                  aria-hidden="true"
+                  className="absolute -bottom-1 h-1 w-1 bg-[var(--gold)] rounded-full"
+                />
               )}
             </Link>
           );

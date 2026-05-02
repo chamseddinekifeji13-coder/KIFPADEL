@@ -26,7 +26,7 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className="mx-auto flex w-full max-w-lg min-h-screen flex-col bg-background selection:bg-gold/20 italic-selection text-foreground">
+    <div className="mx-auto flex w-full max-w-lg min-h-screen flex-col bg-background">
       {/* 
           Main Content Area 
           We use a larger bottom padding to accommodate the floating nav 
