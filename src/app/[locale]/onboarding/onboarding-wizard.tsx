@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   User,
   Phone,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   Trophy,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { completeOnboardingAction } from "@/modules/onboarding/actions";
@@ -45,6 +47,8 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
   const [level, setLevel] = useState("");
 
   const steps: Step[] = ["profile", "phone", "level", "trust"];
@@ -124,18 +128,23 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
           <span>Étape {currentStepIndex + 1} sur {steps.length}</span>
           <span>{Math.round(progress)}%</span>
         </div>
-        <div className="h-1 bg-[var(--border)] rounded-full overflow-hidden">
+        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden mb-8">
           <div 
-            className={cn(
-              "h-full bg-[var(--gold)] transition-all duration-500",
-              progress === 25 ? "w-[25%]" :
-              progress === 50 ? "w-[50%]" :
-              progress === 75 ? "w-[75%]" :
-              progress === 100 ? "w-full" : "w-0"
-            )}
+            className="h-full bg-gradient-to-r from-[var(--gold-dark)] to-[var(--gold)] transition-all duration-500 ease-out" 
+            style={{ width: `${progress}%` }}
           />
         </div>
       </div>
+
+      {urlError && (
+        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-400">
+          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-bold">Erreur de création</p>
+            <p className="opacity-80">{urlError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Step Content */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">

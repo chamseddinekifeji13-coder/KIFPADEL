@@ -58,7 +58,8 @@ export async function completeOnboardingAction(formData: FormData) {
 
   if (error) {
     console.error("Onboarding error:", error);
-    redirect(`/${locale}/onboarding?error=update_failed`);
+    const encodedError = encodeURIComponent(error.message);
+    redirect(`/${locale}/onboarding?error=${encodedError}`);
   }
 
   redirect(`/${locale}/dashboard`);
