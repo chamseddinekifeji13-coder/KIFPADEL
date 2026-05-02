@@ -31,14 +31,14 @@ function getConfiguredSecret() {
 }
 
 async function updateProfileByKnownKeys(
-  adminClient: ReturnType<typeof createSupabaseAdminClient>,
+  client: ReturnType<typeof createSupabaseAdminClient> | Awaited<ReturnType<typeof createSupabaseServerActionClient>>,
   userId: string,
   payload: Record<string, unknown>,
 ) {
-  const byId = await adminClient.from("profiles").update(payload).eq("id", userId);
+  const byId = await client.from("profiles").update(payload).eq("id", userId);
   if (!byId.error) return;
 
-  await adminClient.from("profiles").update(payload).eq("user_id", userId);
+  await client.from("profiles").update(payload).eq("user_id", userId);
 }
 
 export async function completeSuperAdminOnboardingAction(formData: FormData) {
@@ -64,14 +64,34 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-in?error=auth_required&next=/${locale}/onboarding/super-admin`);
   }
 
-  const adminClient = createSupabaseAdminClient();
-
   if (displayName) {
-    await updateProfileByKnownKeys(adminClient, user.id, { display_name: displayName });
+    await updateProfileByKnownKeys(supabase, user.id, { display_name: displayName });
   }
 
-  // Best effort: set the global role when available.
-  await updateProfileByKnownKeys(adminClient, user.id, { global_role: "super_admin" });
+  // Primary path: promote the authenticated user profile to super admin.
+  const setRoleById = await supabase
+    .from("profiles")
+    .update({ global_role: "super_admin" })
+    .eq("id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  let roleUpdated = !setRoleById.error && Boolean(setRoleById.data);
+  if (!roleUpdated) {
+    const setRoleByUserId = await supabase
+      .from("profiles")
+      .update({ global_role: "super_admin" })
+      .eq("user_id", user.id)
+      .select("user_id")
+      .maybeSingle();
+    roleUpdated = !setRoleByUserId.error && Boolean(setRoleByUserId.data);
+  }
+
+  if (!roleUpdated) {
+    redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
+  }
+
+  const adminClient = createSupabaseAdminClient();
 
   const { data: firstClub } = await adminClient
     .from("clubs")
@@ -102,7 +122,8 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
     .maybeSingle();
 
   if (membershipReadError) {
-    redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
+    // Non-blocking now: global_role already grants admin access.
+    redirect(`/${locale}/admin?onboarded=1`);
   }
 
   if (existingMembership?.id) {
@@ -112,7 +133,7 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
       .eq("id", existingMembership.id);
 
     if (membershipUpdateError) {
-      redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
+      redirect(`/${locale}/admin?onboarded=1`);
     }
   } else {
     const { error: membershipInsertError } = await adminClient
@@ -125,7 +146,7 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
       });
 
     if (membershipInsertError) {
-      redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
+      redirect(`/${locale}/admin?onboarded=1`);
     }
   }
 

@@ -20,9 +20,28 @@ export default async function AdminLayout({
   // Check if user is platform admin
   const { data: isAdmin } = await supabase.rpc("is_platform_admin");
 
+  let hasGlobalSuperAdminRole = false;
   if (!isAdmin) {
-    // If not admin, redirect to home or show error
-    redirect(`/${locale}/dashboard`);
+    const byId = await supabase
+      .from("profiles")
+      .select("global_role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (byId.data?.global_role === "super_admin") {
+      hasGlobalSuperAdminRole = true;
+    } else {
+      const byUserId = await supabase
+        .from("profiles")
+        .select("global_role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      hasGlobalSuperAdminRole = byUserId.data?.global_role === "super_admin";
+    }
+  }
+
+  if (!isAdmin && !hasGlobalSuperAdminRole) {
+    redirect(`/${locale}/onboarding/super-admin`);
   }
 
   return (
