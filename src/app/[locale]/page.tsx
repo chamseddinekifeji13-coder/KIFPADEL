@@ -137,7 +137,7 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           variant="primary"
         />
         <IntentCard
-          href={`/${locale}/matches`}
+          href={`/${locale}/play-now`}
           title={dictionary.common.playNow}
           description={dictionary.common.playNowDescription}
           icon={Trophy}
