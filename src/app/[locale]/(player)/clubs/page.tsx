@@ -86,18 +86,12 @@ export default async function ClubsPage({ params, searchParams }: ClubsPageProps
         </div>
       )}
 
-      <div className="grid gap-2 pt-1 sm:grid-cols-2">
+      <div className="grid gap-2 pt-1 sm:grid-cols-1">
         <Link
           href={`/${locale}/onboarding/club`}
           className="rounded-xl border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-4 py-3 text-center text-sm font-semibold text-[var(--gold)] hover:bg-[var(--gold)]/20"
         >
           {isEn ? "Start club onboarding" : "Démarrer l'onboarding club"}
-        </Link>
-        <Link
-          href={`/${locale}/onboarding/super-admin`}
-          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-center text-sm font-semibold text-white hover:border-[var(--gold)]/30"
-        >
-          {isEn ? "Super admin onboarding" : "Onboarding super admin"}
         </Link>
       </div>
 

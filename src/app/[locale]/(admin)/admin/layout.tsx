@@ -1,30 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AppShell } from "@/components/layout/app-shell";
-
-function parseSuperAdminCookie(raw: string | undefined) {
-  if (!raw) return null;
-  const [userId, signature] = raw.split(".");
-  if (!userId || !signature) return null;
-  return { userId, signature };
-}
-
-function isValidSuperAdminCookie(raw: string | undefined, userId: string) {
-  const secret = process.env.SUPER_ADMIN_ONBOARDING_KEY?.trim();
-  if (!secret) return false;
-
-  const parsed = parseSuperAdminCookie(raw);
-  if (!parsed || parsed.userId !== userId) return false;
-
-  const expected = createHmac("sha256", secret).update(userId).digest("hex");
-  const a = Buffer.from(parsed.signature, "utf8");
-  const b = Buffer.from(expected, "utf8");
-  if (a.length !== b.length) return false;
-
-  return timingSafeEqual(a, b);
-}
 
 export default async function AdminLayout({
   children,
@@ -35,7 +10,6 @@ export default async function AdminLayout({
 }) {
   const { locale } = await params;
   const supabase = await createSupabaseServerClient();
-  const cookieStore = await cookies();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -65,13 +39,8 @@ export default async function AdminLayout({
     }
   }
 
-  const hasSignedSuperAdminCookie = isValidSuperAdminCookie(
-    cookieStore.get("kif_super_admin")?.value,
-    user.id,
-  );
-
-  if (!isAdmin && !hasGlobalSuperAdminRole && !hasSignedSuperAdminCookie) {
-    redirect(`/${locale}/onboarding/super-admin`);
+  if (!isAdmin && !hasGlobalSuperAdminRole) {
+    redirect(`/${locale}/dashboard`);
   }
 
   return (
