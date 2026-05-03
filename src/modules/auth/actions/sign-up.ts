@@ -14,16 +14,24 @@ export async function signUpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerActionClient();
+  const emailRedirectTo = `${publicEnv.siteUrl}/${locale}/auth/callback?next=/${locale}/onboarding`;
   const { error } = await supabase.auth.signUp({ 
     email, 
     password,
     options: {
-      emailRedirectTo: `${publicEnv.siteUrl}/auth/callback?next=/onboarding`,
+      emailRedirectTo,
     }
   });
 
   if (error) {
     console.error("Auth error:", error);
+    const message = error.message.toLowerCase();
+    if (message.includes("already registered")) {
+      redirect(`/${locale}/auth/sign-up?error=user_exists`);
+    }
+    if (message.includes("redirect") || message.includes("url")) {
+      redirect(`/${locale}/auth/sign-up?error=invalid_redirect_url`);
+    }
     redirect(`/${locale}/auth/sign-up?error=signup_failed`);
   }
 

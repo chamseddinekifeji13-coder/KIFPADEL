@@ -30,6 +30,19 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+function normalizeSiteUrl(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  if (!trimmed) return null;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // VERCEL_URL is often provided without protocol.
+  return `https://${trimmed}`;
+}
+
 /**
  * Resolve the public Supabase URL.
  */
@@ -82,11 +95,13 @@ export const publicEnv: PublicEnv = {
     process.env.NEXT_PUBLIC_DEFAULT_LOCALE === "en" ? "en" : "fr",
   supabaseUrl: resolveSupabaseUrl(),
   supabaseAnonKey: resolveSupabaseAnonKey(),
-  siteUrl: firstNonEmpty(
-    "NEXT_PUBLIC_SITE_URL",
-    "VERCEL_URL",
-    "URL"
-  )?.value.replace(/\/+$/, "") || (process.env.NODE_ENV === "production" ? "https://www.kifpadel.tn" : "http://localhost:3000"),
+  siteUrl:
+    normalizeSiteUrl(
+      firstNonEmpty("NEXT_PUBLIC_SITE_URL", "VERCEL_URL", "URL")?.value,
+    ) ||
+    (process.env.NODE_ENV === "production"
+      ? "https://www.kifpadel.tn"
+      : "http://localhost:3000"),
 };
 
 export const serverEnv = {

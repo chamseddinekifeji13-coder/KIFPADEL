@@ -53,6 +53,10 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
           <p className="text-sm text-rose-700">
             {error === "missing_fields"
               ? dictionary.auth.missingFieldsError
+              : error === "email_not_confirmed"
+                ? dictionary.auth.emailNotConfirmedError
+                : error === "callback_failed"
+                  ? dictionary.auth.callbackFailedError
               : error === "auth_required"
                 ? dictionary.errors.authRequired
                 : dictionary.auth.invalidCredentialsError}

@@ -31,6 +31,10 @@ export async function signInAction(formData: FormData) {
 
   if (error) {
     console.error("Sign-in error:", error);
+    const message = error.message.toLowerCase();
+    if (message.includes("email not confirmed")) {
+      redirect(`/${locale}/auth/sign-in?error=email_not_confirmed`);
+    }
     redirect(`/${locale}/auth/sign-in?error=invalid_credentials`);
   }
 
