@@ -66,6 +66,12 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
         </Card>
       ) : null}
 
+      {status === "password_updated" ? (
+        <Card className="bg-emerald-50 ring-emerald-100">
+          <p className="text-sm text-emerald-700">{dictionary.auth.passwordUpdatedInfo}</p>
+        </Card>
+      ) : null}
+
       <Card>
         <form action={signInAction} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />
@@ -85,6 +91,14 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
           <Button type="submit" className="w-full">
             {dictionary.auth.signInCta}
           </Button>
+          <div className="pt-1 text-right">
+            <Link
+              href={`/${locale}/auth/reset-password`}
+              className="text-xs font-semibold text-sky-700"
+            >
+              {dictionary.auth.forgotPasswordCta}
+            </Link>
+          </div>
         </form>
       </Card>
 
