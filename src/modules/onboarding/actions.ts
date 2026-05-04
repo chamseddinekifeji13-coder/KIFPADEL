@@ -51,12 +51,31 @@ export async function completeOnboardingAction(formData: FormData) {
     verification_level: phone ? 2 : 1,
   };
 
+  const fallbackProfilePayload = {
+    display_name: displayName,
+    city,
+    phone,
+    league,
+    trust_score: trustScore,
+  };
+
   // Avoid upsert here: some environments can keep stale schema cache for conflict keys.
-  const { data: updatedRows, error: updateError } = await supabase
+  let { data: updatedRows, error: updateError } = await supabase
     .from("profiles")
     .update(profilePayload)
     .eq("id", user.id)
     .select("id");
+
+  const updateDiagnostic = `${updateError?.message ?? ""}`.toLowerCase();
+  if (updateError && updateDiagnostic.includes("verification_level")) {
+    const retry = await supabase
+      .from("profiles")
+      .update(fallbackProfilePayload)
+      .eq("id", user.id)
+      .select("id");
+    updatedRows = retry.data;
+    updateError = retry.error;
+  }
 
   if (updateError) {
     console.error("Onboarding update error:", updateError);
@@ -65,13 +84,25 @@ export async function completeOnboardingAction(formData: FormData) {
   }
 
   if (!updatedRows || updatedRows.length === 0) {
-    const { error: insertError } = await supabase
+    let { error: insertError } = await supabase
       .from("profiles")
       .insert({
         id: user.id,
         email: user.email,
         ...profilePayload,
       });
+
+    const insertDiagnostic = `${insertError?.message ?? ""}`.toLowerCase();
+    if (insertError && insertDiagnostic.includes("verification_level")) {
+      const retry = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          email: user.email,
+          ...fallbackProfilePayload,
+        });
+      insertError = retry.error;
+    }
 
     if (insertError) {
       console.error("Onboarding insert error:", insertError);
