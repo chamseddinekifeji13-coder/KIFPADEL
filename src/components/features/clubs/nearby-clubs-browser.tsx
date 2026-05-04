@@ -208,7 +208,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
             key={city}
             type="button"
             role="tab"
-            aria-selected={selectedCity === city}
+            aria-selected={selectedCity === city ? "true" : "false"}
             onClick={() => setSelectedCity(city)}
             className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition-all ${
               (selectedCity === city) || (i === 0 && selectedCity === "Tous")
