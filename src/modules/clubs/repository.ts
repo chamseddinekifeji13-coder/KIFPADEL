@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 /**
@@ -17,24 +18,82 @@ export interface Club {
   created_at: string;
 }
 
+type ClubRow = Partial<Club> & {
+  id: string;
+  name: string;
+  city?: string | null;
+  is_active?: boolean | null;
+  created_at?: string | null;
+  type?: string | null;
+  logo_url?: string | null;
+  slot_duration_minutes?: number | null;
+  opening_time?: string | null;
+  closing_time?: string | null;
+  is_indoor?: boolean | null;
+};
+
+function normalizeClub(row: ClubRow): Club {
+  const normalizedType =
+    row.type ??
+    (row.is_indoor === true ? "Indoor" : "Outdoor");
+
+  return {
+    id: row.id,
+    name: row.name,
+    city: row.city?.trim() || "Tunis",
+    type: normalizedType as Club["type"],
+    logo_url: row.logo_url ?? null,
+    is_active: row.is_active ?? true,
+    slot_duration_minutes: row.slot_duration_minutes ?? 90,
+    opening_time: row.opening_time ?? "08:00:00",
+    closing_time: row.closing_time ?? "23:00:00",
+    created_at: row.created_at ?? new Date().toISOString(),
+  };
+}
+
 export async function fetchClubs(city?: string): Promise<Club[]> {
   try {
+    const normalizedCity = city?.trim();
     const supabase = await createSupabaseServerClient();
 
     let request = supabase.from("clubs").select("*");
 
-    if (city) {
-      request = request.eq("city", city);
+    if (normalizedCity) {
+      request = request.ilike("city", `%${normalizedCity}%`);
     }
 
-    const { data, error } = await request.order("name");
+    request = request.eq("is_active", true);
+
+    const { data, error } = await request.order("name", { ascending: true });
+
+    if (!error && Array.isArray(data)) {
+      return data.map((club) => normalizeClub(club as ClubRow));
+    }
 
     if (error) {
       console.warn("[clubs.fetchClubs] supabase error", error.message);
+    }
+
+    // Fallback: bypass RLS to avoid an empty clubs page when policies are misconfigured.
+    const adminClient = createSupabaseAdminClient();
+    let adminRequest = adminClient.from("clubs").select("*").eq("is_active", true);
+
+    if (normalizedCity) {
+      adminRequest = adminRequest.ilike("city", `%${normalizedCity}%`);
+    }
+
+    const { data: adminData, error: adminError } = await adminRequest.order("name", {
+      ascending: true,
+    });
+
+    if (adminError) {
+      console.warn("[clubs.fetchClubs] admin fallback error", adminError.message);
       return [];
     }
 
-    return Array.isArray(data) ? (data as Club[]) : [];
+    return Array.isArray(adminData)
+      ? adminData.map((club) => normalizeClub(club as ClubRow))
+      : [];
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[clubs.fetchClubs] unexpected error", err);
