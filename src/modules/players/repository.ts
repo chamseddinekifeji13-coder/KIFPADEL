@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 export interface Player {
-  user_id: string;
+  id: string;
   display_name: string;
   email: string;
   avatar_url: string | null;
@@ -47,7 +47,7 @@ function normalizePlayer(row: ProfileRow): Player {
   const trustBase = row.trust_rating ?? row.trust_score ?? 0;
 
   return {
-    user_id: row.id,
+    id: row.id,
     display_name: row.display_name ?? "Player",
     email: row.email ?? "",
     avatar_url: row.avatar_url ?? null,

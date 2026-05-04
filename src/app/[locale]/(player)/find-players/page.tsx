@@ -70,7 +70,7 @@ export default async function FindPlayersPage({
   try {
     const data = await playerService.getPlayers(q);
     if (Array.isArray(data)) {
-      players = data.filter((p) => p && typeof p === "object" && p.user_id);
+      players = data.filter((p) => p && typeof p === "object" && p.id);
     }
   } catch (err) {
     rethrowFrameworkError(err);
@@ -130,7 +130,7 @@ export default async function FindPlayersPage({
            </div>
            <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
              {players.slice(0, 5).map((player) => (
-                <div key={player.user_id} className="min-w-[140px] flex flex-col items-center gap-3 p-5 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
+                <div key={player.id} className="min-w-[140px] flex flex-col items-center gap-3 p-5 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
                   <Avatar src={player.avatar_url} alt={player.display_name || "Joueur"} size="lg" className="ring-4 ring-sky-50" />
                   <div className="text-center space-y-1">
                     <p className="text-xs font-bold text-slate-900 truncate w-24">{(player.display_name || "Joueur").split(" ")[0]}</p>
@@ -149,7 +149,7 @@ export default async function FindPlayersPage({
       ) : (
         <div className="grid gap-3">
           {players.map((player) => (
-            <PlayerCard key={player.user_id} player={player} />
+            <PlayerCard key={player.id} player={player} />
           ))}
         </div>
       )}

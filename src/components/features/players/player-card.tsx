@@ -5,7 +5,7 @@ import { Star, ShieldCheck } from "lucide-react";
 
 interface PlayerCardProps {
   player: {
-    user_id: string;
+    id: string;
     display_name: string;
     avatar_url: string | null;
     league: "Bronze" | "Silver" | "Gold" | "Platinum";

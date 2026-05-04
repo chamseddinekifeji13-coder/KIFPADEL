@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { LOCALES, DEFAULT_LOCALE } from "@/i18n/config";
 
 /**
- * Proxy (formerly middleware in Next.js < 16).
+ * Middleware.
  *
  * Responsibilities:
  * 1. Refresh the Supabase auth session on every request (keep cookies alive).
@@ -39,12 +39,14 @@ export async function proxy(request: NextRequest) {
   const candidateLocale = segments[1]; // e.g. "fr" or "en"
 
   // API & static assets are not locale-prefixed — let them through.
+  // We detect static assets by checking for a file extension (a dot in the last segment).
+  const hasExtension = segments[segments.length - 1].includes(".");
+
   if (
     candidateLocale === "api" ||
     candidateLocale === "_next" ||
-    candidateLocale === "sw.js" ||
-    pathname.startsWith("/icons") ||
-    pathname.endsWith(".webmanifest")
+    hasExtension ||
+    pathname.startsWith("/icons")
   ) {
     return NextResponse.next();
   }
