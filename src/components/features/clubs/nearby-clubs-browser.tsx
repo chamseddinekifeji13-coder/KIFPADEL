@@ -60,6 +60,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [geoPermissionDenied, setGeoPermissionDenied] = useState(false);
   const [loadingGeo, setLoadingGeo] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const cityTabs = useMemo(() => {
     const uniqueCities = [...new Set(clubs.map((club) => club.city).filter(Boolean))].sort();
@@ -91,6 +92,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
       lat: position.coords.latitude,
       lng: position.coords.longitude,
     });
+    setLastUpdated(new Date());
     setGeoError(null);
     setGeoPermissionDenied(false);
     setLoadingGeo(false);
@@ -172,7 +174,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
           applyLocationError(error);
         }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   }, [applyLocationError, applyPosition, locale]);
 
@@ -294,8 +296,8 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
         <MapPin className="h-3 w-3" />
         {userPosition
           ? locale === "en"
-            ? "Sorted by nearest"
-            : "Trié par proximité"
+            ? `Sorted by nearest ${lastUpdated ? `(updated at ${lastUpdated.toLocaleTimeString()})` : ""}`
+            : `Trié par proximité ${lastUpdated ? `(mis à jour à ${lastUpdated.toLocaleTimeString()})` : ""}`
           : locale === "en"
             ? "Proximity requires location"
             : "La proximité nécessite la position"}

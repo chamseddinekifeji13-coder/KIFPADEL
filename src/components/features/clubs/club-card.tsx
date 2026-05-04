@@ -17,7 +17,7 @@ export interface ClubCardProps {
   locale?: string;
 }
 
-export function ClubCard({ club, locale = "fr" }: ClubCardProps) {
+export function ClubCard({ club, distanceKm, locale = "fr" }: ClubCardProps) {
   return (
     <Link href={`/${locale}/book/${club.id}`} className="block">
       <Card className="p-0 overflow-hidden hover:shadow-xl hover:shadow-gold/10 transition-all group cursor-pointer bg-surface border-gold/10 rounded-[2rem]">
@@ -55,6 +55,11 @@ export function ClubCard({ club, locale = "fr" }: ClubCardProps) {
             <div className="flex items-center gap-1.5 text-xs text-white/50">
               <MapPin className="h-3.5 w-3.5 text-gold/60" />
               <span>{club.city}, Tunisie</span>
+              {distanceKm != null && (
+                <span className="text-gold font-bold ml-1">
+                  • {distanceKm < 1 ? "< 1" : Math.round(distanceKm)} km
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1 bg-gold/10 px-2.5 py-1.5 rounded-lg text-xs font-bold text-gold shrink-0 border border-gold/20">
