@@ -57,6 +57,10 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
                 ? dictionary.auth.emailNotConfirmedError
                 : error === "callback_failed"
                   ? dictionary.auth.callbackFailedError
+              : error === "auth_config_error"
+                ? dictionary.auth.authConfigError
+                : error === "rate_limited"
+                  ? dictionary.auth.rateLimitedError
               : error === "auth_required"
                 ? dictionary.errors.authRequired
                 : dictionary.auth.invalidCredentialsError}

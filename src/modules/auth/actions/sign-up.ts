@@ -25,12 +25,23 @@ export async function signUpAction(formData: FormData) {
 
   if (error) {
     console.error("Auth error:", error);
-    const message = error.message.toLowerCase();
-    if (message.includes("already registered")) {
+    const diagnostic = `${error.name}|${(error as { code?: string }).code ?? ""}|${(error as { status?: number }).status ?? ""}|${error.message}`.toLowerCase();
+    if (diagnostic.includes("already registered")) {
       redirect(`/${locale}/auth/sign-up?error=user_exists`);
     }
-    if (message.includes("redirect") || message.includes("url")) {
+    if (diagnostic.includes("redirect") || diagnostic.includes("url")) {
       redirect(`/${locale}/auth/sign-up?error=invalid_redirect_url`);
+    }
+    if (
+      diagnostic.includes("api key") ||
+      diagnostic.includes("invalid jwt") ||
+      diagnostic.includes("unauthorized") ||
+      diagnostic.includes("forbidden")
+    ) {
+      redirect(`/${locale}/auth/sign-up?error=auth_config_error`);
+    }
+    if (diagnostic.includes("rate limit") || diagnostic.includes("too many requests")) {
+      redirect(`/${locale}/auth/sign-up?error=rate_limited`);
     }
     redirect(`/${locale}/auth/sign-up?error=signup_failed`);
   }

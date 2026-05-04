@@ -57,6 +57,10 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
                 ? dictionary.auth.userExistsError
                 : error === "invalid_redirect_url"
                   ? dictionary.auth.invalidRedirectUrlError
+                : error === "auth_config_error"
+                  ? dictionary.auth.authConfigError
+                  : error === "rate_limited"
+                    ? dictionary.auth.rateLimitedError
               : dictionary.auth.signUpFailedError}
           </p>
         </Card>
