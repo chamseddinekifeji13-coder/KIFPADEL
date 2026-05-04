@@ -108,8 +108,8 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
           setGeoPermissionDenied(true);
           setGeoError(
             locale === "en"
-              ? "Location access denied. Please enable it in your browser and device settings."
-              : "Accès refusé. Veuillez l'autoriser dans votre navigateur et activer le GPS de votre téléphone.",
+              ? "Location blocked. Enable Location in your device settings (Windows: Settings > Privacy > Location | Phone: enable GPS) and allow it for this browser."
+              : "Position bloquée. Activez la Localisation dans les paramètres de votre appareil (Windows : Paramètres > Confidentialité > Localisation | Téléphone : activez le GPS) et autorisez-la pour ce navigateur.",
           );
           break;
         case error.TIMEOUT:
@@ -154,45 +154,26 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
     setGeoError(null);
     setGeoPermissionDenied(false);
 
-    // Use the Permissions API to check the real state first (avoids cached denial)
-    const tryGeo = () => {
-      navigator.geolocation.getCurrentPosition(
-        applyPosition,
-        (error) => {
-          if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
-            navigator.geolocation.getCurrentPosition(
-              applyPosition,
-              applyLocationError,
-              { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-            );
-          } else {
-            applyLocationError(error);
-          }
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
-      );
-    };
-
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: "geolocation" }).then((result) => {
-        if (result.state === "denied") {
-          setLoadingGeo(false);
-          setGeoPermissionDenied(true);
-          setGeoError(
-            locale === "en"
-              ? "Location is blocked. Please reload the page after enabling it in your browser settings."
-              : "La localisation est bloquée. Rechargez la page après l'avoir activée dans les paramètres."
+    // Always attempt getCurrentPosition directly.
+    // Do NOT short-circuit based on the Permissions API — the browser-level
+    // permission and the OS-level permission can report different states,
+    // which leads to false "denied" results.
+    navigator.geolocation.getCurrentPosition(
+      applyPosition,
+      (error) => {
+        if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+          // Retry once with low accuracy (Cell/WiFi based)
+          navigator.geolocation.getCurrentPosition(
+            applyPosition,
+            applyLocationError,
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
           );
-          return;
+        } else {
+          applyLocationError(error);
         }
-        tryGeo();
-      }).catch(() => {
-        // Permissions API not fully supported, just try directly
-        tryGeo();
-      });
-    } else {
-      tryGeo();
-    }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+    );
   }, [applyLocationError, applyPosition, locale]);
 
   function handleLocateMe() {
