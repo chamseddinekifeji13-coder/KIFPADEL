@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LayoutGrid, LocateFixed, MapPin } from "lucide-react";
 
 import { ClubCard } from "@/components/features/clubs/club-card";
@@ -144,7 +144,6 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
       return;
     }
 
-    // Check if site is running in a secure context (HTTPS)
     if (!window.isSecureContext) {
       setGeoError(locale === "en" ? "Location requires a secure (HTTPS) connection." : "La position nécessite une connexion sécurisée (HTTPS).");
       setLoadingGeo(false);
@@ -155,38 +154,83 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
     setGeoError(null);
     setGeoPermissionDenied(false);
 
-    const geoOptions: PositionOptions = {
-      enableHighAccuracy: true, // Use GPS if available
-      timeout: 15000,           // 15 seconds timeout
-      maximumAge: 30000,        // Accept a cached position up to 30 seconds old
+    // Use the Permissions API to check the real state first (avoids cached denial)
+    const tryGeo = () => {
+      navigator.geolocation.getCurrentPosition(
+        applyPosition,
+        (error) => {
+          if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+            navigator.geolocation.getCurrentPosition(
+              applyPosition,
+              applyLocationError,
+              { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+            );
+          } else {
+            applyLocationError(error);
+          }
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      );
     };
 
-    navigator.geolocation.getCurrentPosition(
-      applyPosition,
-      (error) => {
-        // If high accuracy fails or times out, try one more time with low accuracy (Cell/Wifi)
-        if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
-          navigator.geolocation.getCurrentPosition(
-            applyPosition,
-            applyLocationError,
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "geolocation" }).then((result) => {
+        if (result.state === "denied") {
+          setLoadingGeo(false);
+          setGeoPermissionDenied(true);
+          setGeoError(
+            locale === "en"
+              ? "Location is blocked. Please reload the page after enabling it in your browser settings."
+              : "La localisation est bloquée. Rechargez la page après l'avoir activée dans les paramètres."
           );
-        } else {
-          applyLocationError(error);
+          return;
         }
-      },
-      geoOptions
-    );
+        tryGeo();
+      }).catch(() => {
+        // Permissions API not fully supported, just try directly
+        tryGeo();
+      });
+    } else {
+      tryGeo();
+    }
   }, [applyLocationError, applyPosition, locale]);
 
   function handleLocateMe() {
     requestUserLocation();
   }
 
-  // Auto-location on mount is removed.
-  // Strict mobile browsers (like iOS Safari) can instantly block geolocation requests 
-  // that do not originate from a direct user interaction (like a click).
-  // Users must now explicitly click the "Locate me" button.
+  function handleReloadPage() {
+    window.location.reload();
+  }
+
+  // Listen for permission changes — when the user toggles location in browser 
+  // settings, automatically retry geolocation without needing a page reload.
+  useEffect(() => {
+    if (typeof window === "undefined" || !navigator.permissions) return;
+
+    let permissionStatus: PermissionStatus | null = null;
+
+    navigator.permissions.query({ name: "geolocation" }).then((status) => {
+      permissionStatus = status;
+      const onChange = () => {
+        if (status.state === "granted") {
+          // Permission was just re-enabled — auto-request location
+          setGeoPermissionDenied(false);
+          setGeoError(null);
+          requestUserLocation();
+        } else if (status.state === "denied") {
+          setGeoPermissionDenied(true);
+        }
+      };
+      status.addEventListener("change", onChange);
+    }).catch(() => {
+      // Permissions API not supported — no-op
+    });
+
+    return () => {
+      // Cleanup (the listener is on the permissionStatus object which gets GC'd)
+    };
+  }, [requestUserLocation]);
 
   return (
     <>
@@ -239,20 +283,29 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
       {geoPermissionDenied ? (
         <div className="rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           <p className="font-semibold">
-            {locale === "en" ? "Enable location in your browser" : "Active la localisation dans ton navigateur"}
+            {locale === "en" ? "Location blocked by your browser" : "Localisation bloquée par ton navigateur"}
           </p>
           <p className="mt-1">
             {locale === "en"
-              ? "Click the lock icon near the address bar, then set Location to Allow or Ask, and retry."
-              : "Clique sur le cadenas pres de la barre d'adresse, puis mets Localisation sur Autoriser ou Demander, puis reessaie."}
+              ? "Enable location in your browser settings (click the lock/info icon in the address bar), then reload this page."
+              : "Active la localisation dans les paramètres du navigateur (clique sur l'icône à côté de l'adresse), puis recharge la page."}
           </p>
-          <button
-            type="button"
-            onClick={handleLocateMe}
-            className="mt-2 inline-flex items-center rounded-lg border border-amber-400/60 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-900 hover:bg-amber-100"
-          >
-            {locale === "en" ? "Retry location" : "Réessayer la localisation"}
-          </button>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={handleReloadPage}
+              className="inline-flex items-center rounded-lg bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-amber-700 transition-colors"
+            >
+              {locale === "en" ? "↻ Reload page" : "↻ Recharger la page"}
+            </button>
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              className="inline-flex items-center rounded-lg border border-amber-400/60 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-900 hover:bg-amber-100"
+            >
+              {locale === "en" ? "Retry" : "Réessayer"}
+            </button>
+          </div>
         </div>
       ) : null}
 
