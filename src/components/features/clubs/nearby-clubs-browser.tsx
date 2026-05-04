@@ -58,6 +58,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
   const [selectedCity, setSelectedCity] = useState("Tous");
   const [userPosition, setUserPosition] = useState<Coordinates | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoPermissionDenied, setGeoPermissionDenied] = useState(false);
   const [loadingGeo, setLoadingGeo] = useState(false);
 
   const cityTabs = useMemo(() => {
@@ -93,6 +94,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
 
     setLoadingGeo(true);
     setGeoError(null);
+    setGeoPermissionDenied(false);
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setUserPosition({
@@ -106,6 +108,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
         setUserPosition((prev) => prev ?? FALLBACK_POSITION);
 
         if (error.code === 1) {
+          setGeoPermissionDenied(true);
           setGeoError(
             locale === "en"
               ? "Location access denied. We use Tunis as fallback."
@@ -175,6 +178,25 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
       </div>
 
       {geoError ? <p className="text-xs text-amber-600">{geoError}</p> : null}
+      {geoPermissionDenied ? (
+        <div className="rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="font-semibold">
+            {locale === "en" ? "Enable location in your browser" : "Active la localisation dans ton navigateur"}
+          </p>
+          <p className="mt-1">
+            {locale === "en"
+              ? "Click the lock icon near the address bar, then set Location to Allow or Ask, and retry."
+              : "Clique sur le cadenas près de la barre d'adresse, puis mets Localisation sur Autoriser ou Demander, puis réessaie."}
+          </p>
+          <button
+            type="button"
+            onClick={handleLocateMe}
+            className="mt-2 inline-flex items-center rounded-lg border border-amber-400/60 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-900 hover:bg-amber-100"
+          >
+            {locale === "en" ? "Retry location" : "Réessayer la localisation"}
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
         <MapPin className="h-3 w-3" />
