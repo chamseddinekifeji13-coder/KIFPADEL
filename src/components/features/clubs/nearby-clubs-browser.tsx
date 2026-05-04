@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LayoutGrid, LocateFixed, MapPin } from "lucide-react";
 
 import { ClubCard } from "@/components/features/clubs/club-card";
@@ -60,6 +60,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [geoPermissionDenied, setGeoPermissionDenied] = useState(false);
   const [loadingGeo, setLoadingGeo] = useState(false);
+  const hasAutoLocatedRef = useRef(false);
 
   const cityTabs = useMemo(() => {
     const uniqueCities = [...new Set(clubs.map((club) => club.city).filter(Boolean))].sort();
@@ -86,52 +87,87 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
     });
   }, [clubs, selectedCity, userPosition]);
 
-  function handleLocateMe() {
+  const applyPosition = useCallback((position: GeolocationPosition) => {
+    setUserPosition({
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    });
+    setGeoError(null);
+    setGeoPermissionDenied(false);
+    setLoadingGeo(false);
+  }, []);
+
+  const applyLocationError = useCallback(
+    (error: GeolocationPositionError) => {
+      // Keep the feature usable even when geolocation is blocked or unstable.
+      setUserPosition((prev) => prev ?? FALLBACK_POSITION);
+      setLoadingGeo(false);
+
+      if (error.code === error.PERMISSION_DENIED) {
+        setGeoPermissionDenied(true);
+        setGeoError(
+          locale === "en"
+            ? "Location access denied. We use Tunis as fallback."
+            : "Acces a la position refuse. Nous utilisons Tunis par defaut.",
+        );
+        return;
+      }
+
+      if (error.code === error.TIMEOUT) {
+        setGeoError(
+          locale === "en"
+            ? "Location timed out. We use Tunis as fallback."
+            : "La localisation a expire. Nous utilisons Tunis par defaut.",
+        );
+        return;
+      }
+
+      setGeoError(
+        locale === "en"
+          ? "Location temporarily unavailable. We use Tunis as fallback."
+          : "Position temporairement indisponible. Nous utilisons Tunis par defaut.",
+      );
+    },
+    [locale],
+  );
+
+  const requestUserLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setGeoError(locale === "en" ? "Geolocation is not supported." : "La géolocalisation n'est pas supportée.");
+      setUserPosition((prev) => prev ?? FALLBACK_POSITION);
+      setGeoPermissionDenied(false);
+      setLoadingGeo(false);
       return;
     }
 
     setLoadingGeo(true);
     setGeoError(null);
     setGeoPermissionDenied(false);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserPosition({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        setLoadingGeo(false);
-      },
-      (error) => {
-        // Keep the feature usable even when geolocation is blocked.
-        setUserPosition((prev) => prev ?? FALLBACK_POSITION);
 
-        if (error.code === 1) {
-          setGeoPermissionDenied(true);
-          setGeoError(
-            locale === "en"
-              ? "Location access denied. We use Tunis as fallback."
-              : "Accès à la position refusé. Nous utilisons Tunis par défaut.",
-          );
-        } else if (error.code === 3) {
-          setGeoError(
-            locale === "en"
-              ? "Location request timed out. We use Tunis as fallback."
-              : "La localisation a expiré. Nous utilisons Tunis par défaut.",
-          );
-        } else {
-          setGeoError(
-            locale === "en"
-              ? "Unable to access your location. We use Tunis as fallback."
-              : "Impossible d'accéder à votre position. Nous utilisons Tunis par défaut.",
-          );
-        }
-        setLoadingGeo(false);
+    // First try with balanced settings (better success on mobile).
+    navigator.geolocation.getCurrentPosition(
+      applyPosition,
+      () => {
+        // Retry once with high accuracy for devices that need GPS lock.
+        navigator.geolocation.getCurrentPosition(
+          applyPosition,
+          applyLocationError,
+          { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+        );
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 },
     );
+  }, [applyLocationError, applyPosition, locale]);
+
+  function handleLocateMe() {
+    requestUserLocation();
   }
+
+  useEffect(() => {
+    if (hasAutoLocatedRef.current) return;
+    hasAutoLocatedRef.current = true;
+    requestUserLocation();
+  }, [requestUserLocation]);
 
   return (
     <>
@@ -186,7 +222,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
           <p className="mt-1">
             {locale === "en"
               ? "Click the lock icon near the address bar, then set Location to Allow or Ask, and retry."
-              : "Clique sur le cadenas près de la barre d'adresse, puis mets Localisation sur Autoriser ou Demander, puis réessaie."}
+              : "Clique sur le cadenas pres de la barre d'adresse, puis mets Localisation sur Autoriser ou Demander, puis reessaie."}
           </p>
           <button
             type="button"
