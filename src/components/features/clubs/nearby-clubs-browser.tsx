@@ -20,6 +20,7 @@ type NearbyClubsBrowserProps = {
 };
 
 type Coordinates = { lat: number; lng: number };
+const FALLBACK_POSITION: Coordinates = { lat: 36.8065, lng: 10.1815 }; // Tunis center
 
 const CITY_COORDINATES: Record<string, Coordinates> = {
   tunis: { lat: 36.8065, lng: 10.1815 },
@@ -100,12 +101,29 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
         });
         setLoadingGeo(false);
       },
-      () => {
-        setGeoError(
-          locale === "en"
-            ? "Unable to access your location."
-            : "Impossible d'accéder à votre position.",
-        );
+      (error) => {
+        // Keep the feature usable even when geolocation is blocked.
+        setUserPosition((prev) => prev ?? FALLBACK_POSITION);
+
+        if (error.code === 1) {
+          setGeoError(
+            locale === "en"
+              ? "Location access denied. We use Tunis as fallback."
+              : "Accès à la position refusé. Nous utilisons Tunis par défaut.",
+          );
+        } else if (error.code === 3) {
+          setGeoError(
+            locale === "en"
+              ? "Location request timed out. We use Tunis as fallback."
+              : "La localisation a expiré. Nous utilisons Tunis par défaut.",
+          );
+        } else {
+          setGeoError(
+            locale === "en"
+              ? "Unable to access your location. We use Tunis as fallback."
+              : "Impossible d'accéder à votre position. Nous utilisons Tunis par défaut.",
+          );
+        }
         setLoadingGeo(false);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
@@ -156,7 +174,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
         </button>
       </div>
 
-      {geoError ? <p className="text-xs text-rose-600">{geoError}</p> : null}
+      {geoError ? <p className="text-xs text-amber-600">{geoError}</p> : null}
 
       <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
         <MapPin className="h-3 w-3" />
