@@ -32,7 +32,7 @@ function getRequiredEnv(name: string): string {
 
 function normalizeSiteUrl(raw: string | undefined): string | null {
   if (!raw) return null;
-  const trimmed = raw.trim().replace(/\/+$/, "");
+  const trimmed = raw.trim().replace(/^['"]+|['"]+$/g, "").replace(/\/+$/, "");
   if (!trimmed) return null;
 
   if (/^https?:\/\//i.test(trimmed)) {
@@ -43,6 +43,28 @@ function normalizeSiteUrl(raw: string | undefined): string | null {
   return `https://${trimmed}`;
 }
 
+function normalizeSupabaseUrl(raw: string): string {
+  const cleaned = raw.trim().replace(/^['"]+|['"]+$/g, "").replace(/\/+$/, "");
+  if (!cleaned) {
+    throw new Error("Supabase URL is empty after normalization.");
+  }
+
+  if (/^https?:\/\//i.test(cleaned)) {
+    return cleaned;
+  }
+
+  if (cleaned.endsWith(".supabase.co")) {
+    return `https://${cleaned}`;
+  }
+
+  // Common mistake: project ref provided in URL variable.
+  if (/^[a-z0-9-]+$/i.test(cleaned)) {
+    return `https://${cleaned}.supabase.co`;
+  }
+
+  throw new Error("Invalid supabaseUrl: Provided URL is malformed.");
+}
+
 /**
  * Resolve the public Supabase URL.
  */
@@ -51,7 +73,7 @@ function resolveSupabaseUrl(): string {
     "NEXT_PUBLIC_SUPABASE_URL",
     "SUPABASE_URL",
   );
-  if (direct) return direct.value.replace(/\/+$/, "");
+  if (direct) return normalizeSupabaseUrl(direct.value);
 
   const projectId = firstNonEmpty(
     "NEXT_PUBLIC_SUPABASE_PROJECT_ID",
@@ -60,7 +82,7 @@ function resolveSupabaseUrl(): string {
     "SUPABASE_PROJECT_REF",
   );
   if (projectId) {
-    return `https://${projectId.value}.supabase.co`;
+    return normalizeSupabaseUrl(projectId.value);
   }
 
   if (process.env.NODE_ENV === "production") {
@@ -79,7 +101,7 @@ function resolveSupabaseAnonKey(): string {
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   );
-  if (found) return found.value;
+  if (found) return found.value.trim().replace(/^['"]+|['"]+$/g, "");
 
   if (process.env.NODE_ENV === "production") {
     throw new Error(
