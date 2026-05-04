@@ -21,7 +21,7 @@ function getRequiredEnv(name: string): string {
 
   if (!value) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error(`Missing required environment variable: ${name}`);
+      throw new Error(`Missing required environment variable: ${name}. Ensure it is set in your deployment environment (e.g., Vercel Dashboard).`);
     }
     console.warn(`⚠️  Missing env: ${name} — using placeholder`);
     return `MISSING_${name}`;
@@ -73,7 +73,13 @@ function resolveSupabaseUrl(): string {
     "NEXT_PUBLIC_SUPABASE_URL",
     "SUPABASE_URL",
   );
-  if (direct) return normalizeSupabaseUrl(direct.value);
+  if (direct) {
+    // Basic validation
+    if (!direct.value.startsWith("https://")) {
+      console.warn(`⚠️  Supabase URL "${direct.name}" does not start with https://`);
+    }
+    return normalizeSupabaseUrl(direct.value);
+  }
 
   const projectId = firstNonEmpty(
     "NEXT_PUBLIC_SUPABASE_PROJECT_ID",
@@ -87,7 +93,8 @@ function resolveSupabaseUrl(): string {
 
   if (process.env.NODE_ENV === "production") {
     throw new Error(
-      "Missing Supabase URL: set NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PROJECT_ID",
+      "Missing Supabase URL: set NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PROJECT_ID. " +
+      "Note: On Vercel, you MUST use the NEXT_PUBLIC_ prefix for variables used in the browser.",
     );
   }
   return "MISSING_NEXT_PUBLIC_SUPABASE_URL";
@@ -100,12 +107,14 @@ function resolveSupabaseAnonKey(): string {
   const found = firstNonEmpty(
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_ANON_KEY",
   );
   if (found) return found.value.trim().replace(/^['"]+|['"]+$/g, "");
 
   if (process.env.NODE_ENV === "production") {
     throw new Error(
-      "Missing Supabase anon key: set NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      "Missing Supabase anon key: set NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
+      "Note: On Vercel, you MUST use the NEXT_PUBLIC_ prefix for variables used in the browser.",
     );
   }
   return "MISSING_NEXT_PUBLIC_SUPABASE_ANON_KEY";
@@ -117,13 +126,24 @@ export const publicEnv: PublicEnv = {
     process.env.NEXT_PUBLIC_DEFAULT_LOCALE === "en" ? "en" : "fr",
   supabaseUrl: resolveSupabaseUrl(),
   supabaseAnonKey: resolveSupabaseAnonKey(),
-  siteUrl:
-    normalizeSiteUrl(
-      firstNonEmpty("NEXT_PUBLIC_SITE_URL", "VERCEL_URL", "URL")?.value,
-    ) ||
-    (process.env.NODE_ENV === "production"
-      ? "https://www.kifpadel.tn"
-      : "http://localhost:3000"),
+  siteUrl: (() => {
+    const found = firstNonEmpty(
+      "NEXT_PUBLIC_SITE_URL",
+      "VERCEL_URL",
+      "URL"
+    );
+    if (!found) {
+      return process.env.NODE_ENV === "production" 
+        ? "https://www.kifpadel.tn" 
+        : "http://localhost:3000";
+    }
+    
+    let url = found.value.replace(/\/+$/, "");
+    if (!url.startsWith("http")) {
+      url = `https://${url}`;
+    }
+    return url;
+  })(),
 };
 
 export const serverEnv = {
