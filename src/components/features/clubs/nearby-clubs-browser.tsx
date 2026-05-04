@@ -109,8 +109,8 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
           setGeoPermissionDenied(true);
           setGeoError(
             locale === "en"
-              ? "Location access denied. Please enable it in your settings."
-              : "Accès à la position refusé. Veuillez l'autoriser dans vos paramètres.",
+              ? "Location access denied. Please enable it in your browser and device settings."
+              : "Accès refusé. Veuillez l'autoriser dans votre navigateur et activer le GPS de votre téléphone.",
           );
           break;
         case error.TIMEOUT:
@@ -184,17 +184,10 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
     requestUserLocation();
   }
 
-  useEffect(() => {
-    if (hasAutoLocatedRef.current) return;
-    hasAutoLocatedRef.current = true;
-    
-    // Small delay to ensure everything is mounted and ready
-    const timer = setTimeout(() => {
-      requestUserLocation();
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, [requestUserLocation]);
+  // Auto-location on mount is removed.
+  // Strict mobile browsers (like iOS Safari) can instantly block geolocation requests 
+  // that do not originate from a direct user interaction (like a click).
+  // Users must now explicitly click the "Locate me" button.
 
   return (
     <>
