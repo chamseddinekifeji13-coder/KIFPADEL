@@ -33,6 +33,14 @@ export async function signUpAction(formData: FormData) {
       redirect(`/${locale}/auth/sign-up?error=invalid_redirect_url`);
     }
     if (
+      diagnostic.includes("database error saving new user") ||
+      diagnostic.includes("profiles key column not found") ||
+      diagnostic.includes("on_auth_user_created") ||
+      diagnostic.includes("handle_new_user")
+    ) {
+      redirect(`/${locale}/auth/sign-up?error=profile_trigger_error`);
+    }
+    if (
       diagnostic.includes("api key") ||
       diagnostic.includes("invalid jwt") ||
       diagnostic.includes("unauthorized") ||
