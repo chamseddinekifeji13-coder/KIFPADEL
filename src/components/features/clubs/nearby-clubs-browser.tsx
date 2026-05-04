@@ -195,12 +195,14 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
         aria-label={locale === "en" ? "Filter by city" : "Filtrer par ville"}
         className="scrollbar-hide -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-2"
       >
-        {cityTabs.map((city, i) => (
+        {cityTabs.map((city, i) => {
+          const isSelected = selectedCity === city;
+          return (
           <button
             key={city}
             type="button"
             role="tab"
-            aria-selected={selectedCity === city}
+            aria-selected={isSelected}
             onClick={() => setSelectedCity(city)}
             className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition-all ${
               (selectedCity === city) || (i === 0 && selectedCity === "Tous")
@@ -210,7 +212,8 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
           >
             {city}
           </button>
-        ))}
+          );
+        })}
       </div>
 
       <div className="flex items-center justify-between gap-3">
