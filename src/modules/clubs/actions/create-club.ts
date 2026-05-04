@@ -76,20 +76,11 @@ export async function createClubAction(formData: FormData) {
     }
   }
 
-  // Best effort profile update; support both schema variants.
-  const updateById = await adminClient
+  await adminClient
     .from("profiles")
     .update({ main_club_id: clubId })
     .eq("id", user.id)
     .is("main_club_id", null);
-
-  if (updateById.error) {
-    await adminClient
-      .from("profiles")
-      .update({ main_club_id: clubId })
-      .eq("user_id", user.id)
-      .is("main_club_id", null);
-  }
 
   redirect(`/${locale}/club/dashboard?created=1`);
 }

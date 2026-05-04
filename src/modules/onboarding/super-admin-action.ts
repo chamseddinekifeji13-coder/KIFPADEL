@@ -58,19 +58,12 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-in?error=auth_required&next=/${locale}/onboarding/super-admin`);
   }
 
-  // Best effort profile update (works on both id/user_id schemas).
   if (displayName) {
-    const byId = await supabase.from("profiles").update({ display_name: displayName }).eq("id", user.id);
-    if (byId.error) {
-      await supabase.from("profiles").update({ display_name: displayName }).eq("user_id", user.id);
-    }
+    await supabase.from("profiles").update({ display_name: displayName }).eq("id", user.id);
   }
 
-  // Best effort role promotion for environments where the column exists.
-  const promoteById = await supabase.from("profiles").update({ global_role: "super_admin" }).eq("id", user.id);
-  if (promoteById.error) {
-    await supabase.from("profiles").update({ global_role: "super_admin" }).eq("user_id", user.id);
-  }
+  // Role promotion.
+  await supabase.from("profiles").update({ global_role: "super_admin" }).eq("id", user.id);
 
   // Reliable fallback: signed cookie-based admin bootstrap.
   const cookieStore = await cookies();

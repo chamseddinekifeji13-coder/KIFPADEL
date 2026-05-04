@@ -21,21 +21,14 @@ export default async function AdminLayout({
 
   let hasGlobalSuperAdminRole = false;
   if (!isAdmin) {
-    const byId = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
       .select("global_role")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (byId.data?.global_role === "super_admin") {
+    if (profile?.global_role === "super_admin") {
       hasGlobalSuperAdminRole = true;
-    } else {
-      const byUserId = await supabase
-        .from("profiles")
-        .select("global_role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      hasGlobalSuperAdminRole = byUserId.data?.global_role === "super_admin";
     }
   }
 
