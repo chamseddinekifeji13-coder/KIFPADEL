@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { LayoutGrid, LocateFixed, MapPin } from "lucide-react";
 
 import { ClubCard } from "@/components/features/clubs/club-card";
@@ -60,7 +60,6 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [geoPermissionDenied, setGeoPermissionDenied] = useState(false);
   const [loadingGeo, setLoadingGeo] = useState(false);
-  const hasAutoLocatedRef = useRef(false);
 
   const cityTabs = useMemo(() => {
     const uniqueCities = [...new Set(clubs.map((club) => club.city).filter(Boolean))].sort();
@@ -201,7 +200,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
             key={city}
             type="button"
             role="tab"
-            aria-selected={selectedCity === city ? "true" : "false"}
+            aria-selected={selectedCity === city}
             onClick={() => setSelectedCity(city)}
             className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition-all ${
               (selectedCity === city) || (i === 0 && selectedCity === "Tous")
