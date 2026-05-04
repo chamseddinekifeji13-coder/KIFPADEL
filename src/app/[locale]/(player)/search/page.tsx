@@ -72,7 +72,7 @@ export default async function SearchPlayersPage({ params, searchParams }: Search
       ) : (
         <div className="grid gap-3">
           {players.map((player) => (
-            <PlayerCard key={player.user_id} player={player} />
+            <PlayerCard key={player.id} player={player} />
           ))}
         </div>
       )}
