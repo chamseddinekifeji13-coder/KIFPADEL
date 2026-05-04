@@ -11,7 +11,7 @@ import { LOCALES, DEFAULT_LOCALE } from "@/i18n/config";
  * 2. Redirect bare `/` to `/<DEFAULT_LOCALE>`.
  * 3. Reject unknown locale prefixes → 404.
  */
-export async function proxy(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   /* ------------------------------------------------------------------ */
