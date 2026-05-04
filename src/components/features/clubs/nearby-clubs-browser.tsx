@@ -99,43 +99,55 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
 
   const applyLocationError = useCallback(
     (error: GeolocationPositionError) => {
-      // Keep the feature usable even when geolocation is blocked or unstable.
-      setUserPosition((prev) => prev ?? FALLBACK_POSITION);
       setLoadingGeo(false);
+      
+      // Fallback if not already set
+      setUserPosition((prev) => prev ?? FALLBACK_POSITION);
 
-      if (error.code === error.PERMISSION_DENIED) {
-        setGeoPermissionDenied(true);
-        setGeoError(
-          locale === "en"
-            ? "Location access denied. We use Tunis as fallback."
-            : "Acces a la position refuse. Nous utilisons Tunis par defaut.",
-        );
-        return;
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          setGeoPermissionDenied(true);
+          setGeoError(
+            locale === "en"
+              ? "Location access denied. Please enable it in your settings."
+              : "Accès à la position refusé. Veuillez l'autoriser dans vos paramètres.",
+          );
+          break;
+        case error.TIMEOUT:
+          setGeoError(
+            locale === "en"
+              ? "Location request timed out. Retrying might help."
+              : "Délai d'attente dépassé. Réessayez pour obtenir un signal GPS.",
+          );
+          break;
+        case error.POSITION_UNAVAILABLE:
+          setGeoError(
+            locale === "en"
+              ? "Position unavailable. Ensure GPS is on."
+              : "Position indisponible. Vérifiez que votre GPS est activé.",
+          );
+          break;
+        default:
+          setGeoError(
+            locale === "en"
+              ? "An unknown error occurred while locating."
+              : "Une erreur inconnue est survenue lors de la localisation.",
+          );
       }
-
-      if (error.code === error.TIMEOUT) {
-        setGeoError(
-          locale === "en"
-            ? "Location timed out. We use Tunis as fallback."
-            : "La localisation a expire. Nous utilisons Tunis par defaut.",
-        );
-        return;
-      }
-
-      setGeoError(
-        locale === "en"
-          ? "Location temporarily unavailable. We use Tunis as fallback."
-          : "Position temporairement indisponible. Nous utilisons Tunis par defaut.",
-      );
     },
     [locale],
   );
 
   const requestUserLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setGeoError(locale === "en" ? "Geolocation is not supported." : "La géolocalisation n'est pas supportée.");
-      setUserPosition((prev) => prev ?? FALLBACK_POSITION);
-      setGeoPermissionDenied(false);
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setGeoError(locale === "en" ? "Geolocation is not supported by your browser." : "Votre navigateur ne supporte pas la géolocalisation.");
+      setLoadingGeo(false);
+      return;
+    }
+
+    // Check if site is running in a secure context (HTTPS)
+    if (!window.isSecureContext) {
+      setGeoError(locale === "en" ? "Location requires a secure (HTTPS) connection." : "La position nécessite une connexion sécurisée (HTTPS).");
       setLoadingGeo(false);
       return;
     }
@@ -144,18 +156,27 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
     setGeoError(null);
     setGeoPermissionDenied(false);
 
-    // First try with balanced settings (better success on mobile).
+    const geoOptions: PositionOptions = {
+      enableHighAccuracy: true, // Use GPS if available
+      timeout: 15000,           // 15 seconds timeout
+      maximumAge: 30000,        // Accept a cached position up to 30 seconds old
+    };
+
     navigator.geolocation.getCurrentPosition(
       applyPosition,
-      () => {
-        // Retry once with high accuracy for devices that need GPS lock.
-        navigator.geolocation.getCurrentPosition(
-          applyPosition,
-          applyLocationError,
-          { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
-        );
+      (error) => {
+        // If high accuracy fails or times out, try one more time with low accuracy (Cell/Wifi)
+        if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+          navigator.geolocation.getCurrentPosition(
+            applyPosition,
+            applyLocationError,
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+          );
+        } else {
+          applyLocationError(error);
+        }
       },
-      { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 },
+      geoOptions
     );
   }, [applyLocationError, applyPosition, locale]);
 
@@ -166,7 +187,13 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
   useEffect(() => {
     if (hasAutoLocatedRef.current) return;
     hasAutoLocatedRef.current = true;
-    requestUserLocation();
+    
+    // Small delay to ensure everything is mounted and ready
+    const timer = setTimeout(() => {
+      requestUserLocation();
+    }, 800);
+
+    return () => clearTimeout(timer);
   }, [requestUserLocation]);
 
   return (
