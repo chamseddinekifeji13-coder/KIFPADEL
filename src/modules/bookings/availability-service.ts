@@ -1,5 +1,6 @@
 import { fetchBookingsByClubAndDate } from "./repository";
 import { fetchCourtsByClub, fetchClubById, type Club } from "@/modules/clubs/repository";
+import { addMinutes, formatTunisHm, tunisLocalDateTimeToUtc } from "./timezone";
 
 export interface TimeSlot {
   time: string;        // HH:mm format for display
@@ -30,13 +31,13 @@ export async function getClubAvailability(clubId: string, date: string): Promise
 
   // Generate slots dynamically
   const slots: TimeSlot[] = [];
-  let current = new Date(`${date}T${openingTime}:00`);
-  const endOfDay = new Date(`${date}T${closingTime}:00`);
+  let current = tunisLocalDateTimeToUtc(date, openingTime);
+  const endOfDay = tunisLocalDateTimeToUtc(date, closingTime);
 
   while (current < endOfDay) {
-    const startStr = current.toTimeString().substring(0, 5);
-    const end = new Date(current.getTime() + slotDuration * 60000);
-    const endStr = end.toTimeString().substring(0, 5);
+    const startStr = formatTunisHm(current);
+    const end = addMinutes(current, slotDuration);
+    const endStr = formatTunisHm(end);
 
     // Stop if the slot goes beyond closing time
     if (end > endOfDay) break;
@@ -73,7 +74,7 @@ export async function getClubAvailability(clubId: string, date: string): Promise
     });
 
     // Move to next slot
-    current = new Date(current.getTime() + slotDuration * 60000);
+    current = addMinutes(current, slotDuration);
   }
 
   return slots;

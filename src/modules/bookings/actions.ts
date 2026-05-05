@@ -81,45 +81,52 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     }
   }
 
-  // 5. Check for double-booking (same court, overlapping time)
-  const { data: existingBookings } = await supabase
-    .from("bookings")
-    .select("id")
-    .eq("court_id", input.courtId)
-    .neq("status", "cancelled")
-    .lt("starts_at", input.endsAt)
-    .gt("ends_at", input.startsAt);
+  // 5. Atomic DB booking creation to avoid race conditions.
+  const bookingStatus = input.paymentMethod === "online" ? "pending" : "confirmed";
+  const { data: bookingRows, error: rpcError } = await supabase.rpc("create_booking_atomic", {
+    p_club_id: input.clubId,
+    p_court_id: input.courtId,
+    p_player_id: user.id,
+    p_starts_at: input.startsAt,
+    p_ends_at: input.endsAt,
+    p_total_price: input.totalPrice,
+    p_payment_method: input.paymentMethod,
+    p_status: bookingStatus,
+  });
 
-  if (existingBookings && existingBookings.length > 0) {
-    return { 
-      ok: false, 
-      error: "Ce créneau est déjà réservé. Veuillez en choisir un autre.", 
-      code: "SLOT_TAKEN" 
-    };
-  }
-
-  // 6. Create the booking
-  const { data: booking, error: insertError } = await supabase
-    .from("bookings")
-    .insert({
-      club_id: input.clubId,
-      court_id: input.courtId,
-      player_id: user.id,
-      starts_at: input.startsAt,
-      ends_at: input.endsAt,
-      total_price: input.totalPrice,
-      payment_method: input.paymentMethod,
-      status: input.paymentMethod === "online" ? "pending" : "confirmed",
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !booking) {
-    console.error("Booking insert error:", insertError);
+  if (rpcError) {
+    console.error("Booking RPC error:", rpcError);
     return { ok: false, error: "Erreur lors de la création de la réservation.", code: "SERVER_ERROR" };
   }
 
-  return { ok: true, bookingId: booking.id };
+  const bookingResult = Array.isArray(bookingRows) ? bookingRows[0] : null;
+  if (!bookingResult?.ok) {
+    if (bookingResult?.error_code === "SLOT_TAKEN") {
+      return {
+        ok: false,
+        error: "Ce créneau est déjà réservé. Veuillez en choisir un autre.",
+        code: "SLOT_TAKEN",
+      };
+    }
+    if (bookingResult?.error_code === "INVALID_RANGE") {
+      return {
+        ok: false,
+        error: "Le créneau sélectionné est invalide.",
+        code: "SERVER_ERROR",
+      };
+    }
+    if (bookingResult?.error_code === "UNAUTHORIZED") {
+      return {
+        ok: false,
+        error: "Vous devez être connecté pour réserver.",
+        code: "UNAUTHORIZED",
+      };
+    }
+    console.error("Booking RPC business error:", bookingResult?.error_message);
+    return { ok: false, error: "Erreur lors de la création de la réservation.", code: "SERVER_ERROR" };
+  }
+
+  return { ok: true, bookingId: bookingResult.booking_id as string };
 }
 
 /**

@@ -1,24 +1,29 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { tunisDayRangeUtc } from "./timezone";
+
+const PENDING_BOOKING_TTL_MINUTES = 15;
 
 /**
  * Repository for Booking related database operations.
  */
 export async function fetchBookingsByClubAndDate(clubId: string, date: string) {
   const supabase = await createSupabaseServerClient();
-  
-  // Define the start and end of the day
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
-  
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+
+  const { dayStart, nextDayStart } = tunisDayRangeUtc(date);
+  const pendingCutoffIso = new Date(
+    Date.now() - PENDING_BOOKING_TTL_MINUTES * 60 * 1000,
+  ).toISOString();
 
   const { data, error } = await supabase
     .from("bookings")
     .select("*")
     .eq("club_id", clubId)
-    .gte("starts_at", startOfDay.toISOString())
-    .lte("starts_at", endOfDay.toISOString());
+    // Overlap logic: booking intersects [dayStart, nextDayStart)
+    .lt("starts_at", nextDayStart.toISOString())
+    .gt("ends_at", dayStart.toISOString())
+    .neq("status", "cancelled")
+    // Stale pending bookings should no longer block availability.
+    .or(`status.neq.pending,and(status.eq.pending,created_at.gte.${pendingCutoffIso})`);
 
   if (error) {
     throw new Error(error.message);
