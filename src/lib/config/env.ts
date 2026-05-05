@@ -159,9 +159,16 @@ if (typeof window !== "undefined") {
   
   if (missing.length > 0) {
     console.warn(
-      `[Kifpadel] ⚠️ Configuration d'authentification incomplète ! Variables manquantes ou mal préfixées : ${missing.join(", ")}. ` +
-      "Sur Vercel, utilisez impérativement le préfixe NEXT_PUBLIC_ pour les variables lues par le navigateur."
+      `[Kifpadel] ⚠️ Configuration d'authentification incomplète ! Variables manquantes : ${missing.join(", ")}. `
     );
+  } else {
+    // Basic format check
+    if (!publicEnv.supabaseUrl.startsWith("https://")) {
+      console.error("[Kifpadel] ❌ NEXT_PUBLIC_SUPABASE_URL doit commencer par https://");
+    }
+    if (publicEnv.supabaseAnonKey.length < 50) {
+      console.error("[Kifpadel] ❌ NEXT_PUBLIC_SUPABASE_ANON_KEY semble trop courte ou invalide.");
+    }
   }
 }
 

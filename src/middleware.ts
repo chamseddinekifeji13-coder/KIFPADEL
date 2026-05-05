@@ -20,27 +20,45 @@ export default async function proxy(request: NextRequest) {
     },
   });
 
-  const supabase = createServerClient(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
+  // Create the Supabase client
+  let supabase;
+  try {
+    supabase = createServerClient(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            request.cookies.set(name, value),
+          );
+          response = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options),
+          );
+        },
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
-        response = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
+    });
+  } catch (err) {
+    console.error("[Middleware] CRITICAL: Failed to create Supabase client:", err);
+    return response; // Continue without auth instead of crashing
+  }
 
-  // This will refresh the session if needed
-  await supabase.auth.getUser();
+  // Refresh the session
+  try {
+    const { error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      // It's normal for guests, but let's log if it's a config error
+      const msg = userError.message.toLowerCase();
+      if (msg.includes("api key") || msg.includes("invalid") || msg.includes("unauthorized")) {
+        console.error("[Middleware] Auth Config Error detected via getUser():", userError.message);
+      }
+    }
+  } catch (err) {
+    console.error("[Middleware] Error during session refresh:", err);
+  }
 
   const { pathname } = request.nextUrl;
 
