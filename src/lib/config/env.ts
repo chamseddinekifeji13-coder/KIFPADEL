@@ -147,6 +147,24 @@ export const publicEnv: PublicEnv = {
   })(),
 };
 
+// Client-side diagnostic for debugging Vercel environment variables
+if (typeof window !== "undefined") {
+  const missing = [];
+  if (publicEnv.supabaseUrl.includes("your-project-id") || publicEnv.supabaseUrl.includes("MISSING")) {
+    missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  }
+  if (publicEnv.supabaseAnonKey.includes("your-anon") || publicEnv.supabaseAnonKey.includes("MISSING")) {
+    missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
+  
+  if (missing.length > 0) {
+    console.warn(
+      `[Kifpadel] ⚠️ Configuration d'authentification incomplète ! Variables manquantes ou mal préfixées : ${missing.join(", ")}. ` +
+      "Sur Vercel, utilisez impérativement le préfixe NEXT_PUBLIC_ pour les variables lues par le navigateur."
+    );
+  }
+}
+
 export const serverEnv = {
   supabaseServiceRoleKey: (firstNonEmpty(
     "SUPABASE_SERVICE_ROLE_KEY",

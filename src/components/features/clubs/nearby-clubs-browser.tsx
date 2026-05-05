@@ -191,10 +191,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
   useEffect(() => {
     if (typeof window === "undefined" || !navigator.permissions) return;
 
-    let permissionStatus: PermissionStatus | null = null;
-
-    navigator.permissions.query({ name: "geolocation" }).then((status) => {
-      permissionStatus = status;
+    navigator.permissions.query({ name: "geolocation" as any }).then((status) => {
       const onChange = () => {
         if (status.state === "granted") {
           // Permission was just re-enabled — auto-request location
@@ -229,7 +226,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
             key={city}
             type="button"
             role="tab"
-            aria-selected={isSelected}
+            aria-selected={isSelected ? "true" : "false"}
             onClick={() => setSelectedCity(city)}
             className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition-all ${
               (selectedCity === city) || (i === 0 && selectedCity === "Tous")
