@@ -92,11 +92,8 @@ function resolveSupabaseUrl(): string {
     return normalizeSupabaseUrl(projectId.value);
   }
 
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "Missing Supabase URL: set NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PROJECT_ID. " +
-      "Note: On Vercel, you MUST use the NEXT_PUBLIC_ prefix for variables used in the browser.",
-    );
+  if (process.env.NODE_ENV === "production" && !direct && !projectId) {
+    console.error("CRITICAL: Missing Supabase URL in production environment variables.");
   }
   return "MISSING_NEXT_PUBLIC_SUPABASE_URL";
 }
@@ -112,11 +109,8 @@ function resolveSupabaseAnonKey(): string {
   );
   if (found) return found.value.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "");
 
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "Missing Supabase anon key: set NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
-      "Note: On Vercel, you MUST use the NEXT_PUBLIC_ prefix for variables used in the browser.",
-    );
+  if (process.env.NODE_ENV === "production" && !found) {
+    console.error("CRITICAL: Missing Supabase Anon Key in production environment variables.");
   }
   return "MISSING_NEXT_PUBLIC_SUPABASE_ANON_KEY";
 }
