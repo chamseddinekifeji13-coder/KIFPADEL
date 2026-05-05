@@ -42,14 +42,37 @@ export async function createBooking(payload: {
 }) {
   const supabase = await createSupabaseServerClient();
 
+  const { data: bookingRows, error: rpcError } = await supabase.rpc(
+    "create_booking_atomic",
+    {
+      p_club_id: payload.club_id,
+      p_court_id: payload.court_id,
+      p_player_id: payload.player_id,
+      p_starts_at: payload.starts_at,
+      p_ends_at: payload.ends_at,
+      p_total_price: payload.total_price,
+      p_payment_method: null,
+      p_status: "confirmed",
+    },
+  );
+
+  if (rpcError) {
+    throw new Error(rpcError.message);
+  }
+
+  const bookingResult = Array.isArray(bookingRows) ? bookingRows[0] : null;
+  if (!bookingResult?.ok || !bookingResult?.booking_id) {
+    throw new Error(bookingResult?.error_code || "BOOKING_CREATE_FAILED");
+  }
+
   const { data, error } = await supabase
     .from("bookings")
-    .insert(payload)
-    .select()
+    .select("*")
+    .eq("id", bookingResult.booking_id)
     .single();
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    throw new Error(error?.message || "BOOKING_FETCH_FAILED");
   }
 
   return data;
