@@ -18,11 +18,9 @@ type PlayNowPageProps = {
 
 export async function generateMetadata({ params }: PlayNowPageProps): Promise<Metadata> {
   const { locale } = await params;
-  const isEn = locale === "en";
-  const title = isEn ? "Play now — Open matches" : "Jouer maintenant — Matchs ouverts";
-  const description = isEn
-    ? "Join an open padel match near you and meet new players in Tunisia's best clubs."
-    : "Rejoignez une partie de padel ouverte près de chez vous et rencontrez de nouveaux joueurs dans les meilleurs clubs de Tunisie.";
+  const dictionary = await getDictionary(locale as Locale);
+  const title = dictionary.player.playNowMetaTitle;
+  const description = dictionary.player.playNowMetaDescription;
   return {
     title,
     description,
@@ -35,15 +33,9 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  const fallbackTitle = locale === "en" ? "Play now" : "Jouer maintenant";
-
-  let pageTitle = fallbackTitle;
-  try {
-    const dictionary = await getDictionary(locale as Locale);
-    pageTitle = dictionary.player?.playNowTitle ?? fallbackTitle;
-  } catch {
-    // keep fallback
-  }
+  const dictionary = await getDictionary(locale as Locale);
+  const labels = dictionary.player;
+  const pageTitle = labels.playNowTitle;
 
   let matches: MatchWithDetails[] = [];
   try {
@@ -60,19 +52,21 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
           {pageTitle}
         </h1>
         <p className="text-sm text-slate-500">
-          Rejoignez une partie en cours et rencontrez de nouveaux joueurs.
+          {labels.playNowDescription}
         </p>
       </header>
 
       <div className="flex items-center justify-between">
         <SectionTitle
-          title="Parties Ouvertes"
+          title={labels.openMatchesSectionTitle}
           icon={<Trophy className="h-4 w-4" />}
         />
         <button
           type="button"
-          aria-label="Filtrer les matchs"
+          aria-label={labels.filterMatchesAria}
+          disabled
           className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+          title={labels.filtersComingSoon}
         >
           <Filter className="h-4 w-4" />
         </button>
@@ -81,11 +75,11 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
       {matches.length === 0 ? (
         <div className="py-12 text-center space-y-3">
           <p className="text-slate-500 italic font-medium">
-            Aucune partie ouverte pour le moment.
+            {labels.noOpenMatchesTitle}
           </p>
           <Link href={`/${locale}/matches/create`}>
             <button className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold shadow-xl shadow-slate-200 active:scale-95 transition-transform">
-              Créer un match
+              {labels.createMatchCta}
             </button>
           </Link>
         </div>

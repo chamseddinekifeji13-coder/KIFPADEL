@@ -28,9 +28,10 @@ type Player = {
 type PlayersDirectoryProps = {
   players: Player[];
   locale: string;
+  labels: Record<string, string>;
 };
 
-export function PlayersDirectory({ players, locale }: PlayersDirectoryProps) {
+export function PlayersDirectory({ players, locale, labels }: PlayersDirectoryProps) {
   const [search, setSearch] = useState("");
   const [filterTrust, setFilterTrust] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"trust" | "bookings" | "recent">("trust");
@@ -68,7 +69,7 @@ export function PlayersDirectory({ players, locale }: PlayersDirectoryProps) {
           )}
         >
           <p className="text-2xl font-bold text-[var(--success)]">{trustStats.healthy}</p>
-          <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider mt-1">Fiables</p>
+          <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider mt-1">{labels.playersReliable}</p>
         </button>
         <button
           onClick={() => setFilterTrust(filterTrust === "warning" ? null : "warning")}
@@ -78,7 +79,7 @@ export function PlayersDirectory({ players, locale }: PlayersDirectoryProps) {
           )}
         >
           <p className="text-2xl font-bold text-[var(--warning)]">{trustStats.warning}</p>
-          <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider mt-1">Attention</p>
+          <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider mt-1">{labels.playersWarning}</p>
         </button>
         <button
           onClick={() => setFilterTrust(filterTrust === "restricted" ? null : "restricted")}
@@ -88,7 +89,7 @@ export function PlayersDirectory({ players, locale }: PlayersDirectoryProps) {
           )}
         >
           <p className="text-2xl font-bold text-[var(--danger)]">{trustStats.restricted}</p>
-          <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider mt-1">Restreints</p>
+          <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider mt-1">{labels.playersRestricted}</p>
         </button>
       </div>
 
@@ -98,7 +99,7 @@ export function PlayersDirectory({ players, locale }: PlayersDirectoryProps) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--foreground-muted)]" />
           <input
             type="text"
-            placeholder="Rechercher un joueur..."
+            placeholder={labels.playersSearchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full h-10 pl-10 pr-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-white text-sm placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--gold)]"
@@ -109,22 +110,22 @@ export function PlayersDirectory({ players, locale }: PlayersDirectoryProps) {
           onChange={(e) => setSortBy(e.target.value as "trust" | "bookings" | "recent")}
           className="h-10 px-3 pr-8 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-white text-sm appearance-none cursor-pointer"
         >
-          <option value="trust">Par confiance</option>
-          <option value="bookings">Par réservations</option>
-          <option value="recent">Par dernière visite</option>
+          <option value="trust">{labels.playersSortTrust}</option>
+          <option value="bookings">{labels.playersSortBookings}</option>
+          <option value="recent">{labels.playersSortRecent}</option>
         </select>
       </div>
 
       {/* Players List */}
       <div className="space-y-3">
         {filtered.map((player) => (
-          <PlayerRow key={player.id} player={player} />
+          <PlayerRow key={player.id} player={player} labels={labels} locale={locale} />
         ))}
 
         {filtered.length === 0 && (
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 text-center">
             <Search className="h-8 w-8 text-[var(--foreground-muted)] mx-auto mb-3" />
-            <p className="text-white font-medium">Aucun joueur trouvé</p>
+            <p className="text-white font-medium">{labels.playersNoResults}</p>
           </div>
         )}
       </div>
@@ -132,7 +133,15 @@ export function PlayersDirectory({ players, locale }: PlayersDirectoryProps) {
   );
 }
 
-function PlayerRow({ player }: { player: Player }) {
+function PlayerRow({
+  player,
+  labels,
+  locale,
+}: {
+  player: Player;
+  labels: Record<string, string>;
+  locale: string;
+}) {
   const [expanded, setExpanded] = useState(false);
   const reliability = reliabilityFromTrustScore(player.trustScore);
 
@@ -171,7 +180,7 @@ function PlayerRow({ player }: { player: Player }) {
             </span>
           </div>
           <p className="text-sm text-[var(--foreground-muted)]">
-            {player.bookingsCount} réservations
+            {player.bookingsCount} {labels.bookingsLabel}
           </p>
         </div>
 
@@ -190,16 +199,16 @@ function PlayerRow({ player }: { player: Player }) {
             <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--background)]">
               <Phone className="h-4 w-4 text-[var(--foreground-muted)]" />
               <div>
-                <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider">Contact</p>
+                <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider">{labels.contactLabel}</p>
                 <p className="text-sm font-medium text-white">{player.phone}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--background)]">
               <Calendar className="h-4 w-4 text-[var(--foreground-muted)]" />
               <div>
-                <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider">Dernière visite</p>
+                <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider">{labels.lastVisitLabel}</p>
                 <p className="text-sm font-medium text-white">
-                  {new Date(player.lastVisit).toLocaleDateString("fr-FR")}
+                  {new Date(player.lastVisit).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR")}
                 </p>
               </div>
             </div>
@@ -208,11 +217,11 @@ function PlayerRow({ player }: { player: Player }) {
           <div className="flex gap-3">
             <button className="flex-1 h-10 rounded-xl bg-[var(--gold)]/10 text-[var(--gold)] font-bold text-sm hover:bg-[var(--gold)]/20 transition-colors flex items-center justify-center gap-2">
               <Star className="h-4 w-4" />
-              Ajouter bonus
+              {labels.addBonusCta}
             </button>
             <button className="flex-1 h-10 rounded-xl bg-[var(--danger)]/10 text-[var(--danger)] font-bold text-sm hover:bg-[var(--danger)]/20 transition-colors flex items-center justify-center gap-2">
               <Ban className="h-4 w-4" />
-              Signaler
+              {labels.reportCta}
             </button>
           </div>
         </div>

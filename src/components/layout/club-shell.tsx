@@ -26,9 +26,14 @@ type ClubShellProps = Readonly<{
     incidents: string;
     settings: string;
   };
+  uiLabels: {
+    managerLabel: string;
+    mobileClubLabel: string;
+    backToApp: string;
+  };
 }>;
 
-export function ClubShell({ children, locale, clubName, navLabels }: ClubShellProps) {
+export function ClubShell({ children, locale, clubName, navLabels, uiLabels }: ClubShellProps) {
   const pathname = usePathname();
   const baseUrl = `/${locale}/club`;
 
@@ -53,7 +58,7 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] font-medium">
-                Club Manager
+                {uiLabels.managerLabel}
               </p>
               <p className="text-sm font-bold text-white truncate">{clubName}</p>
             </div>
@@ -98,7 +103,7 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--foreground-muted)] hover:text-white hover:bg-[var(--surface-elevated)] transition-all text-sm font-medium"
           >
             <LogOut className="h-5 w-5" />
-            Retour à l&apos;app
+            {uiLabels.backToApp}
           </Link>
         </div>
       </aside>
@@ -112,7 +117,7 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
             </div>
             <div>
               <p className="text-[9px] uppercase tracking-widest text-[var(--foreground-muted)] font-medium">
-                Club
+                {uiLabels.mobileClubLabel}
               </p>
               <p className="text-sm font-bold text-white">{clubName}</p>
             </div>
