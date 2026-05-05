@@ -44,7 +44,9 @@ function normalizeSiteUrl(raw: string | undefined): string | null {
 }
 
 function normalizeSupabaseUrl(raw: string): string {
-  const cleaned = raw.trim().replace(/^['"]+|['"]+$/g, "").replace(/\/+$/, "");
+  // Use regex to strip all whitespace characters including \r and \n
+  const cleaned = raw.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "").replace(/\/+$/, "");
+  
   if (!cleaned) {
     throw new Error("Supabase URL is empty after normalization.");
   }
@@ -57,12 +59,11 @@ function normalizeSupabaseUrl(raw: string): string {
     return `https://${cleaned}`;
   }
 
-  // Common mistake: project ref provided in URL variable.
   if (/^[a-z0-9-]+$/i.test(cleaned)) {
     return `https://${cleaned}.supabase.co`;
   }
 
-  throw new Error("Invalid supabaseUrl: Provided URL is malformed.");
+  throw new Error(`Invalid supabaseUrl: "${cleaned}" is malformed.`);
 }
 
 /**
@@ -109,7 +110,7 @@ function resolveSupabaseAnonKey(): string {
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_ANON_KEY",
   );
-  if (found) return found.value.trim().replace(/^['"]+|['"]+$/g, "");
+  if (found) return found.value.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "");
 
   if (process.env.NODE_ENV === "production") {
     throw new Error(
@@ -147,8 +148,8 @@ export const publicEnv: PublicEnv = {
 };
 
 export const serverEnv = {
-  supabaseServiceRoleKey: firstNonEmpty(
+  supabaseServiceRoleKey: (firstNonEmpty(
     "SUPABASE_SERVICE_ROLE_KEY",
     "SUPABASE_SECRET_KEY"
-  )?.value || getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  )?.value || getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY")).replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, ""),
 };

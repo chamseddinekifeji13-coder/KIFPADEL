@@ -24,7 +24,7 @@ export async function signUpAction(formData: FormData) {
   });
 
   if (error) {
-    console.error("Auth error:", error);
+    console.error("[signUpAction] Auth error details:", JSON.stringify(error, null, 2));
     const diagnostic = `${error.name}|${(error as { code?: string }).code ?? ""}|${(error as { status?: number }).status ?? ""}|${error.message}`.toLowerCase();
     if (diagnostic.includes("already registered")) {
       redirect(`/${locale}/auth/sign-up?error=user_exists`);

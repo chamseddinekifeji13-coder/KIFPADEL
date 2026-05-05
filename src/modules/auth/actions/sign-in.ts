@@ -30,7 +30,7 @@ export async function signInAction(formData: FormData) {
   });
 
   if (error) {
-    console.error("Sign-in error:", error);
+    console.error("[signInAction] Auth error details:", JSON.stringify(error, null, 2));
     const diagnostic = `${error.name}|${(error as { code?: string }).code ?? ""}|${(error as { status?: number }).status ?? ""}|${error.message}`.toLowerCase();
     if (diagnostic.includes("email not confirmed")) {
       redirect(`/${locale}/auth/sign-in?error=email_not_confirmed`);

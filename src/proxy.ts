@@ -1,7 +1,9 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { LOCALES, DEFAULT_LOCALE } from "@/i18n/config";
+import { publicEnv } from "@/lib/config/env";
 
 /**
  * Middleware.
@@ -12,24 +14,47 @@ import { LOCALES, DEFAULT_LOCALE } from "@/i18n/config";
  * 3. Reject unknown locale prefixes → 404.
  */
 export default async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
-  /* ------------------------------------------------------------------ */
-  /* 1 — Supabase session refresh                                       */
-  /*    The @supabase/ssr library stores the session in cookies.         */
-  /*    We forward the existing cookies so server components can read    */
-  /*    the authenticated user. A full refresh (re-sign) happens only   */
-  /*    when the access token is about to expire; @supabase/ssr handles */
-  /*    that transparently when `createServerClient` is called inside   */
-  /*    a server component or action. The proxy simply passes cookies   */
-  /*    through (NextResponse.next() does this by default).             */
-  /* ------------------------------------------------------------------ */
+  const supabase = createServerClient(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
+        response = NextResponse.next({
+          request: {
+            headers: request.headers,
+          },
+        });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
+
+  // This will refresh the session if needed
+  await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
 
   /* ------------------------------------------------------------------ */
   /* 2 — i18n redirect: bare "/" → "/fr"                                */
   /* ------------------------------------------------------------------ */
   if (pathname === "/") {
-    return NextResponse.redirect(new URL(`/${DEFAULT_LOCALE}`, request.url));
+    const url = new URL(`/${DEFAULT_LOCALE}`, request.url);
+    const redirectResponse = NextResponse.redirect(url);
+    // Copy cookies to redirect response
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return redirectResponse;
   }
 
   /* ------------------------------------------------------------------ */
@@ -39,7 +64,6 @@ export default async function proxy(request: NextRequest) {
   const candidateLocale = segments[1]; // e.g. "fr" or "en"
 
   // API & static assets are not locale-prefixed — let them through.
-  // We detect static assets by checking for a file extension (a dot in the last segment).
   const hasExtension = segments[segments.length - 1].includes(".");
 
   if (
@@ -48,17 +72,21 @@ export default async function proxy(request: NextRequest) {
     hasExtension ||
     pathname.startsWith("/icons")
   ) {
-    return NextResponse.next();
+    return response;
   }
 
   // If the first segment is not a known locale, redirect to default.
   if (!LOCALES.includes(candidateLocale as (typeof LOCALES)[number])) {
-    return NextResponse.redirect(
-      new URL(`/${DEFAULT_LOCALE}${pathname}`, request.url),
-    );
+    const url = new URL(`/${DEFAULT_LOCALE}${pathname}`, request.url);
+    const redirectResponse = NextResponse.redirect(url);
+    // Copy cookies to redirect response
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return redirectResponse;
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
