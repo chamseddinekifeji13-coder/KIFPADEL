@@ -146,3 +146,50 @@ export async function fetchCourtsByClub(clubId: string) {
     return [];
   }
 }
+
+export async function fetchManagedClubForUser(userId: string) {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { data, error } = await supabase
+      .from("club_memberships")
+      .select(
+        `
+          role,
+          club:clubs (
+            id,
+            name,
+            city,
+            is_active
+          )
+        `,
+      )
+      .eq("user_id", userId)
+      .in("role", ["club_manager", "club_staff", "platform_admin"])
+      .limit(1);
+
+    if (error) {
+      console.warn("[clubs.fetchManagedClubForUser] supabase error", error.message);
+      return null;
+    }
+
+    const membership = Array.isArray(data) ? data[0] : null;
+    const clubRecord = membership?.club;
+    const club = Array.isArray(clubRecord) ? clubRecord[0] : clubRecord;
+
+    if (!club?.id || !club?.name) {
+      return null;
+    }
+
+    return {
+      id: club.id,
+      name: club.name,
+      city: club.city ?? "Tunis",
+      is_active: club.is_active ?? true,
+    };
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[clubs.fetchManagedClubForUser] unexpected error", err);
+    return null;
+  }
+}
