@@ -70,29 +70,21 @@ function normalizeSupabaseUrl(raw: string): string {
  * Resolve the public Supabase URL.
  */
 function resolveSupabaseUrl(): string {
-  const direct = firstNonEmpty(
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "SUPABASE_URL",
-  );
-  if (direct) {
-    // Basic validation
-    if (!direct.value.startsWith("https://")) {
-      console.warn(`⚠️  Supabase URL "${direct.name}" does not start with https://`);
-    }
-    return normalizeSupabaseUrl(direct.value);
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  if (url) {
+    return normalizeSupabaseUrl(url);
   }
 
-  const projectId = firstNonEmpty(
-    "NEXT_PUBLIC_SUPABASE_PROJECT_ID",
-    "SUPABASE_PROJECT_ID",
-    "NEXT_PUBLIC_SUPABASE_PROJECT_REF",
-    "SUPABASE_PROJECT_REF",
-  );
+  const projectId = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || 
+                    process.env.SUPABASE_PROJECT_ID || 
+                    process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF || 
+                    process.env.SUPABASE_PROJECT_REF;
+                    
   if (projectId) {
-    return normalizeSupabaseUrl(projectId.value);
+    return normalizeSupabaseUrl(projectId);
   }
 
-  if (process.env.NODE_ENV === "production" && !direct && !projectId) {
+  if (process.env.NODE_ENV === "production") {
     console.error("CRITICAL: Missing Supabase URL in production environment variables.");
   }
   return "MISSING_NEXT_PUBLIC_SUPABASE_URL";
@@ -102,14 +94,15 @@ function resolveSupabaseUrl(): string {
  * Resolve the public anon key.
  */
 function resolveSupabaseAnonKey(): string {
-  const found = firstNonEmpty(
-    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "SUPABASE_ANON_KEY",
-  );
-  if (found) return found.value.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "");
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+              process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
+              process.env.SUPABASE_ANON_KEY;
+              
+  if (key) {
+    return key.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "");
+  }
 
-  if (process.env.NODE_ENV === "production" && !found) {
+  if (process.env.NODE_ENV === "production") {
     console.error("CRITICAL: Missing Supabase Anon Key in production environment variables.");
   }
   return "MISSING_NEXT_PUBLIC_SUPABASE_ANON_KEY";
@@ -122,18 +115,17 @@ export const publicEnv: PublicEnv = {
   supabaseUrl: resolveSupabaseUrl(),
   supabaseAnonKey: resolveSupabaseAnonKey(),
   siteUrl: (() => {
-    const found = firstNonEmpty(
-      "NEXT_PUBLIC_SITE_URL",
-      "VERCEL_URL",
-      "URL"
-    );
-    if (!found) {
+    const rawUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                   process.env.VERCEL_URL || 
+                   process.env.URL;
+                   
+    if (!rawUrl) {
       return process.env.NODE_ENV === "production" 
         ? "https://www.kifpadel.tn" 
         : "http://localhost:3000";
     }
     
-    let url = found.value.replace(/\/+$/, "");
+    let url = rawUrl.replace(/\/+$/, "");
     if (!url.startsWith("http")) {
       url = `https://${url}`;
     }
