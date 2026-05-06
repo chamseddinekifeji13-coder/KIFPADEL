@@ -67,9 +67,9 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
     : profile.display_name;
 
   return (
-    <div className="flex flex-col items-center w-full min-h-screen space-y-10 pb-32 animate-fade-in pt-8 px-4">
-      {/* Centered Logo */}
-      <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-center w-full min-h-screen pb-32 animate-fade-in pt-8 px-4 sm:px-6 lg:px-8">
+      {/* Centered Logo - Constant across devices */}
+      <div className="flex flex-col items-center gap-3 mb-12">
         <div className="relative h-16 w-16 overflow-hidden rounded-2xl glass-gold p-2 shadow-premium group">
           <img 
             src="/icons/icon.svg" 
@@ -83,63 +83,72 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
         </div>
       </div>
 
-      {/* Player Identity - LARGE & CENTERED */}
-      <div className="text-center space-y-2">
-        <h1 className="text-4xl font-black text-white uppercase tracking-tighter sm:text-6xl">
+      {/* Hero section: Name and ELO - Responsive text size */}
+      <div className="text-center space-y-4 mb-16">
+        <h1 className="text-5xl font-black text-white uppercase tracking-tighter sm:text-7xl lg:text-8xl">
           {displayName}
         </h1>
-        <p className="text-lg font-black text-gold uppercase tracking-[0.15em] flex items-center justify-center gap-2">
+        <p className="text-xl font-black text-gold uppercase tracking-[0.15em] flex items-center justify-center gap-2 sm:text-2xl lg:text-3xl">
           ELO RANK: <span className="text-white">{profile.trust_score * 15 + 800}</span>
         </p>
       </div>
 
-      {/* Stats Grid - 3 Columns */}
-      <div className="w-full max-w-sm">
-        <ProfileStatsGrid items={stats} />
-      </div>
-
-      {/* Upcoming Booking (Premium Mini Card) */}
-      {upcomingBooking && (
-        <Card className="w-full max-w-sm border-gold/30 bg-gold/5 p-4 rounded-2xl flex items-center justify-between">
-          <div className="space-y-0.5">
-            <p className="text-[9px] font-black text-gold uppercase tracking-widest">{labels.upcomingBookingTitle}</p>
-            <p className="text-xs font-bold text-white truncate max-w-[180px]">{upcomingBooking.club_name}</p>
+      {/* Responsive Content Grid */}
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+        
+        {/* Left/Main Column: Stats & Rivals */}
+        <div className="lg:col-span-7 space-y-12 flex flex-col items-center">
+          <div className="w-full max-w-md lg:max-w-none">
+            <ProfileStatsGrid items={stats} />
           </div>
-          <div className="text-right">
-            <p className="text-[10px] font-bold text-white">
-              {new Date(upcomingBooking.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
-            </p>
-            <span className={`text-[8px] font-bold uppercase tracking-tight ${bookingStatusClasses(upcomingBooking.status)}`}>
-              {bookingStatusLabel(upcomingBooking.status, labels)}
-            </span>
+
+          {/* Upcoming Booking (Premium Mini Card) */}
+          {upcomingBooking && (
+            <Card className="w-full max-w-md border-gold/30 bg-gold/5 p-5 rounded-[2rem] flex items-center justify-between shadow-gold/10">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-gold uppercase tracking-widest">{labels.upcomingBookingTitle}</p>
+                <p className="text-sm font-bold text-white truncate max-w-[200px]">{upcomingBooking.club_name}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-white">
+                  {new Date(upcomingBooking.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                </p>
+                <span className={`text-[9px] font-bold uppercase tracking-tight ${bookingStatusClasses(upcomingBooking.status)}`}>
+                  {bookingStatusLabel(upcomingBooking.status, labels)}
+                </span>
+              </div>
+            </Card>
+          )}
+
+          <div className="w-full max-w-sm lg:max-w-md">
+            <TopRivals rivals={dummyRivals} />
           </div>
-        </Card>
-      )}
-
-      {/* Top Rivals - Minimalist List */}
-      <div className="w-full max-w-xs">
-        <TopRivals rivals={dummyRivals} />
-      </div>
-
-      {/* Navigation Actions - Subtle below */}
-      <div className="w-full max-w-xs pt-8 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <Link href={`/${locale}/play-now`} className="flex flex-col items-center gap-3 p-5 glass-gold rounded-3xl hover:bg-gold hover:text-black transition-all group active:scale-95">
-            <Trophy className="h-6 w-6" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Jouer</span>
-          </Link>
-          <Link href={`/${locale}/book`} className="flex flex-col items-center gap-3 p-5 glass rounded-3xl border border-white/5 hover:bg-white/10 transition-all active:scale-95">
-            <Calendar className="h-6 w-6" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Réserver</span>
-          </Link>
         </div>
-        <Link 
-          href={`/${locale}/profile`}
-          className="flex items-center justify-center gap-2 p-3 text-[10px] font-black text-foreground-muted uppercase tracking-widest hover:text-white transition-colors"
-        >
-          <User className="h-4 w-4" />
-          Mon Profil
-        </Link>
+
+        {/* Right/Side Column: Navigation & Actions */}
+        <div className="lg:col-span-5 space-y-8 lg:sticky lg:top-8 flex flex-col items-center">
+          <div className="w-full max-w-sm space-y-6">
+            <h3 className="text-[10px] font-black text-foreground-muted uppercase tracking-[0.3em] text-center lg:text-left mb-6">Actions</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <Link href={`/${locale}/play-now`} className="flex flex-col items-center gap-4 p-6 glass-gold rounded-[2rem] hover:bg-gold hover:text-black transition-all group active:scale-95 shadow-lg">
+                <Trophy className="h-8 w-8" />
+                <span className="text-[11px] font-black uppercase tracking-widest">Jouer</span>
+              </Link>
+              <Link href={`/${locale}/book`} className="flex flex-col items-center gap-4 p-6 glass rounded-[2rem] border border-white/5 hover:bg-white/10 transition-all active:scale-95">
+                <Calendar className="h-8 w-8" />
+                <span className="text-[11px] font-black uppercase tracking-widest">Réserver</span>
+              </Link>
+            </div>
+            
+            <Link 
+              href={`/${locale}/profile`}
+              className="flex items-center justify-center gap-3 p-4 text-xs font-black text-foreground-muted uppercase tracking-[0.2em] hover:text-white transition-colors glass rounded-2xl"
+            >
+              <User className="h-4 w-4" />
+              Mon Profil Complet
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
