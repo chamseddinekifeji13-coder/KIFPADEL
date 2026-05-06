@@ -131,6 +131,34 @@ async function setPrimaryClubIfEmpty(
   }
 }
 
+async function ensureDefaultCourt(adminClient: SupabaseAdminClient, clubId: string) {
+  const { data: existingCourts, error: existingCourtsError } = await adminClient
+    .from("courts")
+    .select("id")
+    .eq("club_id", clubId)
+    .limit(1);
+
+  if (existingCourtsError) {
+    console.warn("[createClubAction] default court lookup failed", existingCourtsError);
+    return;
+  }
+
+  if ((existingCourts ?? []).length > 0) {
+    return;
+  }
+
+  const { error: createCourtError } = await adminClient.from("courts").insert({
+    club_id: clubId,
+    label: "Terrain 1",
+    surface: "standard",
+    is_indoor: false,
+  });
+
+  if (createCourtError) {
+    console.warn("[createClubAction] default court creation failed", createCourtError);
+  }
+}
+
 export async function createClubAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const name = String(formData.get("name") ?? "").trim();
@@ -176,6 +204,7 @@ export async function createClubAction(formData: FormData) {
   }
 
   await setPrimaryClubIfEmpty(adminClient, user.id, clubId);
+  await ensureDefaultCourt(adminClient, clubId);
 
   redirect(`/${locale}/club/dashboard?created=1`);
 }

@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils/cn";
 import { TimeContainer } from "@/app/[locale]/(player)/book/[clubId]/time-container";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type ClubDetailPageProps = {
   params: Promise<{ locale: string; clubId: string }>;
   searchParams: Promise<{ date?: string }>;
