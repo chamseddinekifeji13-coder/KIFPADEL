@@ -24,12 +24,12 @@ export async function completeOnboardingAction(formData: FormData) {
 
   // Map UI level IDs to database league names
   const levelMap: Record<string, string> = {
-    beginner: "Bronze",
-    intermediate: "Silver",
-    advanced: "Gold",
-    expert: "Platinum",
+    beginner: "bronze",
+    intermediate: "silver",
+    advanced: "gold",
+    expert: "platinum",
   };
-  const league = levelMap[rawLevel] || "Bronze";
+  const league = levelMap[rawLevel] || "bronze";
 
   if (!displayName) {
     redirect(`/${locale}/onboarding?error=missing_name`);
