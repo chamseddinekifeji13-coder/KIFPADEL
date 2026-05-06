@@ -1,4 +1,4 @@
-import { fetchPlayers, fetchPlayerById, fetchTopRivals } from "./repository";
+import { fetchPlayers, fetchPlayerById } from "./repository";
 
 /**
  * Service to handle player and profile related business logic.
@@ -16,12 +16,5 @@ export const playerService = {
    */
   async getPlayerProfile(userId: string) {
     return fetchPlayerById(userId);
-  },
-
-  /**
-   * Retrieves most encountered opponents for the player.
-   */
-  async getTopRivals(userId: string, limit = 3) {
-    return fetchTopRivals(userId, limit);
   },
 };

@@ -1,4 +1,4 @@
-import { fetchClubs, fetchClubById, fetchManagedClubForUser } from "./repository";
+import { fetchClubs, fetchClubById } from "./repository";
 
 /**
  * Service to handle club related business logic.
@@ -16,9 +16,5 @@ export const clubService = {
    */
   async getClubDetails(id: string) {
     return fetchClubById(id);
-  },
-
-  async getManagedClub(userId: string) {
-    return fetchManagedClubForUser(userId);
   },
 };

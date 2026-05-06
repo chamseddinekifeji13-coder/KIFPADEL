@@ -9,22 +9,11 @@ import { MapPin, ArrowLeft, Calendar as CalendarIcon, InfoIcon, Clock } from "lu
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { TimeContainer } from "@/app/[locale]/(player)/book/[clubId]/time-container";
-import type { Metadata } from "next";
 
 type ClubDetailPageProps = {
   params: Promise<{ locale: string; clubId: string }>;
   searchParams: Promise<{ date?: string }>;
 };
-
-export async function generateMetadata({ params }: ClubDetailPageProps): Promise<Metadata> {
-  const { clubId } = await params;
-  const club = await clubService.getClubDetails(clubId).catch(() => null);
-  
-  return {
-    title: club ? `${club.name} | Kifpadel` : "Club Details | Kifpadel",
-    description: club ? `Réservez votre terrain de Padel à ${club.name} (${club.city}).` : "Détails du club de Padel.",
-  };
-}
 
 export default async function ClubDetailPage({
   params,

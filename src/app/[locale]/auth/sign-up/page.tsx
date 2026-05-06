@@ -53,16 +53,6 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
           <p className="text-sm text-rose-700">
             {error === "missing_fields"
               ? dictionary.auth.missingFieldsError
-              : error === "user_exists"
-                ? dictionary.auth.userExistsError
-                : error === "invalid_redirect_url"
-                  ? dictionary.auth.invalidRedirectUrlError
-                : error === "profile_trigger_error"
-                  ? dictionary.auth.profileTriggerError
-                : error === "auth_config_error"
-                  ? dictionary.auth.authConfigError
-                  : error === "rate_limited"
-                    ? dictionary.auth.rateLimitedError
               : dictionary.auth.signUpFailedError}
           </p>
         </Card>

@@ -24,11 +24,6 @@ export interface Match {
   clubs: MatchClub;
 }
 
-export interface MatchWithDetails extends Match {
-  playerCount: number;
-  clubName: string;
-}
-
 const MATCH_SELECT = `
   *,
   clubs (
@@ -42,7 +37,7 @@ const MATCH_SELECT = `
   )
 `;
 
-function normalizeMatches(raw: unknown): MatchWithDetails[] {
+function normalizeMatches(raw: unknown): (Match & { playerCount: number; clubName: string })[] {
   if (!Array.isArray(raw)) return [];
   return (raw as Match[])
     .filter((m): m is Match => Boolean(m && typeof m === "object" && m.id))
@@ -56,7 +51,7 @@ function normalizeMatches(raw: unknown): MatchWithDetails[] {
 /**
  * Repository for Match related database operations.
  */
-export async function fetchOpenMatches(): Promise<MatchWithDetails[]> {
+export async function fetchOpenMatches() {
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -79,7 +74,7 @@ export async function fetchOpenMatches(): Promise<MatchWithDetails[]> {
   }
 }
 
-export async function fetchOpenMatchesByClub(clubId: string): Promise<MatchWithDetails[]> {
+export async function fetchOpenMatchesByClub(clubId: string) {
   try {
     const supabase = await createSupabaseServerClient();
 

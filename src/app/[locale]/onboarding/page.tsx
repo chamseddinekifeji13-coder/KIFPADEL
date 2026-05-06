@@ -23,15 +23,6 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
       <div className="max-w-md mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
-            <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-[var(--surface)] border border-[var(--gold)]/20 shadow-xl shadow-[var(--gold)]/5 p-1">
-              <img 
-                src="/logo.png" 
-                alt="Kifpadel Logo" 
-                className="h-full w-full object-contain"
-              />
-            </div>
-          </div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 text-[10px] font-bold uppercase tracking-widest text-[var(--gold)] mb-4">
             Bienvenue
           </div>
@@ -43,7 +34,12 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
           </p>
         </div>
 
-        <OnboardingWizard locale={locale} />
+        <OnboardingWizard 
+          locale={locale} 
+          userId={user.id}
+          userEmail={user.email ?? ""}
+          dictionary={dictionary}
+        />
       </div>
     </div>
   );

@@ -38,10 +38,9 @@ type SlotsManagerProps = {
   bookings: Booking[];
   courts: string[];
   locale: string;
-  labels: Record<string, string>;
 };
 
-export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerProps) {
+export function SlotsManager({ bookings, courts, locale }: SlotsManagerProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [filterCourt, setFilterCourt] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
@@ -52,13 +51,6 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
     return true;
   });
 
-  const statusCounts = {
-    confirmed: bookings.filter((booking) => booking.status === "confirmed").length,
-    pending: bookings.filter((booking) => booking.status === "pending").length,
-    blocked: bookings.filter((booking) => booking.status === "no_show").length,
-    available: Math.max(courts.length * 12 - bookings.length, 0),
-  };
-
   return (
     <div className="space-y-6">
       {/* Date Selector */}
@@ -67,7 +59,7 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
           const date = new Date();
           date.setDate(date.getDate() + i);
           const isSelected = date.toDateString() === selectedDate.toDateString();
-          const dayName = date.toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", { weekday: "short" });
+          const dayName = date.toLocaleDateString("fr-FR", { weekday: "short" });
           const dayNum = date.getDate();
 
           return (
@@ -92,7 +84,7 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
       <div className="flex items-center gap-3 overflow-x-auto">
         <div className="flex items-center gap-2 text-[var(--foreground-muted)]">
           <Filter className="h-4 w-4" />
-          <span className="text-xs font-medium">{labels.slotsFiltersLabel}:</span>
+          <span className="text-xs font-medium">Filtres:</span>
         </div>
         
         <select
@@ -100,7 +92,7 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
           onChange={(e) => setFilterCourt(e.target.value || null)}
           className="h-8 px-3 pr-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-white text-xs font-medium appearance-none cursor-pointer"
         >
-          <option value="">{labels.slotsAllCourts}</option>
+          <option value="">Tous les courts</option>
           {courts.map((court) => (
             <option key={court} value={court}>{court}</option>
           ))}
@@ -111,33 +103,24 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
           onChange={(e) => setFilterStatus(e.target.value || null)}
           className="h-8 px-3 pr-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-white text-xs font-medium appearance-none cursor-pointer"
         >
-          <option value="">{labels.slotsAllStatuses}</option>
-          <option value="confirmed">{labels.slotsStatusConfirmed}</option>
-          <option value="pending">{labels.slotsStatusPendingPayment}</option>
-          <option value="cancelled">{labels.slotsStatusCancelled}</option>
-          <option value="no_show">{labels.slotsStatusNoShow}</option>
+          <option value="">Tous les statuts</option>
+          <option value="confirmed">Confirmées</option>
+          <option value="pending">En attente</option>
         </select>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <StatusPill label={labels.slotsStatusConfirmed} value={statusCounts.confirmed} className="text-[var(--success)] border-[var(--success)]/25 bg-[var(--success)]/10" />
-        <StatusPill label={labels.slotsStatusPendingPayment} value={statusCounts.pending} className="text-[var(--warning)] border-[var(--warning)]/25 bg-[var(--warning)]/10" />
-        <StatusPill label={labels.slotsStatusBlocked} value={statusCounts.blocked} className="text-[var(--danger)] border-[var(--danger)]/25 bg-[var(--danger)]/10" />
-        <StatusPill label={labels.slotsStatusAvailable} value={statusCounts.available} className="text-slate-200 border-[var(--border)] bg-[var(--surface)]" />
       </div>
 
       {/* Bookings List */}
       <div className="space-y-3">
         {filteredBookings.map((booking) => (
-          <BookingCard key={booking.id} booking={booking} labels={labels} />
+          <BookingCard key={booking.id} booking={booking} />
         ))}
 
         {filteredBookings.length === 0 && (
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 text-center">
             <Calendar className="h-8 w-8 text-[var(--foreground-muted)] mx-auto mb-3" />
-            <p className="text-white font-medium">{labels.slotsNoBookingsTitle}</p>
+            <p className="text-white font-medium">Aucune réservation</p>
             <p className="text-sm text-[var(--foreground-muted)] mt-1">
-              {labels.slotsNoBookingsSubtitle}
+              Pas de créneaux réservés pour cette période
             </p>
           </div>
         )}
@@ -146,7 +129,7 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
   );
 }
 
-function BookingCard({ booking, labels }: { booking: Booking; labels: Record<string, string> }) {
+function BookingCard({ booking }: { booking: Booking }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
@@ -163,10 +146,10 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
   };
 
   const trustLabels: Record<string, string> = {
-    healthy: labels.playersReliable,
-    warning: labels.playersWarning,
-    restricted: labels.playersRestricted,
-    blacklisted: labels.playersRestricted,
+    healthy: "Fiable",
+    warning: "Attention",
+    restricted: "Restreint",
+    blacklisted: "Blacklisté",
   };
 
   const handleConfirmArrival = () => {
@@ -174,7 +157,7 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
       const result = await confirmArrivalAction(booking.id);
       if (result.ok) {
         setActionState("success");
-        setActionMessage(labels.arrivalConfirmedMessage);
+        setActionMessage("Arrivée confirmée");
         router.refresh();
       } else {
         setActionState("error");
@@ -188,7 +171,7 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
       const result = await reportNoShowAction(booking.id, booking.player.id);
       if (result.ok) {
         setActionState("success");
-        setActionMessage(labels.noShowReportedMessage);
+        setActionMessage("No-show enregistré - Trust impacté");
         router.refresh();
       } else {
         setActionState("error");
@@ -225,16 +208,13 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
 
         {/* Payment & Status */}
         <div className="flex items-center gap-3">
-          <span className={cn("text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full", statusChipClass(booking.status))}>
-            {statusLabel(booking.status, labels)}
-          </span>
           {booking.paymentMethod === "online" ? (
             <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-[var(--success)]/10 text-[var(--success)]">
-              {labels.paymentOnline}
+              Payé
             </span>
           ) : (
             <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-[var(--warning)]/10 text-[var(--warning)]">
-              {labels.paymentAtClub}
+              {booking.amount} DT
             </span>
           )}
           {booking.status === "completed" ? (
@@ -256,14 +236,14 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
             <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--background)]">
               <Phone className="h-4 w-4 text-[var(--foreground-muted)]" />
               <div>
-                <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider">{labels.phoneLabel}</p>
+                <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider">Téléphone</p>
                 <p className="text-sm font-medium text-white">{booking.player.phone}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--background)]">
               <Shield className="h-4 w-4 text-[var(--foreground-muted)]" />
               <div>
-                <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider">{labels.trustScoreLabel}</p>
+                <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider">Score Trust</p>
                 <p className={cn("text-sm font-bold", trustColors[reliability].split(" ")[0])}>
                   {booking.player.trustScore}/100
                 </p>
@@ -276,10 +256,10 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
             <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--warning)]/5 border border-[var(--warning)]/20">
               <AlertTriangle className="h-4 w-4 text-[var(--warning)] mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-[var(--warning)]">{labels.watchPlayerTitle}</p>
+                <p className="text-sm font-medium text-[var(--warning)]">Joueur à surveiller</p>
                 <p className="text-xs text-[var(--foreground-muted)] mt-0.5">
-                  {reliability === "warning" && labels.watchPlayerWarning}
-                  {reliability === "restricted" && labels.watchPlayerRestricted}
+                  {reliability === "warning" && "Ce joueur a eu des incidents passés. Vérifiez sa présence."}
+                  {reliability === "restricted" && "Ce joueur est en période probatoire. Paiement sur place non recommandé."}
                 </p>
               </div>
             </div>
@@ -315,7 +295,7 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
-                    {labels.confirmArrivalCta}
+                    Confirmer arrivée
                   </>
                 )}
               </button>
@@ -329,7 +309,7 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
                 ) : (
                   <>
                     <XCircle className="h-4 w-4" />
-                    {labels.reportNoShowCta}
+                    No-show
                   </>
                 )}
               </button>
@@ -339,30 +319,4 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
       )}
     </div>
   );
-}
-
-function StatusPill({ label, value, className }: { label: string; value: number; className: string }) {
-  return (
-    <div className={cn("rounded-xl border px-3 py-2", className)}>
-      <p className="text-xs font-black">{value}</p>
-      <p className="text-[10px] uppercase tracking-wider">{label}</p>
-    </div>
-  );
-}
-
-function statusChipClass(status: Booking["status"]) {
-  if (status === "confirmed") return "bg-[var(--success)]/10 text-[var(--success)]";
-  if (status === "pending") return "bg-[var(--warning)]/10 text-[var(--warning)]";
-  if (status === "cancelled") return "bg-slate-500/15 text-slate-300";
-  if (status === "no_show") return "bg-[var(--danger)]/10 text-[var(--danger)]";
-  return "bg-slate-500/10 text-slate-300";
-}
-
-function statusLabel(status: Booking["status"], labels: Record<string, string>) {
-  if (status === "confirmed") return labels.slotsStatusConfirmed;
-  if (status === "pending") return labels.slotsStatusPendingPayment;
-  if (status === "cancelled") return labels.slotsStatusCancelled;
-  if (status === "no_show") return labels.slotsStatusNoShow;
-  if (status === "completed") return labels.statusCompleted;
-  return status;
 }

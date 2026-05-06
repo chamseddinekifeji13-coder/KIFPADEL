@@ -1,182 +1,172 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { isLocale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { playerService } from "@/modules/players/service";
-import { fetchBookingsForPlayer } from "@/modules/bookings/repository";
-import { Player } from "@/modules/players/repository";
-import { LeagueProgress } from "@/components/features/players/league-progress";
-import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { 
-  Trophy, 
-  ShieldCheck, 
-  CreditCard, 
-  Settings, 
-  ChevronRight, 
-  History,
-  Star
-} from "lucide-react";
-import { SectionTitle } from "@/components/ui/section-title";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
+import { ChevronLeft, Trophy, Target, Zap, Calendar, Heart, Shield, TrendingUp } from "lucide-react";
 
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
 };
 
+export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn ? "My Profile" : "Mon Profil";
+  const description = isEn
+    ? "Your premium KIFPADEL player card with ELO ranking, trust score, and match statistics."
+    : "Votre carte joueur KIFPADEL premium avec classement ELO, score de confiance et statistiques de matchs.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `/${locale}/profile` },
+    robots: { index: false, follow: false },
+    openGraph: { title, description, url: `/${locale}/profile` },
+  };
+}
+
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const dictionary = await getDictionary(locale);
-  const labels = dictionary.player;
 
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/auth/sign-in`);
-  }
-
-  let profile: Player | null = null;
+  let userId: string | null = null;
   try {
-    profile = await playerService.getPlayerProfile(user.id);
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    userId = data?.user?.id ?? null;
   } catch (err) {
-    console.error("Failed to fetch profile:", err);
+    rethrowFrameworkError(err);
+    userId = null;
   }
 
-  if (!profile) {
-    redirect(`/${locale}/onboarding`);
+  // Demo mode: show profile without auth for preview
+  const isDemo = !userId;
+  
+  let profile: Awaited<ReturnType<typeof playerService.getPlayerProfile>> | null = null;
+  if (userId) {
+    try {
+      profile = await playerService.getPlayerProfile(userId);
+    } catch (err) {
+      rethrowFrameworkError(err);
+      profile = null;
+    }
   }
 
-  const [topRivals, bookings] = await Promise.all([
-    playerService.getTopRivals(user.id, 3),
-    fetchBookingsForPlayer(user.id, 20),
-  ]);
-  const completedCount = bookings.filter((booking) => booking.status === "completed").length;
-  const cancelledCount = bookings.filter((booking) => booking.status === "cancelled").length;
+  const displayName = profile?.display_name ?? "AHMED BENALI";
+  const trustScore = Number.isFinite(profile?.trust_score) ? profile.trust_score : 85;
+  const reliabilityStatus = profile?.reliability_status ?? "healthy";
+
+  // Mock stats
+  const playerStats = {
+    matchesPlayed: 24,
+    wins: 18,
+    losses: 6,
+    winRatio: "75%",
+    currentStreak: 4,
+    presence: "92%",
+    trustScore: trustScore,
+    eloRank: 1850,
+  };
+
+  const topRivals = [
+    { name: "Ahmed B.", record: "3-2" },
+    { name: "Youssef K.", record: "2-2" },
+    { name: "Sarah M.", record: "4-2" },
+    { name: "Mehdi T.", record: "1-2" },
+    { name: "Ines L.", record: "2-0" },
+  ];
 
   return (
-    <div className="flex-1 p-4 space-y-8 pb-20">
-      <header className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-900">{labels.profileTitle}</h1>
-        <button 
-          aria-label={labels.profileSettingsAria}
-          className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-        >
-          <Settings className="h-5 w-5" />
-        </button>
-      </header>
-
-
-      {/* Virtual Member Card */}
-      <section className="relative overflow-hidden rounded-[2rem] aspect-[1.6/1] bg-[var(--surface)] border border-[var(--gold)]/20 p-6 flex flex-col justify-between text-white shadow-2xl shadow-black/20 group">
-        {/* Abstract Background Design */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--gold)] rounded-full blur-[90px] opacity-10 -mr-20 -mt-20 group-hover:opacity-20 transition-opacity" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full blur-[70px] opacity-5 -ml-20 -mb-20" />
+    <div className="min-h-screen bg-[var(--background)] py-8 px-4">
+      <div className="w-full max-w-lg mx-auto space-y-8">
         
-        <div className="relative flex justify-between items-start">
-          <div className="space-y-4">
-            <div className="h-8 w-8 bg-white/10 rounded-lg backdrop-blur-md flex items-center justify-center border border-white/10">
-              <CreditCard className="h-4 w-4" />
+        {/* Top Header - KIFPADEL Logo */}
+        <header className="flex items-center justify-between">
+          <Link 
+            href={`/${locale}`}
+            className="flex items-center gap-2 text-[var(--foreground-muted)] hover:text-white transition-colors"
+            aria-label="Back to home"
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="text-xs font-medium uppercase tracking-wider">Accueil</span>
+          </Link>
+          <div className="flex items-center gap-1.5">
+            <div className="h-6 w-6 rounded-lg bg-[var(--gold)] flex items-center justify-center">
+              <span className="text-black font-black text-[10px]">KIF</span>
             </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400">{labels.profileCardRoleLabel}</p>
-              <h2 className="text-xl font-bold">{profile.display_name}</h2>
-            </div>
+            <span className="text-[var(--gold)] font-black text-sm tracking-tight uppercase">PADEL</span>
           </div>
-          <Badge variant={profile.league.toLowerCase() as BadgeProps["variant"]} className="border-white/20 backdrop-blur-sm px-4 py-1.5 uppercase tracking-wider">
-            {profile.league}
-          </Badge>
-        </div>
+          <div className="w-10" />
+        </header>
 
-        <div className="relative flex justify-between items-end">
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
-              {labels.reliabilityLabel}
+        {/* Hero: Player Name + ELO Rank */}
+        <div className="space-y-4 text-center">
+          <div>
+            <p className="text-[11px] font-bold text-[var(--foreground-muted)] uppercase tracking-[0.15em] mb-2">
+              Profil Joueur
             </p>
-            <div className="flex items-center gap-1.5 text-emerald-400">
-              <ShieldCheck className="h-4 w-4" />
-              <span className="text-sm font-bold uppercase tracking-wide">{profile.reliability_status}</span>
-            </div>
+            <h1 className="text-4xl font-black text-white uppercase tracking-tight text-balance">
+              {displayName}
+            </h1>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-black tracking-tighter">KIF-2026</p>
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-medium">{labels.profileCardIdLabel}</p>
+          
+          <div className="inline-flex items-baseline gap-3 mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl px-5 py-3">
+            <span className="text-[10px] font-bold text-[var(--foreground-muted)] uppercase tracking-[0.1em]">
+              ELO Rank:
+            </span>
+            <span className="text-3xl font-black text-[var(--gold)] font-mono tracking-tighter">
+              {playerStats.eloRank.toString().padStart(4, "0")}
+            </span>
           </div>
         </div>
-      </section>
 
-      {/* Progression */}
-      <Card className="p-6 space-y-6 bg-[var(--surface)] border-[var(--border)]">
-        <SectionTitle 
-          title={labels.rankingSectionTitle}
-          icon={<Trophy className="h-4 w-4" />}
-          className="bg-transparent p-0"
-        />
-        <LeagueProgress 
-          score={profile.trust_score} 
-          currentLeague={profile.league} 
-        />
-      </Card>
-
-      {/* Stats Quick Links */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="p-4 flex flex-col items-center justify-center gap-2 bg-[var(--surface)] border-[var(--border)]">
-          <div className="h-10 w-10 rounded-full bg-[var(--gold)]/10 text-[var(--gold)] flex items-center justify-center">
-            <Star className="h-5 w-5 fill-[var(--gold)]" />
-          </div>
-          <span className="text-xs font-bold text-white">{labels.completedSessionsLabel}</span>
-          <span className="text-lg font-black text-[var(--gold)]">{completedCount}</span>
-        </Card>
-        <Card className="p-4 flex flex-col items-center justify-center gap-2 bg-[var(--surface)] border-[var(--border)]">
-          <div className="h-10 w-10 rounded-full bg-rose-500/10 text-rose-300 flex items-center justify-center">
-            <History className="h-5 w-5" />
-          </div>
-          <span className="text-xs font-bold text-white">{labels.cancelledBookingsLabel}</span>
-          <span className="text-lg font-black text-rose-300">{cancelledCount}</span>
-        </Card>
-      </div>
-
-      <section className="space-y-3">
-        <SectionTitle title={labels.topRivalsTitle} className="text-sm opacity-80 px-2 text-white" />
-        <div className="space-y-2">
-          {topRivals.length === 0 ? (
-            <Card className="p-4 bg-[var(--surface)] border-[var(--border)] text-sm text-[var(--foreground-muted)]">
-              {labels.topRivalsEmpty}
-            </Card>
-          ) : (
-            topRivals.map((rival) => (
-              <Card key={rival.userId} className="p-4 bg-[var(--surface)] border-[var(--border)] flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold text-white">{rival.name}</p>
-                  <p className="text-xs text-[var(--foreground-muted)]">
-                    {rival.encounters} {labels.rivalEncountersLabel}
-                  </p>
-                </div>
-                <span className="rounded-full bg-[var(--gold)]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--gold)]">
-                  {labels.eloViewLabel}
-                </span>
-              </Card>
-            ))
-          )}
-        </div>
-      </section>
-
-      {/* Account Settings List */}
-      <section className="space-y-3">
-        <SectionTitle title={labels.accountSettingsTitle} className="text-sm opacity-50 px-2" />
-        <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] divide-y divide-[var(--border)] shadow-sm overflow-hidden">
+        {/* Stats Grid - 7 Stats */}
+        <div className="grid grid-cols-2 gap-3">
           {[
-            { label: labels.accountPersonalInfo, icon: "user" },
-            { label: labels.accountNotifications, icon: "bell" },
-            { label: labels.accountSupport, icon: "help" },
-          ].map((item) => (
-            <button key={item.label} className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface-elevated)] transition-colors group">
-              <span className="text-sm font-bold text-slate-200 group-hover:text-white">{item.label}</span>
-              <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)]" />
-            </button>
+            { label: "Matchs", value: playerStats.matchesPlayed, icon: Trophy },
+            { label: "Victoires", value: playerStats.wins, icon: Target },
+            { label: "Défaites", value: playerStats.losses, icon: TrendingUp },
+            { label: "Ratio", value: playerStats.winRatio, icon: Zap },
+            { label: "Série", value: playerStats.currentStreak, icon: Calendar },
+            { label: "Présence", value: playerStats.presence, icon: Heart },
+            { label: "Confiance", value: playerStats.trustScore, icon: Shield },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2"
+            >
+              <stat.icon className="h-5 w-5 text-[var(--gold)]" />
+              <span className="text-2xl font-black text-white">{stat.value}</span>
+              <span className="text-[8px] font-bold text-[var(--foreground-muted)] uppercase tracking-widest">
+                {stat.label}
+              </span>
+            </div>
           ))}
         </div>
-      </section>
+
+        {/* Top Rivals Section */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 space-y-4">
+          <h3 className="text-xs font-bold text-[var(--gold)] uppercase tracking-[0.2em]">
+            Top Rivaux
+          </h3>
+          <div className="space-y-2">
+            {topRivals.map((rival, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between py-3 px-2 border-b border-[var(--border)] last:border-0"
+              >
+                <p className="text-sm font-bold text-white">{rival.name}</p>
+                <p className="text-xs font-mono text-[var(--gold)]">{rival.record}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Spacing for bottom nav */}
+        <div className="h-20" />
+      </div>
     </div>
   );
 }

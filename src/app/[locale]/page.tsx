@@ -13,8 +13,9 @@ import {
   Calendar,
   Sparkles,
   User,
-  Building2,
+  MapPin,
   ArrowRight,
+  ChevronRight,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 
@@ -54,26 +55,16 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   const dictionary = await getDictionary(locale as Locale);
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const isEn = locale === "en";
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-10 pb-20">
+    <div className="space-y-8 pb-20">
       {/* Header / Hero */}
-      <header className="flex items-center justify-between py-2 sm:py-4">
-        <div className="flex items-center gap-3">
-          <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-[var(--surface)] border border-[var(--gold)]/20 shadow-lg shadow-[var(--gold)]/5 p-1">
-            <img 
-              src="/icons/icon.svg" 
-              alt="Kifpadel Logo" 
-              className="h-full w-full object-contain"
-            />
-          </div>
-          <div className="space-y-0.5">
-            <p className="text-[10px] font-bold text-[var(--gold)] uppercase tracking-widest">Tunisia</p>
-            <h1 className="text-xl font-black tracking-tighter text-white uppercase leading-none">
-              KIF<span className="text-[var(--gold)]">PADEL</span>
-            </h1>
-          </div>
+      <header className="flex items-center justify-between py-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-[var(--foreground-muted)]">Bienvenue sur</p>
+          <h1 className="text-3xl font-black tracking-tighter text-white uppercase">
+            KIF<span className="text-[var(--gold)]">PADEL</span>
+          </h1>
         </div>
         {user ? (
           <Link href={`/${locale}/profile`} aria-label="Mon profil">
@@ -91,51 +82,41 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       </header>
 
       {/* Main Section - Premium Dark */}
-      <section className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 text-white shadow-2xl shadow-black/20 sm:p-8">
+      <section className="relative overflow-hidden rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-8 text-white">
         {/* Gold accent */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-50" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--gold)] rounded-full blur-[100px] opacity-10 -mr-20 -mt-20" />
         
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center space-y-6 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
+        <div className="relative space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
             <Sparkles className="h-3 w-3" />
-            {isEn ? "Premium Padel" : "Premium Padel"}
+            Premium Padel
           </div>
           
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-              {isEn
-                ? "The ultimate Padel experience"
-                : "L'expérience Padel ultime"}
+            <h2 className="text-3xl font-bold tracking-tight text-balance">
+              Kiffe ta partie, trouve tes partenaires.
             </h2>
-            <p className="text-sm text-[var(--foreground-muted)] text-balance sm:text-base">
-              {isEn
-                ? "Join the largest community of padel players in Tunisia. Book courts in seconds and find the perfect match."
-                : "Rejoignez la plus grande communauté de joueurs de padel en Tunisie. Réservez vos terrains en quelques secondes."}
+            <p className="text-[var(--foreground-muted)] text-sm max-w-[280px] leading-relaxed">
+              La plateforme n°1 en Tunisie pour réserver et jouer au Padel.
             </p>
           </div>
 
-          {!user && (
-            <Link
-              href={`/${locale}/auth/sign-up`}
-              className="group relative flex h-14 items-center justify-center gap-2 rounded-2xl bg-[var(--gold)] px-8 text-sm font-bold text-black transition-all hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
-            >
-              {isEn ? "Start Playing" : "Commencer à jouer"}
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-          )}
+          <Link 
+            href={`/${locale}/play-now`}
+            className="inline-flex items-center gap-2 bg-[var(--gold)] hover:bg-[var(--gold-dark)] text-black rounded-xl h-12 px-6 font-bold transition-all active:scale-95 group"
+          >
+            Commencer à jouer
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
         </div>
       </section>
 
-      {/* Intent Grid */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <IntentCard
-          href={`/${locale}/book`}
-          title={dictionary.common.bookCourt}
-          description={dictionary.common.bookCourtDescription}
-          icon={Calendar}
-          variant="primary"
-        />
+      {/* Navigation Cards */}
+      <div className="grid gap-4">
+        <h3 className="text-xs font-bold text-[var(--foreground-muted)] uppercase tracking-widest px-1">
+          Que veux-tu faire ?
+        </h3>
         <IntentCard
           href={`/${locale}/play-now`}
           title={dictionary.common.playNow}
@@ -143,48 +124,36 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           icon={Trophy}
           variant="secondary"
         />
-      </div>
-
-      {/* Secondary Actions */}
-      <div className="grid grid-cols-2 gap-4">
-        <Link
-          href={`/${locale}/clubs`}
-          className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:bg-[var(--surface-hover)]"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-[var(--gold)]">
-            <Building2 className="h-6 w-6" />
-          </div>
-          <span className="text-sm font-bold text-white">
-            {isEn ? "Browse Clubs" : "Explorer les clubs"}
-          </span>
-        </Link>
-        <Link
-          href={`/${locale}/search`}
-          className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:bg-[var(--surface-hover)]"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-[var(--gold)]">
-            <Search className="h-6 w-6" />
-          </div>
-          <span className="text-sm font-bold text-white">
-            {isEn ? "Find Players" : "Trouver des joueurs"}
-          </span>
-        </Link>
-      </div>
-
-      {/* Trust Indicator */}
-      <div className="flex flex-col items-center justify-center space-y-4 pt-10 text-center">
-        <div className="flex -space-x-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-8 w-8 rounded-full border-2 border-[var(--background)] bg-[var(--surface)] overflow-hidden">
-              <img src={`https://i.pravatar.cc/100?u=padel${i}`} alt="" className="h-full w-full object-cover opacity-80" />
-            </div>
-          ))}
+        <div className="grid grid-cols-2 gap-4">
+          <IntentCard
+            href={`/${locale}/find-players`}
+            title="Partenaires"
+            description="Trouve des joueurs"
+            icon={Search}
+          />
+          <IntentCard
+            href={`/${locale}/book`}
+            title="Réserver"
+            description="Choisis ton club"
+            icon={Calendar}
+          />
         </div>
-        <p className="text-xs text-[var(--foreground-muted)]">
-          {isEn 
-            ? "Trusted by 10,000+ players in Tunisia" 
-            : "Déjà 10,000+ joueurs nous font confiance"}
-        </p>
+      </div>
+
+      {/* Local Info Card - Dark Theme */}
+      <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center gap-4 group hover:border-[var(--gold)]/30 transition-colors">
+        <div className="h-12 w-12 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)]">
+          <MapPin className="h-6 w-6" />
+        </div>
+        <div className="flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--foreground-muted)]">
+            Clubs à proximité
+          </p>
+          <p className="text-sm font-bold text-white leading-tight">
+            Découvre les 12 clubs ouverts à Tunis.
+          </p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-[var(--foreground-muted)]" aria-hidden="true" />
       </div>
     </div>
   );

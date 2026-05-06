@@ -6,7 +6,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { matchService } from "@/modules/matches/service";
-import { MatchWithDetails } from "@/modules/matches/repository";
 import { MatchCard } from "@/components/features/matches/match-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Trophy, Filter } from "lucide-react";
@@ -18,9 +17,11 @@ type PlayNowPageProps = {
 
 export async function generateMetadata({ params }: PlayNowPageProps): Promise<Metadata> {
   const { locale } = await params;
-  const dictionary = await getDictionary(locale as Locale);
-  const title = dictionary.player.playNowMetaTitle;
-  const description = dictionary.player.playNowMetaDescription;
+  const isEn = locale === "en";
+  const title = isEn ? "Play now — Open matches" : "Jouer maintenant — Matchs ouverts";
+  const description = isEn
+    ? "Join an open padel match near you and meet new players in Tunisia's best clubs."
+    : "Rejoignez une partie de padel ouverte près de chez vous et rencontrez de nouveaux joueurs dans les meilleurs clubs de Tunisie.";
   return {
     title,
     description,
@@ -33,16 +34,23 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  const dictionary = await getDictionary(locale as Locale);
-  const labels = dictionary.player;
-  const pageTitle = labels.playNowTitle;
+  const fallbackTitle =
+    locale === "en" ? "Play now" : "Jouer maintenant";
 
-  let matches: MatchWithDetails[] = [];
+  let pageTitle = fallbackTitle;
+  try {
+    const dictionary = await getDictionary(locale as Locale);
+    pageTitle = dictionary.player?.playNowTitle ?? fallbackTitle;
+  } catch {
+    // keep fallback
+  }
+
+  let matches: Awaited<ReturnType<typeof matchService.getOpenMatches>> = [];
   try {
     matches = await matchService.getOpenMatches();
   } catch (err) {
     rethrowFrameworkError(err);
-    console.error("Failed to fetch matches:", err);
+    matches = [];
   }
 
   return (
@@ -52,41 +60,41 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
           {pageTitle}
         </h1>
         <p className="text-sm text-slate-500">
-          {labels.playNowDescription}
+          Rejoignez une partie en cours et rencontrez de nouveaux joueurs.
         </p>
       </header>
 
       <div className="flex items-center justify-between">
         <SectionTitle
-          title={labels.openMatchesSectionTitle}
+          title="Parties Ouvertes"
           icon={<Trophy className="h-4 w-4" />}
         />
         <button
           type="button"
-          aria-label={labels.filterMatchesAria}
-          disabled
+          aria-label="Filtrer les matchs"
           className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-          title={labels.filtersComingSoon}
         >
           <Filter className="h-4 w-4" />
         </button>
+
       </div>
 
       {matches.length === 0 ? (
         <div className="py-12 text-center space-y-3">
           <p className="text-slate-500 italic font-medium">
-            {labels.noOpenMatchesTitle}
+            Aucune partie ouverte pour le moment.
           </p>
           <Link href={`/${locale}/matches/create`}>
             <button className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold shadow-xl shadow-slate-200 active:scale-95 transition-transform">
-              {labels.createMatchCta}
+              Créer un match
             </button>
           </Link>
         </div>
+
       ) : (
         <div className="grid gap-4">
           {matches.map((match) => (
-            <MatchCard key={match.id} match={match} locale={locale} />
+            <MatchCard key={match.id} match={match} />
           ))}
         </div>
       )}

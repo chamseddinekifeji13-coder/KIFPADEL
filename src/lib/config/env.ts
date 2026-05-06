@@ -3,7 +3,6 @@ type PublicEnv = {
   defaultLocale: "fr" | "en";
   supabaseUrl: string;
   supabaseAnonKey: string;
-  siteUrl: string;
 };
 
 function firstNonEmpty(...names: string[]): { value: string; name: string } | null {
@@ -21,7 +20,7 @@ function getRequiredEnv(name: string): string {
 
   if (!value) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error(`Missing required environment variable: ${name}. Ensure it is set in your deployment environment (e.g., Vercel Dashboard).`);
+      throw new Error(`Missing required environment variable: ${name}`);
     }
     console.warn(`⚠️  Missing env: ${name} — using placeholder`);
     return `MISSING_${name}`;
@@ -30,81 +29,71 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
-function normalizeSiteUrl(raw: string | undefined): string | null {
-  if (!raw) return null;
-  const trimmed = raw.trim().replace(/^['"]+|['"]+$/g, "").replace(/\/+$/, "");
-  if (!trimmed) return null;
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-
-  // VERCEL_URL is often provided without protocol.
-  return `https://${trimmed}`;
-}
-
-function normalizeSupabaseUrl(raw: string): string {
-  // Use regex to strip all whitespace characters including \r and \n
-  const cleaned = raw.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "").replace(/\/+$/, "");
-  
-  if (!cleaned) {
-    throw new Error("Supabase URL is empty after normalization.");
-  }
-
-  if (/^https?:\/\//i.test(cleaned)) {
-    return cleaned;
-  }
-
-  if (cleaned.endsWith(".supabase.co")) {
-    return `https://${cleaned}`;
-  }
-
-  if (/^[a-z0-9-]+$/i.test(cleaned)) {
-    return `https://${cleaned}.supabase.co`;
-  }
-
-  throw new Error(`Invalid supabaseUrl: "${cleaned}" is malformed.`);
-}
-
 /**
  * Resolve the public Supabase URL.
+ *
+ * Order of precedence:
+ *   1. NEXT_PUBLIC_SUPABASE_URL          (canonical)
+ *   2. SUPABASE_URL                      (legacy / server alias)
+ *   3. Derived from a project-id env var (NEXT_PUBLIC_SUPABASE_PROJECT_ID,
+ *      SUPABASE_PROJECT_ID, or NEXT_PUBLIC_SUPABASE_PROJECT_REF).
+ *
+ * The project ID itself is not a secret — it appears in the public URL —
+ * so deriving the URL client-side is safe.
  */
 function resolveSupabaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  if (url) {
-    return normalizeSupabaseUrl(url);
-  }
+  const direct = firstNonEmpty(
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "SUPABASE_URL",
+  );
+  if (direct) return direct.value.replace(/\/+$/, "");
 
-  const projectId = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || 
-                    process.env.SUPABASE_PROJECT_ID || 
-                    process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF || 
-                    process.env.SUPABASE_PROJECT_REF;
-                    
+  const projectId = firstNonEmpty(
+    "NEXT_PUBLIC_SUPABASE_PROJECT_ID",
+    "SUPABASE_PROJECT_ID",
+    "NEXT_PUBLIC_SUPABASE_PROJECT_REF",
+    "SUPABASE_PROJECT_REF",
+  );
   if (projectId) {
-    return normalizeSupabaseUrl(projectId);
+    return `https://${projectId.value}.supabase.co`;
   }
 
   if (process.env.NODE_ENV === "production") {
-    console.error("CRITICAL: Missing Supabase URL in production environment variables.");
+    throw new Error(
+      "Missing Supabase URL: set NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PROJECT_ID",
+    );
   }
+  console.warn(
+    "⚠️  Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PROJECT_ID — using placeholder",
+  );
   return "MISSING_NEXT_PUBLIC_SUPABASE_URL";
 }
 
 /**
- * Resolve the public anon key.
+ * Resolve the public anon (a.k.a. publishable) key.
+ *
+ * Supabase has been migrating naming from "anon" to "publishable".
+ * Both refer to the same key class and may be safely exposed to the browser.
+ *
+ * Order of precedence:
+ *   1. NEXT_PUBLIC_SUPABASE_ANON_KEY        (legacy canonical)
+ *   2. NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY  (modern canonical)
  */
 function resolveSupabaseAnonKey(): string {
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-              process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
-              process.env.SUPABASE_ANON_KEY;
-              
-  if (key) {
-    return key.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "");
-  }
+  const found = firstNonEmpty(
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  );
+  if (found) return found.value;
 
   if (process.env.NODE_ENV === "production") {
-    console.error("CRITICAL: Missing Supabase Anon Key in production environment variables.");
+    throw new Error(
+      "Missing Supabase anon key: set NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    );
   }
+  console.warn(
+    "⚠️  Missing NEXT_PUBLIC_SUPABASE_ANON_KEY / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY — using placeholder",
+  );
   return "MISSING_NEXT_PUBLIC_SUPABASE_ANON_KEY";
 }
 
@@ -114,53 +103,24 @@ export const publicEnv: PublicEnv = {
     process.env.NEXT_PUBLIC_DEFAULT_LOCALE === "en" ? "en" : "fr",
   supabaseUrl: resolveSupabaseUrl(),
   supabaseAnonKey: resolveSupabaseAnonKey(),
-  siteUrl: (() => {
-    const rawUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-                   process.env.VERCEL_URL || 
-                   process.env.URL;
-                   
-    if (!rawUrl) {
-      return process.env.NODE_ENV === "production" 
-        ? "https://www.kifpadel.tn" 
-        : "http://localhost:3000";
-    }
-    
-    let url = rawUrl.replace(/\/+$/, "");
-    if (!url.startsWith("http")) {
-      url = `https://${url}`;
-    }
-    return url;
-  })(),
 };
 
-// Client-side diagnostic for debugging Vercel environment variables
-if (typeof window !== "undefined") {
-  const missing = [];
-  if (publicEnv.supabaseUrl.includes("your-project-id") || publicEnv.supabaseUrl.includes("MISSING")) {
-    missing.push("NEXT_PUBLIC_SUPABASE_URL");
-  }
-  if (publicEnv.supabaseAnonKey.includes("your-anon") || publicEnv.supabaseAnonKey.includes("MISSING")) {
-    missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  }
-  
-  if (missing.length > 0) {
-    console.warn(
-      `[Kifpadel] ⚠️ Configuration d'authentification incomplète ! Variables manquantes : ${missing.join(", ")}. `
-    );
-  } else {
-    // Basic format check
-    if (!publicEnv.supabaseUrl.startsWith("https://")) {
-      console.error("[Kifpadel] ❌ NEXT_PUBLIC_SUPABASE_URL doit commencer par https://");
-    }
-    if (publicEnv.supabaseAnonKey.length < 50) {
-      console.error("[Kifpadel] ❌ NEXT_PUBLIC_SUPABASE_ANON_KEY semble trop courte ou invalide.");
-    }
-  }
-}
-
-export const serverEnv = {
-  supabaseServiceRoleKey: (firstNonEmpty(
+/**
+ * Server-only resolver for the Supabase service-role / secret key.
+ *
+ * NEVER reference any of these names with a `NEXT_PUBLIC_` prefix —
+ * they must never reach the browser bundle.
+ *
+ * Order of precedence:
+ *   1. SUPABASE_SERVICE_ROLE_KEY  (legacy canonical)
+ *   2. SUPABASE_SECRET_KEY        (modern canonical)
+ */
+export function getSupabaseServiceRoleKey(): string {
+  const found = firstNonEmpty(
     "SUPABASE_SERVICE_ROLE_KEY",
-    "SUPABASE_SECRET_KEY"
-  )?.value || getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY")).replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, ""),
-};
+    "SUPABASE_SECRET_KEY",
+  );
+  if (found) return found.value;
+
+  return getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+}

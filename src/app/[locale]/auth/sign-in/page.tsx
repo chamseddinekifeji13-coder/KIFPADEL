@@ -13,7 +13,7 @@ import { signInAction } from "@/modules/auth/actions/sign-in";
 
 type SignInPageProps = Readonly<{
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ error?: string; status?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; status?: string }>;
 }>;
 
 export async function generateMetadata({ params }: SignInPageProps): Promise<Metadata> {
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: SignInPageProps): Promise<Met
 
 export default async function SignInPage({ params, searchParams }: SignInPageProps) {
   const { locale } = await params;
-  const { error, status, next } = await searchParams;
+  const { error, status } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
 
@@ -53,14 +53,6 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
           <p className="text-sm text-rose-700">
             {error === "missing_fields"
               ? dictionary.auth.missingFieldsError
-              : error === "email_not_confirmed"
-                ? dictionary.auth.emailNotConfirmedError
-                : error === "callback_failed"
-                  ? dictionary.auth.callbackFailedError
-              : error === "auth_config_error"
-                ? dictionary.auth.authConfigError
-                : error === "rate_limited"
-                  ? dictionary.auth.rateLimitedError
               : error === "auth_required"
                 ? dictionary.errors.authRequired
                 : dictionary.auth.invalidCredentialsError}
@@ -74,16 +66,9 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
         </Card>
       ) : null}
 
-      {status === "password_updated" ? (
-        <Card className="bg-emerald-50 ring-emerald-100">
-          <p className="text-sm text-emerald-700">{dictionary.auth.passwordUpdatedInfo}</p>
-        </Card>
-      ) : null}
-
       <Card>
         <form action={signInAction} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />
-          <input type="hidden" name="next" value={next ?? `/${locale}/profile`} />
           <div className="space-y-1">
             <label htmlFor="email" className="text-xs font-medium text-slate-700">
               {dictionary.auth.emailLabel}
@@ -99,14 +84,6 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
           <Button type="submit" className="w-full">
             {dictionary.auth.signInCta}
           </Button>
-          <div className="pt-1 text-right">
-            <Link
-              href={`/${locale}/auth/reset-password`}
-              className="text-xs font-semibold text-sky-700"
-            >
-              {dictionary.auth.forgotPasswordCta}
-            </Link>
-          </div>
         </form>
       </Card>
 
