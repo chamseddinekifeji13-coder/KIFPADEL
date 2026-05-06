@@ -44,11 +44,26 @@ type ClubRow = Partial<Club> & {
 };
 
 const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
-const MANAGED_CLUB_ROLES = ["club_manager", "club_admin", "club_staff", "platform_admin"] as const;
+const MANAGED_CLUB_ROLES = [
+  "club_manager",
+  "club_admin",
+  "manager",
+  "admin",
+  "owner",
+  "club_staff",
+  "platform_admin",
+] as const;
 
 type ManagedClubMembership = {
   role?: string | null;
   club?: ClubRow | ClubRow[] | null;
+};
+
+type ManagedClubSummary = {
+  id: string;
+  name: string;
+  city: string;
+  is_active: boolean;
 };
 
 function normalizeClub(row: ClubRow): Club {
@@ -212,6 +227,46 @@ export async function fetchCourtsByClub(clubId: string) {
   }
 }
 
+async function fetchPrimaryClubForUser(userId: string): Promise<ManagedClubSummary | null> {
+  const adminClient = createSupabaseAdminClient();
+
+  for (const profileKey of ["id", "user_id"] as const) {
+    const { data: profile, error: profileError } = await adminClient
+      .from("profiles")
+      .select("main_club_id")
+      .eq(profileKey, userId)
+      .maybeSingle();
+
+    if (profileError) {
+      continue;
+    }
+
+    const mainClubId = (profile as { main_club_id?: string | null } | null)?.main_club_id;
+    if (!mainClubId) {
+      return null;
+    }
+
+    const { data: club, error: clubError } = await adminClient
+      .from("clubs")
+      .select("id,name,city,is_active")
+      .eq("id", mainClubId)
+      .maybeSingle();
+
+    if (clubError || !club?.id || !club?.name) {
+      return null;
+    }
+
+    return {
+      id: club.id,
+      name: club.name,
+      city: club.city ?? "Tunis",
+      is_active: club.is_active ?? true,
+    };
+  }
+
+  return null;
+}
+
 export async function fetchManagedClubForUser(userId: string) {
   try {
     const supabase = await createSupabaseServerClient();
@@ -255,7 +310,7 @@ export async function fetchManagedClubForUser(userId: string) {
       if (lookupErrors.length === MEMBERSHIP_USER_COLUMNS.length) {
         console.warn("[clubs.fetchManagedClubForUser] lookup errors", lookupErrors);
       }
-      return null;
+      return fetchPrimaryClubForUser(userId);
     }
 
     const clubRecord = membership?.club;
