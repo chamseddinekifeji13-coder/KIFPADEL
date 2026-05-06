@@ -226,6 +226,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
             key={city}
             type="button"
             role="tab"
+            // eslint-disable-next-line jsx-a11y/aria-proptypes
             aria-selected={isSelected}
             onClick={() => setSelectedCity(city)}
             className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition-all ${
