@@ -51,6 +51,13 @@ type ManagedClubMembership = {
   club?: ClubRow | ClubRow[] | null;
 };
 
+type ManagedClubSummary = {
+  id: string;
+  name: string;
+  city: string;
+  is_active: boolean;
+};
+
 function normalizeClub(row: ClubRow): Club {
   const normalizedType =
     row.type ??
