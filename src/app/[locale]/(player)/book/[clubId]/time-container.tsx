@@ -7,7 +7,6 @@ import { PaymentMethodSelector } from "@/components/features/bookings/payment-me
 import { BookingConfirmSheet } from "@/components/features/bookings/booking-confirm-sheet";
 import { type TimeSlot } from "@/modules/bookings/availability-service";
 import { createBookingAction } from "@/modules/bookings/actions";
-import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { ChevronRight, ShieldAlert } from "lucide-react";
 
 interface TimeContainerProps {
@@ -66,7 +65,7 @@ export function TimeContainer({
     const startsAt = new Date(date);
     startsAt.setHours(hours, minutes, 0, 0);
     const endsAt = new Date(startsAt);
-    endsAt.setMinutes(endsAt.getMinutes() + DEFAULT_BOOKING_DURATION_MINUTES);
+    endsAt.setMinutes(endsAt.getMinutes() + 90); // 1.5 hour slots
 
     startTransition(async () => {
       const result = await createBookingAction({
