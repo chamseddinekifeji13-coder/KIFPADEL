@@ -44,26 +44,11 @@ type ClubRow = Partial<Club> & {
 };
 
 const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
-const MANAGED_CLUB_ROLES = [
-  "club_manager",
-  "club_admin",
-  "manager",
-  "admin",
-  "owner",
-  "club_staff",
-  "platform_admin",
-] as const;
+const MANAGED_CLUB_ROLES = ["club_manager", "club_admin", "club_staff", "platform_admin"] as const;
 
 type ManagedClubMembership = {
   role?: string | null;
   club?: ClubRow | ClubRow[] | null;
-};
-
-type ManagedClubSummary = {
-  id: string;
-  name: string;
-  city: string;
-  is_active: boolean;
 };
 
 function normalizeClub(row: ClubRow): Club {
@@ -314,7 +299,7 @@ export async function fetchManagedClubForUser(userId: string) {
       if (lookupErrors.length === MEMBERSHIP_USER_COLUMNS.length) {
         console.warn("[clubs.fetchManagedClubForUser] lookup errors", lookupErrors);
       }
-      return fetchPrimaryClubForUser(userId);
+      return null;
     }
 
     const clubRecord = membership?.club;
