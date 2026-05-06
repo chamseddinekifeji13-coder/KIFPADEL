@@ -191,7 +191,7 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
   useEffect(() => {
     if (typeof window === "undefined" || !navigator.permissions) return;
 
-    navigator.permissions.query({ name: "geolocation" as any }).then((status) => {
+    navigator.permissions.query({ name: "geolocation" as PermissionName }).then((status) => {
       const onChange = () => {
         if (status.state === "granted") {
           // Permission was just re-enabled — auto-request location

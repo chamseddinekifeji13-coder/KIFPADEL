@@ -1,6 +1,6 @@
 "use client";
 
-import { X, MapPin, Calendar, Clock, CreditCard, Banknote, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, MapPin, Calendar, CreditCard, Banknote, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface BookingConfirmSheetProps {
   isOpen: boolean;
@@ -82,7 +82,7 @@ export function BookingConfirmSheet({
                 <CheckCircle2 className="h-10 w-10 text-emerald-400" />
               </div>
               <div className="text-center">
-                <p className="text-2xl font-black text-white uppercase tracking-tight">C'est confirmé !</p>
+                <p className="text-2xl font-black text-white uppercase tracking-tight">C&apos;est confirmé !</p>
                 <p className="text-sm text-foreground-muted mt-2 max-w-[280px]">
                   {paymentMethod === "online" 
                     ? "Un lien de paiement sécurisé vous a été envoyé par email."
@@ -167,7 +167,7 @@ export function BookingConfirmSheet({
               {/* No-show Warning */}
               <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
                 <p className="text-[11px] text-warning font-medium leading-relaxed text-center italic">
-                  "En cas de no-show, votre score de confiance sera impacté."
+                  &quot;En cas de no-show, votre score de confiance sera impacté.&quot;
                 </p>
               </div>
 
