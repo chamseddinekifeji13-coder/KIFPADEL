@@ -32,6 +32,13 @@ type ClubRow = Partial<Club> & {
   is_indoor?: boolean | null;
 };
 
+const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
+
+type ManagedClubMembership = {
+  role?: string | null;
+  club?: ClubRow | ClubRow[] | null;
+};
+
 function normalizeClub(row: ClubRow): Club {
   const normalizedType =
     row.type ??
@@ -151,29 +158,48 @@ export async function fetchManagedClubForUser(userId: string) {
   try {
     const supabase = await createSupabaseServerClient();
 
-    const { data, error } = await supabase
-      .from("club_memberships")
-      .select(
-        `
-          role,
-          club:clubs (
-            id,
-            name,
-            city,
-            is_active
-          )
-        `,
-      )
-      .eq("user_id", userId)
-      .in("role", ["club_manager", "club_staff", "platform_admin"])
-      .limit(1);
+    let membership: ManagedClubMembership | null = null;
+    const lookupErrors: string[] = [];
 
-    if (error) {
-      console.warn("[clubs.fetchManagedClubForUser] supabase error", error.message);
+    for (const userColumn of MEMBERSHIP_USER_COLUMNS) {
+      const { data, error } = await supabase
+        .from("club_memberships")
+        .select(
+          `
+            role,
+            club:clubs (
+              id,
+              name,
+              city,
+              is_active
+            )
+          `,
+        )
+        .eq(userColumn, userId)
+        .in("role", ["club_manager", "club_staff", "platform_admin"])
+        .limit(1);
+
+      if (error) {
+        lookupErrors.push(`${userColumn}: ${error.message}`);
+        continue;
+      }
+
+      membership = Array.isArray(data)
+        ? (data[0] as ManagedClubMembership | undefined) ?? null
+        : null;
+
+      if (membership) {
+        break;
+      }
+    }
+
+    if (!membership) {
+      if (lookupErrors.length === MEMBERSHIP_USER_COLUMNS.length) {
+        console.warn("[clubs.fetchManagedClubForUser] lookup errors", lookupErrors);
+      }
       return null;
     }
 
-    const membership = Array.isArray(data) ? data[0] : null;
     const clubRecord = membership?.club;
     const club = Array.isArray(clubRecord) ? clubRecord[0] : clubRecord;
 

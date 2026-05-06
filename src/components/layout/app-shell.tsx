@@ -1,4 +1,5 @@
 import { MainNav } from "@/components/features/main-nav";
+import { LocaleSwitcher } from "@/components/features/locale-switcher";
 
 type AppShellProps = Readonly<{
   locale: string;
@@ -27,6 +28,10 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <div className="mx-auto flex w-full max-w-lg min-h-screen flex-col bg-background">
+      <div className="sticky top-0 z-50 flex justify-end bg-background/90 px-4 pt-4 backdrop-blur">
+        <LocaleSwitcher currentLocale={locale} />
+      </div>
+
       {/* 
           Main Content Area 
           We use a larger bottom padding to accommodate the floating nav 

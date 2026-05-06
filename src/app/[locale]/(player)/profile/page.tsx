@@ -1,7 +1,9 @@
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { signOutAction } from "@/modules/auth/actions/sign-out";
 import { playerService } from "@/modules/players/service";
 import { fetchBookingsForPlayer } from "@/modules/bookings/repository";
 import { Player } from "@/modules/players/repository";
@@ -15,6 +17,7 @@ import {
   Settings, 
   ChevronRight, 
   History,
+  LogOut,
   Star
 } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
@@ -58,12 +61,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     <div className="flex-1 p-4 space-y-8 pb-20">
       <header className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-900">{labels.profileTitle}</h1>
-        <button 
+        <a
+          href="#account-settings"
           aria-label={labels.profileSettingsAria}
           className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
         >
           <Settings className="h-5 w-5" />
-        </button>
+        </a>
       </header>
 
 
@@ -162,19 +166,29 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       </section>
 
       {/* Account Settings List */}
-      <section className="space-y-3">
+      <section id="account-settings" className="scroll-mt-6 space-y-3">
         <SectionTitle title={labels.accountSettingsTitle} className="text-sm opacity-50 px-2" />
         <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] divide-y divide-[var(--border)] shadow-sm overflow-hidden">
           {[
-            { label: labels.accountPersonalInfo, icon: "user" },
-            { label: labels.accountNotifications, icon: "bell" },
-            { label: labels.accountSupport, icon: "help" },
+            { label: labels.accountPersonalInfo, href: `/${locale}/profile/edit` },
+            { label: labels.accountNotifications, href: `/${locale}/profile/notifications` },
+            { label: labels.accountSupport, href: `/${locale}/support` },
           ].map((item) => (
-            <button key={item.label} className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface-elevated)] transition-colors group">
+            <Link key={item.label} href={item.href} className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface-elevated)] transition-colors group">
               <span className="text-sm font-bold text-slate-200 group-hover:text-white">{item.label}</span>
               <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)]" />
-            </button>
+            </Link>
           ))}
+          <form action={signOutAction}>
+            <input type="hidden" name="locale" value={locale} />
+            <button className="w-full p-4 flex items-center justify-between hover:bg-red-500/10 transition-colors group" type="submit">
+              <span className="inline-flex items-center gap-2 text-sm font-bold text-red-300 group-hover:text-red-200">
+                <LogOut className="h-4 w-4" />
+                {dictionary.auth.signOutCta}
+              </span>
+              <ChevronRight className="h-4 w-4 text-red-300/70" />
+            </button>
+          </form>
         </div>
       </section>
     </div>
