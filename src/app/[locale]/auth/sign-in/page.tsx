@@ -91,7 +91,8 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
         <p className="text-sm text-slate-600">{dictionary.auth.createAccountHint}</p>
         <Link
           href={`/${locale}/auth/sign-up`}
-          className="mt-2 inline-block text-sm font-semibold text-sky-700"
+          className="mt-2 inline-block text-sm font-semibold"
+          style={{ color: "rgba(0, 0, 0, 0.93)" }}
         >
           {dictionary.auth.createAccountCta}
         </Link>
