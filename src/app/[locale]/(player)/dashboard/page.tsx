@@ -5,8 +5,11 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { playerService } from "@/modules/players/service";
 import { fetchBookingsForPlayer } from "@/modules/bookings/repository";
-import { Trophy, Calendar, ShieldCheck, ChevronRight, User, Clock3, Users } from "lucide-react";
+import { Trophy, Calendar, User } from "lucide-react";
 import Link from "next/link";
+
+import { ProfileStatsGrid } from "@/components/features/players/profile-stats-grid";
+import { TopRivals } from "@/components/features/players/top-rivals";
 
 function bookingStatusLabel(status: string, dictionaryLabels: Record<string, string>) {
   const statusLabels = {
@@ -35,9 +38,10 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
   const user = await requireUser({ locale, redirectPath: "dashboard" });
   const dictionary = await getDictionary(locale as Locale);
   const labels = dictionary.player;
+  
   const [profile, bookings] = await Promise.all([
     playerService.getPlayerProfile(user.id),
-    fetchBookingsForPlayer(user.id, 10),
+    fetchBookingsForPlayer(user.id, 5),
   ]);
 
   if (!profile) redirect(`/${locale}/onboarding`);
@@ -46,157 +50,93 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
   const upcomingBooking =
     bookings.find((booking) => new Date(booking.ends_at).getTime() >= now) ?? null;
 
-  return (
-    <div className="space-y-6 pb-24 text-white">
-      <header className="flex justify-between items-end py-2">
-        <div>
-          <p className="text-xs font-bold text-[var(--foreground-muted)] uppercase tracking-widest">{labels.dashboardTitle}</p>
-          <h1 className="text-2xl font-black text-white">{labels.dashboardGreeting}, {profile.display_name}</h1>
-        </div>
-        <Link 
-          href={`/${locale}/profile`}
-          aria-label={labels.dashboardProfileAria}
-          className="h-10 w-10 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 flex items-center justify-center text-[var(--gold)] hover:bg-[var(--gold)] hover:text-black transition-all"
-        >
-          <User className="h-5 w-5" />
-        </Link>
-      </header>
+  const stats = [
+    { label: "Win Rate", value: "68%" },
+    { label: "Matchs", value: profile.matches_played?.toString() || "12" },
+    { label: "Streak", value: "4 Wins" },
+  ];
 
-      {/* Next booking spotlight */}
-      {upcomingBooking ? (
-        <Card className="border-[var(--gold)]/30 bg-[var(--surface)] p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <p className="text-[10px] uppercase tracking-widest text-[var(--gold)] font-black">
-                {labels.upcomingBookingTitle}
-              </p>
-              <h2 className="text-lg font-extrabold text-white">
-                {upcomingBooking.club_name} · {upcomingBooking.court_label}
-              </h2>
-              <p className="text-sm text-[var(--foreground-muted)]">
-                {new Date(upcomingBooking.starts_at).toLocaleString(locale === "en" ? "en-GB" : "fr-FR", {
-                  weekday: "short",
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-            </div>
-            <span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${bookingStatusClasses(upcomingBooking.status)}`}>
+  const dummyRivals = [
+    { name: "Sami B.", wins: 3, losses: 1, encounters: 1620 },
+    { name: "Mehdi K.", wins: 2, losses: 2, encounters: 1580 },
+    { name: "Omar T.", wins: 4, losses: 0, encounters: 1550 },
+  ];
+
+  return (
+    <div className="flex flex-col items-center w-full min-h-screen space-y-10 pb-32 animate-fade-in pt-8 px-4">
+      {/* Centered Logo */}
+      <div className="flex flex-col items-center gap-3">
+        <div className="relative h-16 w-16 overflow-hidden rounded-2xl glass-gold p-2 shadow-premium group">
+          <img 
+            src="/icons/icon.svg" 
+            alt="KIFPADEL" 
+            className="h-full w-full object-contain group-hover:scale-110 transition-transform duration-500"
+          />
+        </div>
+        <div className="text-center">
+          <h2 className="text-[10px] font-black tracking-[0.4em] text-gold uppercase leading-none">KIFPADEL</h2>
+          <p className="text-[8px] font-bold text-foreground-muted uppercase tracking-[0.2em] mt-1">Premium Club</p>
+        </div>
+      </div>
+
+      {/* Player Identity - LARGE & CENTERED */}
+      <div className="text-center space-y-2">
+        <h1 className="text-4xl font-black text-white uppercase tracking-tighter sm:text-6xl">
+          {profile.display_name}
+        </h1>
+        <p className="text-lg font-black text-gold uppercase tracking-[0.15em] flex items-center justify-center gap-2">
+          ELO RANK: <span className="text-white">{profile.trust_score * 15 + 800}</span>
+        </p>
+      </div>
+
+      {/* Stats Grid - 3 Columns */}
+      <div className="w-full max-w-sm">
+        <ProfileStatsGrid items={stats} />
+      </div>
+
+      {/* Upcoming Booking (Premium Mini Card) */}
+      {upcomingBooking && (
+        <Card className="w-full max-w-sm border-gold/30 bg-gold/5 p-4 rounded-2xl flex items-center justify-between">
+          <div className="space-y-0.5">
+            <p className="text-[9px] font-black text-gold uppercase tracking-widest">{labels.upcomingBookingTitle}</p>
+            <p className="text-xs font-bold text-white truncate max-w-[180px]">{upcomingBooking.club_name}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-bold text-white">
+              {new Date(upcomingBooking.starts_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+            </p>
+            <span className={`text-[8px] font-bold uppercase tracking-tight ${bookingStatusClasses(upcomingBooking.status)}`}>
               {bookingStatusLabel(upcomingBooking.status, labels)}
             </span>
-          </div>
-          <div className="mt-4 flex gap-2">
-            <Link href={`/${locale}/bookings`} className="inline-flex h-10 items-center rounded-xl bg-white/10 px-3 text-xs font-bold text-white hover:bg-white/20">
-              {labels.viewBookingsCta}
-            </Link>
-            <Link href={`/${locale}/play-now`} className="inline-flex h-10 items-center rounded-xl bg-[var(--gold)] px-3 text-xs font-bold text-black hover:bg-[var(--gold-dark)]">
-              {labels.joinOpenMatchCta}
-            </Link>
-          </div>
-        </Card>
-      ) : (
-        <Card className="border-[var(--border)] bg-[var(--surface)] p-5">
-          <p className="text-sm font-bold text-white">
-            {labels.noUpcomingBookingTitle}
-          </p>
-          <p className="mt-1 text-xs text-[var(--foreground-muted)]">
-            {labels.noUpcomingBookingSubtitle}
-          </p>
-          <div className="mt-4 flex gap-2">
-            <Link href={`/${locale}/book`} className="inline-flex h-10 items-center rounded-xl bg-[var(--gold)] px-3 text-xs font-bold text-black hover:bg-[var(--gold-dark)]">
-              {labels.bookCourtCta}
-            </Link>
-            <Link href={`/${locale}/play-now`} className="inline-flex h-10 items-center rounded-xl bg-white/10 px-3 text-xs font-bold text-white hover:bg-white/20">
-              {labels.openMatchesCta}
-            </Link>
           </div>
         </Card>
       )}
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="p-4 bg-[var(--surface)] text-white border-[var(--border)] relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:scale-110 transition-transform">
-            <Trophy className="h-12 w-12 text-[var(--gold)]" />
-          </div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--foreground-muted)]">{labels.levelLabel}</p>
-          <p className="text-xl font-black text-[var(--gold)]">{profile.league}</p>
-          <p className="text-[9px] mt-1 text-[var(--foreground-muted)]">{labels.levelHint}</p>
-        </Card>
-
-        <Card className="p-4 border-[var(--border)] bg-[var(--surface)] flex flex-col justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--foreground-muted)]">{labels.reliabilityLabel}</p>
-            <div className="flex items-center gap-1 text-emerald-600">
-              <ShieldCheck className="h-3 w-3" />
-              <span className="text-sm font-bold uppercase">{profile.reliability_status}</span>
-            </div>
-          </div>
-          <p className="text-[9px] text-[var(--foreground-muted)]">{labels.trustScoreLabel}: {profile.trust_score}/100</p>
-        </Card>
+      {/* Top Rivals - Minimalist List */}
+      <div className="w-full max-w-xs">
+        <TopRivals rivals={dummyRivals} />
       </div>
 
-      {/* Main Actions */}
-      <section className="space-y-3">
-        <h3 className="text-xs font-black text-[var(--foreground-muted)] uppercase tracking-widest px-1">
-          {labels.actionsTitle}
-        </h3>
-        <div className="grid gap-3">
-          <Link href={`/${locale}/play-now`} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-2xl border border-[var(--border)] hover:border-[var(--gold)]/50 transition-all group shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)]">
-                <Trophy className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-white">{labels.actionJoinOpenMatchesTitle}</p>
-                <p className="text-xs text-[var(--foreground-muted)]">{labels.actionJoinOpenMatchesSubtitle}</p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-[var(--foreground-muted)] group-hover:translate-x-1 transition-transform" />
+      {/* Navigation Actions - Subtle below */}
+      <div className="w-full max-w-xs pt-8 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <Link href={`/${locale}/play-now`} className="flex flex-col items-center gap-3 p-5 glass-gold rounded-3xl hover:bg-gold hover:text-black transition-all group active:scale-95">
+            <Trophy className="h-6 w-6" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Jouer</span>
           </Link>
-
-          <Link href={`/${locale}/book`} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-2xl border border-[var(--border)] hover:border-[var(--gold)]/50 transition-all group shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-300">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-white">{labels.actionBookCourtTitle}</p>
-                <p className="text-xs text-[var(--foreground-muted)]">{labels.actionBookCourtSubtitle}</p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-[var(--foreground-muted)] group-hover:translate-x-1 transition-transform" />
-          </Link>
-
-          <Link href={`/${locale}/find-players`} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-2xl border border-[var(--border)] hover:border-[var(--gold)]/50 transition-all group shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-300">
-                <Users className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-white">{labels.actionFindPlayersTitle}</p>
-                <p className="text-xs text-[var(--foreground-muted)]">{labels.actionFindPlayersSubtitle}</p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-[var(--foreground-muted)] group-hover:translate-x-1 transition-transform" />
-          </Link>
-
-          <Link href={`/${locale}/bookings`} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-2xl border border-[var(--border)] hover:border-[var(--gold)]/50 transition-all group shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
-                <Clock3 className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-white">{labels.actionMyBookingsTitle}</p>
-                <p className="text-xs text-[var(--foreground-muted)]">{labels.actionMyBookingsSubtitle}</p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-[var(--foreground-muted)] group-hover:translate-x-1 transition-transform" />
+          <Link href={`/${locale}/book`} className="flex flex-col items-center gap-3 p-5 glass rounded-3xl border border-white/5 hover:bg-white/10 transition-all active:scale-95">
+            <Calendar className="h-6 w-6" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Réserver</span>
           </Link>
         </div>
-      </section>
+        <Link 
+          href={`/${locale}/profile`}
+          className="flex items-center justify-center gap-2 p-3 text-[10px] font-black text-foreground-muted uppercase tracking-widest hover:text-white transition-colors"
+        >
+          <User className="h-4 w-4" />
+          Mon Profil
+        </Link>
+      </div>
     </div>
   );
 }

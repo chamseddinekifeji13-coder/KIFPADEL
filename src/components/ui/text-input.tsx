@@ -22,7 +22,7 @@ export function TextInput({
       type={type}
       placeholder={placeholder}
       className={cn(
-        "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none ring-sky-300 transition focus:border-sky-300 focus:ring-2",
+        "h-11 w-full rounded-xl border border-border bg-surface-elevated px-4 text-sm text-white placeholder:text-foreground-muted outline-none transition-all focus:border-gold/50 focus:ring-1 focus:ring-gold/50",
         className,
       )}
     />

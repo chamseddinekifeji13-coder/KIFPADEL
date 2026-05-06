@@ -25,19 +25,19 @@ export function LeagueProgress({ score, currentLeague }: LeagueProgressProps) {
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-end">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+        <span className="text-[10px] font-black text-foreground-muted uppercase tracking-widest">
           Progression {nextLeague}
         </span>
-        <span className="text-sm font-bold text-slate-900">
-          {score} <span className="text-slate-400 font-medium">/ {nextThreshold} pts</span>
+        <span className="text-sm font-bold text-white">
+          {score} <span className="text-gold font-black">/ {nextThreshold} PTS</span>
         </span>
       </div>
-      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-2 w-full bg-surface-elevated border border-white/5 rounded-full overflow-hidden shadow-inner">
         <div 
           className={cn(
-            "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
-            currentLeague.toLowerCase() === "gold" ? "bg-amber-400" : 
-            currentLeague.toLowerCase() === "silver" ? "bg-slate-400" : "bg-orange-400",
+            "h-full rounded-full transition-all duration-1000 ease-out shadow-gold",
+            currentLeague.toLowerCase() === "gold" ? "bg-gold-gradient" : 
+            currentLeague.toLowerCase() === "silver" ? "bg-slate-400" : "bg-orange-500",
             // Mapping progress to nearest 5% fixed classes to avoid inline styles
             progress >= 100 ? "w-full" :
             progress >= 95 ? "w-[95%]" :
@@ -63,8 +63,8 @@ export function LeagueProgress({ score, currentLeague }: LeagueProgressProps) {
         />
       </div>
       
-      <p className="text-[10px] text-slate-400 italic">
-        Plus que {nextThreshold - score} points pour atteindre la ligue {nextLeague} !
+      <p className="text-[10px] text-foreground-muted font-medium italic">
+        Plus que <span className="text-gold font-bold">{nextThreshold - score} points</span> pour atteindre la ligue {nextLeague} !
       </p>
     </div>
   );

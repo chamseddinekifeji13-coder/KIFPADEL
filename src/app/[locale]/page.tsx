@@ -57,33 +57,33 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   const isEn = locale === "en";
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-10 pb-20">
+    <div className="mx-auto w-full max-w-5xl space-y-12 pb-32 animate-fade-in px-4 sm:px-0">
       {/* Header / Hero */}
-      <header className="flex items-center justify-between py-2 sm:py-4">
-        <div className="flex items-center gap-3">
-          <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-[var(--surface)] border border-[var(--gold)]/20 shadow-lg shadow-[var(--gold)]/5 p-1">
+      <header className="flex items-center justify-between py-6">
+        <div className="flex items-center gap-4">
+          <div className="relative h-14 w-14 overflow-hidden rounded-2xl glass-gold p-1.5 group">
             <img 
               src="/icons/icon.svg" 
               alt="Kifpadel Logo" 
-              className="h-full w-full object-contain"
+              className="h-full w-full object-contain group-hover:scale-110 transition-transform duration-500"
             />
           </div>
           <div className="space-y-0.5">
-            <p className="text-[10px] font-bold text-[var(--gold)] uppercase tracking-widest">Tunisia</p>
-            <h1 className="text-xl font-black tracking-tighter text-white uppercase leading-none">
-              KIF<span className="text-[var(--gold)]">PADEL</span>
+            <p className="text-[10px] font-black text-gold uppercase tracking-[0.3em]">Tunisia</p>
+            <h1 className="text-2xl font-black tracking-tighter text-white uppercase leading-none">
+              KIF<span className="text-gold-gradient bg-gold-gradient bg-clip-text text-transparent">PADEL</span>
             </h1>
           </div>
         </div>
         {user ? (
-          <Link href={`/${locale}/profile`} aria-label="Mon profil">
-            <Avatar src={null} alt="" size="lg" className="ring-2 ring-[var(--gold)]/20" />
+          <Link href={`/${locale}/profile`} aria-label="Mon profil" className="active:scale-90 transition-transform">
+            <Avatar src={null} alt="" size="lg" className="ring-2 ring-gold/20 shadow-gold" />
           </Link>
         ) : (
           <Link
             href={`/${locale}/auth/sign-in`}
             aria-label="Se connecter"
-            className="h-12 w-12 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-[var(--foreground-muted)] hover:text-white transition-colors"
+            className="h-12 w-12 rounded-2xl glass flex items-center justify-center text-foreground-muted hover:text-gold transition-all hover:bg-gold/10"
           >
             <User className="h-6 w-6" aria-hidden="true" />
           </Link>
@@ -91,44 +91,44 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       </header>
 
       {/* Main Section - Premium Dark */}
-      <section className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 text-white shadow-2xl shadow-black/20 sm:p-8">
+      <section className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-surface-elevated p-8 text-white shadow-premium sm:p-12 group">
         {/* Gold accent */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-50" />
-        <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--gold)] rounded-full blur-[100px] opacity-10 -mr-20 -mt-20" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent opacity-30" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gold rounded-full blur-[120px] opacity-10 -mr-24 -mt-24 group-hover:opacity-20 transition-opacity duration-1000" />
         
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center space-y-6 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--gold)]">
+        <div className="relative mx-auto flex max-w-2xl flex-col items-center space-y-8 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/5 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-gold animate-slide-up">
             <Sparkles className="h-3 w-3" />
-            {isEn ? "Premium Padel" : "Premium Padel"}
+            {isEn ? "Elite Padel Platform" : "Plateforme Elite"}
           </div>
           
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+          <div className="space-y-4 animate-slide-up">
+            <h2 className="text-4xl font-black tracking-tight text-balance sm:text-6xl uppercase leading-[0.95]">
               {isEn
                 ? "The ultimate Padel experience"
                 : "L'expérience Padel ultime"}
             </h2>
-            <p className="text-sm text-[var(--foreground-muted)] text-balance sm:text-base">
+            <p className="text-base text-foreground-muted text-balance max-w-lg mx-auto font-medium">
               {isEn
                 ? "Join the largest community of padel players in Tunisia. Book courts in seconds and find the perfect match."
-                : "Rejoignez la plus grande communauté de joueurs de padel en Tunisie. Réservez vos terrains en quelques secondes."}
+                : "Rejoignez l'élite du padel en Tunisie. Réservez vos terrains en quelques secondes et trouvez des partenaires à votre niveau."}
             </p>
           </div>
 
           {!user && (
             <Link
               href={`/${locale}/auth/sign-up`}
-              className="group relative flex h-14 items-center justify-center gap-2 rounded-2xl bg-[var(--gold)] px-8 text-sm font-bold text-black transition-all hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+              className="group relative flex h-16 items-center justify-center gap-3 rounded-2xl bg-gold px-10 text-sm font-black uppercase tracking-widest text-black transition-all hover:scale-[1.02] active:scale-[0.98] shadow-gold animate-slide-up"
             >
-              {isEn ? "Start Playing" : "Commencer à jouer"}
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {isEn ? "Start Playing" : "Rejoindre l'aventure"}
+              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Link>
           )}
         </div>
       </section>
 
       {/* Intent Grid */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         <IntentCard
           href={`/${locale}/book`}
           title={dictionary.common.bookCourt}
@@ -146,44 +146,44 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       </div>
 
       {/* Secondary Actions */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-6">
         <Link
           href={`/${locale}/clubs`}
-          className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:bg-[var(--surface-hover)]"
+          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] border border-white/5 bg-surface p-8 transition-all hover:bg-surface-elevated hover:border-gold/20 hover:shadow-gold group active:scale-95"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-[var(--gold)]">
-            <Building2 className="h-6 w-6" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-gold border border-white/5 group-hover:bg-gold group-hover:text-black transition-all">
+            <Building2 className="h-7 w-7" />
           </div>
-          <span className="text-sm font-bold text-white">
-            {isEn ? "Browse Clubs" : "Explorer les clubs"}
+          <span className="text-xs font-black text-white uppercase tracking-widest">
+            {isEn ? "Clubs" : "Explorer"}
           </span>
         </Link>
         <Link
-          href={`/${locale}/search`}
-          className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:bg-[var(--surface-hover)]"
+          href={`/${locale}/find-players`}
+          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] border border-white/5 bg-surface p-8 transition-all hover:bg-surface-elevated hover:border-gold/20 hover:shadow-gold group active:scale-95"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-[var(--gold)]">
-            <Search className="h-6 w-6" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-gold border border-white/5 group-hover:bg-gold group-hover:text-black transition-all">
+            <Search className="h-7 w-7" />
           </div>
-          <span className="text-sm font-bold text-white">
-            {isEn ? "Find Players" : "Trouver des joueurs"}
+          <span className="text-xs font-black text-white uppercase tracking-widest">
+            {isEn ? "Players" : "Joueurs"}
           </span>
         </Link>
       </div>
 
       {/* Trust Indicator */}
-      <div className="flex flex-col items-center justify-center space-y-4 pt-10 text-center">
-        <div className="flex -space-x-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-8 w-8 rounded-full border-2 border-[var(--background)] bg-[var(--surface)] overflow-hidden">
-              <img src={`https://i.pravatar.cc/100?u=padel${i}`} alt="" className="h-full w-full object-cover opacity-80" />
+      <div className="flex flex-col items-center justify-center space-y-6 pt-12 text-center opacity-80">
+        <div className="flex -space-x-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-10 w-10 rounded-full border-4 border-background bg-surface-elevated overflow-hidden shadow-premium">
+              <img src={`https://i.pravatar.cc/100?u=padel${i}`} alt="" className="h-full w-full object-cover grayscale hover:grayscale-0 transition-all duration-500" />
             </div>
           ))}
         </div>
-        <p className="text-xs text-[var(--foreground-muted)]">
+        <p className="text-[10px] font-black text-foreground-muted uppercase tracking-[0.2em]">
           {isEn 
-            ? "Trusted by 10,000+ players in Tunisia" 
-            : "Déjà 10,000+ joueurs nous font confiance"}
+            ? "Trusted by 10,000+ elite players" 
+            : "Communauté de 10,000+ joueurs"}
         </p>
       </div>
     </div>

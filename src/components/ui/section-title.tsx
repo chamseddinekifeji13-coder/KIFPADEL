@@ -23,18 +23,18 @@ export function SectionTitle({
   as: Heading = "h2",
 }: SectionTitleProps) {
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex items-center gap-3", className)}>
       {icon && (
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold border border-gold/20 shadow-gold">
           {icon}
         </div>
       )}
       <div className="space-y-0.5">
-        <Heading className={cn("text-lg font-bold text-slate-900", titleClassName)}>
+        <Heading className={cn("text-lg font-black text-white uppercase tracking-tight", titleClassName)}>
           {title}
         </Heading>
         {subtitle && (
-          <p className={cn("text-sm text-slate-500 font-medium", subtitleClassName)}>
+          <p className={cn("text-[10px] text-foreground-muted font-bold uppercase tracking-widest", subtitleClassName)}>
             {subtitle}
           </p>
         )}

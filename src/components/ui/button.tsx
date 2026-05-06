@@ -1,6 +1,6 @@
 import { cn } from "@/lib/ui/cn";
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "glass";
 
 type ButtonProps = Readonly<{
   children: React.ReactNode;
@@ -13,10 +13,13 @@ type ButtonProps = Readonly<{
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-sky-600 text-white shadow-sm hover:bg-sky-700 active:bg-sky-800",
+    "bg-gold text-black shadow-gold hover:bg-gold-light active:scale-95",
   secondary:
-    "bg-slate-100 text-slate-800 shadow-sm hover:bg-slate-200 active:bg-slate-300",
-  ghost: "bg-transparent text-slate-700 hover:bg-slate-100 active:bg-slate-200",
+    "bg-surface-elevated text-white border border-border hover:bg-surface active:scale-95",
+  ghost: 
+    "bg-transparent text-foreground-muted hover:text-white hover:bg-white/5",
+  glass:
+    "glass-gold text-gold hover:bg-gold hover:text-black active:scale-95",
 };
 
 export function Button({
@@ -33,7 +36,7 @@ export function Button({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-bold uppercase tracking-wide transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],
         className,
       )}

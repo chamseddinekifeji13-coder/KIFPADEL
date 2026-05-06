@@ -11,34 +11,26 @@ type TopRivalsProps = {
 
 export function TopRivals({ rivals }: TopRivalsProps) {
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-[0.25em] text-amber-200">Top Rivals</h2>
-      </div>
+    <section className="space-y-6 flex flex-col items-center w-full">
+      <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-gold">Top Rivals</h2>
 
       {rivals.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4">
-          <p className="text-sm text-white/70">Aucun rival enregistré pour le moment.</p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/40">
-            Les prochains matchs alimenteront cette section.
-          </p>
-        </div>
+        <p className="text-[10px] uppercase tracking-widest text-foreground-muted italic">
+          En attente de matchs...
+        </p>
       ) : (
-        <div className="space-y-2">
+        <div className="flex flex-col items-center gap-3 w-full">
           {rivals.map((rival, index) => (
             <article
               key={`${rival.name}-${index}`}
-              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
+              className="flex items-center gap-2 group cursor-default"
             >
-              <div>
-                <p className="text-sm font-semibold text-white">{rival.name}</p>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-white/45">
-                  Head to head · {rival.encounters ?? rival.wins + rival.losses} matchs
-                </p>
-              </div>
-              <p className="text-sm font-bold text-amber-200">
-                {rival.wins} - {rival.losses}
-              </p>
+              <span className="text-sm font-bold text-white group-hover:text-gold transition-colors">
+                {rival.name}
+              </span>
+              <span className="text-sm font-black text-gold">
+                ({rival.encounters ?? 1500} ELO)
+              </span>
             </article>
           ))}
         </div>

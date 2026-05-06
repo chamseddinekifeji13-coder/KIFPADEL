@@ -36,11 +36,11 @@ export function MainNav({ locale, labels }: MainNavProps) {
   return (
     <nav
       aria-label="Navigation principale"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md"
+      className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-lg animate-fade-in"
     >
-      <div className="bg-[var(--surface)]/95 backdrop-blur-2xl border border-[var(--border)] rounded-2xl p-2 shadow-2xl shadow-black/30 flex justify-between items-center px-4 h-16">
+      <div className="glass-gold rounded-[2rem] p-2 flex justify-between items-center px-4 h-20 shadow-premium">
         {items.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          const active = pathname === item.href || (item.href !== `/${locale}` && pathname.startsWith(item.href + "/"));
           const Icon = item.icon;
 
           return (
@@ -50,18 +50,23 @@ export function MainNav({ locale, labels }: MainNavProps) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1 transition-all duration-300 min-h-11 min-w-11 px-3",
-                active ? "text-[var(--gold)] scale-110" : "text-[var(--foreground-muted)] hover:text-white"
+                "relative flex flex-col items-center justify-center gap-1.5 transition-all duration-300 min-h-14 min-w-[64px] rounded-2xl group",
+                active ? "text-gold" : "text-foreground-muted hover:text-white"
               )}
             >
-              <Icon
-                aria-hidden="true"
-                className={cn("h-5 w-5 transition-all", active ? "fill-[var(--gold)]/20" : "")}
-              />
+              <div className={cn(
+                "p-2 rounded-xl transition-all duration-300",
+                active ? "bg-gold/10 scale-110 shadow-gold/20 border border-gold/20" : "group-hover:bg-white/5"
+              )}>
+                <Icon
+                  aria-hidden="true"
+                  className={cn("h-6 w-6 transition-all", active ? "fill-gold/10" : "")}
+                />
+              </div>
               <span
                 className={cn(
-                  "text-[9px] font-bold uppercase tracking-tighter transition-all",
-                  active ? "opacity-100 block" : "hidden",
+                  "text-[8px] font-black uppercase tracking-[0.15em] transition-all",
+                  active ? "opacity-100" : "opacity-0 scale-90",
                 )}
               >
                 {item.label}
@@ -69,7 +74,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
               {active && (
                 <div
                   aria-hidden="true"
-                  className="absolute -bottom-1 h-1 w-1 bg-[var(--gold)] rounded-full"
+                  className="absolute -bottom-1 h-1 w-4 bg-gold rounded-full shadow-gold"
                 />
               )}
             </Link>

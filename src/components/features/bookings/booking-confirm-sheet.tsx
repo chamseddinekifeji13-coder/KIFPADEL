@@ -52,40 +52,40 @@ export function BookingConfirmSheet({
       />
       
       {/* Sheet */}
-      <div className="absolute bottom-0 left-0 right-0 bg-[var(--surface)] rounded-t-3xl animate-in slide-in-from-bottom duration-300">
-        <div className="max-w-lg mx-auto p-6 space-y-6">
+      <div className="absolute bottom-0 left-0 right-0 glass-gold rounded-t-[3rem] animate-slide-up shadow-premium">
+        <div className="max-w-lg mx-auto p-8 space-y-8">
           {/* Handle */}
-          <div className="flex justify-center">
-            <div className="h-1 w-12 bg-[var(--border)] rounded-full" />
+          <div className="flex justify-center -mt-2">
+            <div className="h-1.5 w-16 bg-white/10 rounded-full" />
           </div>
 
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">
-              {isSuccess ? "Réservation confirmée" : isError ? "Erreur" : "Confirmer la réservation"}
+            <h2 className="text-xl font-black text-white uppercase tracking-tight">
+              {isSuccess ? "Succès" : isError ? "Erreur" : "Réservation"}
             </h2>
             {!isLoading && (
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-[var(--background)] transition-colors"
+                className="p-2 rounded-full hover:bg-white/5 transition-colors"
               >
-                <X className="h-5 w-5 text-[var(--foreground-muted)]" />
+                <X className="h-6 w-6 text-foreground-muted" />
               </button>
             )}
           </div>
 
           {/* Success State */}
           {isSuccess && (
-            <div className="py-8 flex flex-col items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+            <div className="py-12 flex flex-col items-center gap-6">
+              <div className="h-20 w-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]">
+                <CheckCircle2 className="h-10 w-10 text-emerald-400" />
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-white">Réservation confirmée</p>
-                <p className="text-sm text-[var(--foreground-muted)] mt-1">
+                <p className="text-2xl font-black text-white uppercase tracking-tight">C'est confirmé !</p>
+                <p className="text-sm text-foreground-muted mt-2 max-w-[280px]">
                   {paymentMethod === "online" 
-                    ? "Vous allez recevoir un lien de paiement par email"
-                    : "Présentez-vous au club à l'heure indiquée"}
+                    ? "Un lien de paiement sécurisé vous a été envoyé par email."
+                    : "Votre terrain est bloqué. On vous attend au club !"}
                 </p>
               </div>
             </div>
@@ -94,11 +94,11 @@ export function BookingConfirmSheet({
           {/* Error State */}
           {isError && (
             <div className="py-6">
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="bg-danger/10 border border-danger/20 rounded-2xl p-6 flex items-start gap-4">
+                <AlertCircle className="h-6 w-6 text-danger flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-bold text-red-400">Erreur de réservation</p>
-                  <p className="text-xs text-red-400/80 mt-1">
+                  <p className="text-sm font-bold text-danger uppercase tracking-wide">Erreur de réservation</p>
+                  <p className="text-xs text-danger/80 mt-1 leading-relaxed">
                     {errorMessage ?? "Une erreur est survenue. Veuillez réessayer."}
                   </p>
                 </div>
@@ -106,7 +106,7 @@ export function BookingConfirmSheet({
               
               <button
                 onClick={onClose}
-                className="w-full mt-4 bg-[var(--border)] hover:bg-[var(--surface-elevated)] text-white h-12 rounded-xl text-sm font-bold transition-all"
+                className="w-full mt-6 bg-surface-elevated hover:bg-surface text-white h-14 rounded-2xl text-sm font-black uppercase tracking-widest transition-all border border-white/5"
               >
                 Fermer
               </button>
@@ -117,42 +117,56 @@ export function BookingConfirmSheet({
           {!isSuccess && !isError && (
             <>
               {/* Booking Details */}
-              <div className="bg-[var(--background)] rounded-xl p-4 space-y-4">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4 text-[var(--gold)]" />
-                  <span className="text-sm font-medium text-white">{clubName}</span>
+              <div className="bg-surface-elevated/50 border border-white/5 rounded-3xl p-6 space-y-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-gold/10 flex items-center justify-center border border-gold/20">
+                    <MapPin className="h-5 w-5 text-gold" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-foreground-muted tracking-widest">Club</p>
+                    <p className="text-sm font-black text-white">{clubName}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-[var(--gold)]" />
-                  <span className="text-sm font-medium text-white capitalize">{formattedDate}</span>
+                
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-gold/10 flex items-center justify-center border border-gold/20">
+                    <Calendar className="h-5 w-5 text-gold" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-foreground-muted tracking-widest">Date & Heure</p>
+                    <p className="text-sm font-black text-white capitalize">{formattedDate} @ {time}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Clock className="h-4 w-4 text-[var(--gold)]" />
-                  <span className="text-sm font-medium text-white">{time} (1h30)</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  {paymentMethod === "online" ? (
-                    <CreditCard className="h-4 w-4 text-[var(--gold)]" />
-                  ) : (
-                    <Banknote className="h-4 w-4 text-[var(--gold)]" />
-                  )}
-                  <span className="text-sm font-medium text-white">
-                    {paymentMethod === "online" ? "Paiement en ligne" : "Paiement sur place"}
-                  </span>
+
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-gold/10 flex items-center justify-center border border-gold/20">
+                    {paymentMethod === "online" ? (
+                      <CreditCard className="h-5 w-5 text-gold" />
+                    ) : (
+                      <Banknote className="h-5 w-5 text-gold" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-foreground-muted tracking-widest">Paiement</p>
+                    <p className="text-sm font-black text-white">
+                      {paymentMethod === "online" ? "En ligne (Email)" : "Sur place au club"}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Price Summary */}
-              <div className="flex items-center justify-between py-4 border-t border-[var(--border)]">
-                <span className="text-sm text-[var(--foreground-muted)]">Total à payer</span>
-                <span className="text-2xl font-black text-[var(--gold)]">{price} DT</span>
+              <div className="flex items-center justify-between px-2">
+                <span className="text-sm font-bold text-foreground-muted uppercase tracking-widest">Total</span>
+                <span className="text-3xl font-black text-white">
+                  {price} <span className="text-gold">DT</span>
+                </span>
               </div>
 
               {/* No-show Warning */}
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-                <p className="text-xs text-amber-400 leading-relaxed">
-                  En cas de no-show, votre score de confiance sera impacté et vos futures 
-                  réservations pourront être restreintes.
+              <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
+                <p className="text-[11px] text-warning font-medium leading-relaxed text-center italic">
+                  "En cas de no-show, votre score de confiance sera impacté."
                 </p>
               </div>
 
@@ -160,17 +174,17 @@ export function BookingConfirmSheet({
               <button
                 onClick={handleConfirm}
                 disabled={isLoading}
-                className="w-full bg-[var(--gold)] hover:bg-[var(--gold-dark)] disabled:opacity-50 text-black h-14 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:active:scale-100"
+                className="w-full bg-gold hover:bg-gold-light disabled:opacity-50 text-black h-16 rounded-2xl text-sm font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-gold"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Confirmation en cours...
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Traitement...
                   </>
-                ) : paymentMethod === "online" ? (
-                  `Payer ${price} DT`
                 ) : (
-                  "Confirmer la réservation"
+                  <>
+                    {paymentMethod === "online" ? "Payer maintenant" : "Confirmer ma venue"}
+                  </>
                 )}
               </button>
             </>
