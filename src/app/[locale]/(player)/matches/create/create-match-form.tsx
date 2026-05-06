@@ -80,6 +80,7 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
+              style={{ color: "#5d5353" }}
             />
           </div>
           <div className="space-y-2">
@@ -91,6 +92,7 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
               value={time}
               onChange={(e) => setTime(e.target.value)}
               className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
+              style={{ color: "#757575" }}
             />
           </div>
         </div>
