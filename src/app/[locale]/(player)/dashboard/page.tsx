@@ -52,7 +52,7 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
 
   const stats = [
     { label: "Win Rate", value: "68%" },
-    { label: "Matchs", value: profile.matches_played?.toString() || "12" },
+    { label: "Matchs", value: "12" }, // TODO: Fetch real match count
     { label: "Streak", value: "4 Wins" },
   ];
 
