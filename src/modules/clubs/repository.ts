@@ -51,6 +51,13 @@ type ManagedClubMembership = {
   club?: ClubRow | ClubRow[] | null;
 };
 
+type ManagedClubSummary = {
+  id: string;
+  name: string;
+  city: string;
+  is_active: boolean;
+};
+
 function normalizeClub(row: ClubRow): Club {
   const normalizedType =
     row.type ??
@@ -212,6 +219,50 @@ export async function fetchCourtsByClub(clubId: string) {
   }
 }
 
+async function fetchPrimaryClubForUser(userId: string): Promise<ManagedClubSummary | null> {
+  const adminClient = createSupabaseAdminClient();
+
+  for (const profileKey of ["id", "user_id"] as const) {
+    const { data: profile, error: profileError } = await adminClient
+      .from("profiles")
+      .select("main_club_id")
+      .eq(profileKey, userId)
+      .maybeSingle();
+
+    if (profileError) {
+      continue;
+    }
+
+    if (!profile) {
+      continue;
+    }
+
+    const mainClubId = (profile as { main_club_id?: string | null }).main_club_id;
+    if (!mainClubId) {
+      return null;
+    }
+
+    const { data: club, error: clubError } = await adminClient
+      .from("clubs")
+      .select("id,name,city,is_active")
+      .eq("id", mainClubId)
+      .maybeSingle();
+
+    if (clubError || !club?.id || !club?.name) {
+      return null;
+    }
+
+    return {
+      id: club.id,
+      name: club.name,
+      city: club.city ?? "Tunis",
+      is_active: club.is_active ?? true,
+    };
+  }
+
+  return null;
+}
+
 export async function fetchManagedClubForUser(userId: string) {
   try {
     const supabase = await createSupabaseServerClient();
@@ -262,7 +313,7 @@ export async function fetchManagedClubForUser(userId: string) {
     const club = Array.isArray(clubRecord) ? clubRecord[0] : clubRecord;
 
     if (!club?.id || !club?.name) {
-      return null;
+      return fetchPrimaryClubForUser(userId);
     }
 
     return {

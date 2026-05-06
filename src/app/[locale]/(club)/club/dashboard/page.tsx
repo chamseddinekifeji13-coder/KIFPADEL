@@ -48,6 +48,12 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
         <p className="mt-2 text-sm text-[var(--foreground-muted)]">
           {labels.noClubAccessSubtitle}
         </p>
+        <Link
+          href={`/${locale}/clubs/new`}
+          className="mt-5 inline-flex h-11 items-center justify-center rounded-xl bg-[var(--gold)] px-5 text-sm font-bold text-black transition-colors hover:bg-[var(--gold-dark)]"
+        >
+          {labels.noClubCreateCta}
+        </Link>
       </div>
     );
   }
