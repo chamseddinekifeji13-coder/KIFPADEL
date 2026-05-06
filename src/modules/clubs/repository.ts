@@ -18,6 +18,17 @@ export interface Club {
   created_at: string;
 }
 
+type CourtRow = {
+  id: string;
+  club_id: string;
+  label: string;
+  surface?: string | null;
+  is_indoor?: boolean | null;
+  is_active?: boolean | null;
+  price_per_slot?: number | null;
+  created_at?: string | null;
+};
+
 type ClubRow = Partial<Club> & {
   id: string;
   name: string;
@@ -33,6 +44,7 @@ type ClubRow = Partial<Club> & {
 };
 
 const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
+const MANAGED_CLUB_ROLES = ["club_manager", "club_admin", "club_staff", "platform_admin"] as const;
 
 type ManagedClubMembership = {
   role?: string | null;
@@ -51,11 +63,52 @@ function normalizeClub(row: ClubRow): Club {
     type: normalizedType as Club["type"],
     logo_url: row.logo_url ?? null,
     is_active: row.is_active ?? true,
-    slot_duration_minutes: row.slot_duration_minutes ?? 90,
+    slot_duration_minutes: row.slot_duration_minutes ?? 60,
     opening_time: row.opening_time ?? "08:00:00",
     closing_time: row.closing_time ?? "23:00:00",
     created_at: row.created_at ?? new Date().toISOString(),
   };
+}
+
+function filterActiveCourts(courts: CourtRow[]) {
+  return courts.filter((court) => court.is_active !== false);
+}
+
+async function ensureDefaultCourtForClub(clubId: string): Promise<CourtRow[]> {
+  const adminClient = createSupabaseAdminClient();
+
+  const { data: existingCourts, error: existingCourtsError } = await adminClient
+    .from("courts")
+    .select("*")
+    .eq("club_id", clubId);
+
+  if (existingCourtsError) {
+    console.warn("[clubs.ensureDefaultCourtForClub] lookup error", existingCourtsError.message);
+    return [];
+  }
+
+  const activeCourts = filterActiveCourts((existingCourts ?? []) as CourtRow[]);
+  if (activeCourts.length > 0) {
+    return activeCourts;
+  }
+
+  const { data: createdCourt, error: createCourtError } = await adminClient
+    .from("courts")
+    .insert({
+      club_id: clubId,
+      label: "Terrain 1",
+      surface: "standard",
+      is_indoor: false,
+    })
+    .select("*")
+    .single();
+
+  if (createCourtError || !createdCourt) {
+    console.warn("[clubs.ensureDefaultCourtForClub] create error", createCourtError?.message);
+    return [];
+  }
+
+  return [createdCourt as CourtRow];
 }
 
 export async function fetchClubs(city?: string): Promise<Club[]> {
@@ -138,15 +191,20 @@ export async function fetchCourtsByClub(clubId: string) {
     const { data, error } = await supabase
       .from("courts")
       .select("*")
-      .eq("club_id", clubId)
-      .eq("is_active", true);
+      .eq("club_id", clubId);
+
+    if (!error && Array.isArray(data)) {
+      const activeCourts = filterActiveCourts(data as CourtRow[]);
+      if (activeCourts.length > 0) {
+        return activeCourts;
+      }
+    }
 
     if (error) {
       console.warn("[clubs.fetchCourtsByClub] supabase error", error.message);
-      return [];
     }
 
-    return Array.isArray(data) ? data : [];
+    return ensureDefaultCourtForClub(clubId);
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[clubs.fetchCourtsByClub] unexpected error", err);
@@ -176,7 +234,7 @@ export async function fetchManagedClubForUser(userId: string) {
           `,
         )
         .eq(userColumn, userId)
-        .in("role", ["club_manager", "club_staff", "platform_admin"])
+        .in("role", [...MANAGED_CLUB_ROLES])
         .limit(1);
 
       if (error) {
