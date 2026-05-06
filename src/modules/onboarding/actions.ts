@@ -88,7 +88,6 @@ export async function completeOnboardingAction(formData: FormData) {
       .from("profiles")
       .insert({
         id: user.id,
-        email: user.email,
         ...profilePayload,
       });
 
@@ -98,7 +97,6 @@ export async function completeOnboardingAction(formData: FormData) {
         .from("profiles")
         .insert({
           id: user.id,
-          email: user.email,
           ...fallbackProfilePayload,
         });
       insertError = retry.error;
