@@ -5,32 +5,51 @@ import { cn } from "@/lib/utils/cn";
 import { MapPin, Calendar, Trophy, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type Club } from "@/modules/clubs/repository";
+import { createOpenMatchAction } from "@/modules/matches/actions";
 
 interface CreateMatchFormProps {
   clubs: Club[];
   locale: string;
 }
 
+function toLocalDateInputValue(date = new Date()) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Prochain créneau 15 min strictement après maintenant (évite validation « passé »). */
+function defaultTimeValue() {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  d.setMinutes(d.getMinutes() + 2);
+  let mins = d.getMinutes();
+  const step = 15;
+  const rounded = Math.ceil(mins / step) * step;
+  if (rounded >= 60) {
+    d.setHours(d.getHours() + 1);
+    d.setMinutes(rounded - 60);
+  } else {
+    d.setMinutes(rounded);
+  }
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
 export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClub, setSelectedClub] = useState("");
-  const [date, setDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().slice(0, 10);
-  });
-  const [time, setTime] = useState(() => {
-    const now = new Date();
-    now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0);
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    return `${hh}:${mm}`;
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const [date, setDate] = useState(() => toLocalDateInputValue());
+  const [time, setTime] = useState(() => defaultTimeValue());
   const [formError, setFormError] = useState("");
 
   const quickTimes = ["09:00", "12:00", "16:00", "18:00", "20:00", "21:30"];
+  const minDate = toLocalDateInputValue();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
 
@@ -45,12 +64,11 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
       return;
     }
 
-    if (startsAtLocal.getTime() <= Date.now()) {
+    if (startsAtLocal.getTime() < Date.now() - 30_000) {
       setFormError("Choisis un créneau futur.");
       return;
     }
 
-    setIsLoading(true);
     const selectedClubData = clubs.find((club) => club.id === selectedClub);
     const payload = {
       clubId: selectedClub,
@@ -60,15 +78,36 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
       startsAt: startsAtLocal.toISOString(),
     };
 
-    // Keep a trace so the next screen can consume latest match draft.
-    sessionStorage.setItem("kifpadel:lastCreatedMatchDraft", JSON.stringify(payload));
-    const query = new URLSearchParams({
-      created: "1",
-      clubId: payload.clubId,
-      date: payload.date,
-      time: payload.time,
-    });
-    router.push(`/${locale}/play-now?${query.toString()}`);
+    setIsSubmitting(true);
+    try {
+      const result = await createOpenMatchAction({
+        locale,
+        clubId: selectedClub,
+        startsAtIso: startsAtLocal.toISOString(),
+      });
+
+      if (!result.ok) {
+        setFormError(result.error);
+        return;
+      }
+
+      try {
+        sessionStorage.setItem("kifpadel:lastCreatedMatchDraft", JSON.stringify(payload));
+      } catch {
+        /* navigation privée / quota */
+      }
+
+      const query = new URLSearchParams({
+        created: "1",
+        matchId: result.matchId,
+        clubId: payload.clubId,
+        date: payload.date,
+        time: payload.time,
+      });
+      router.push(`/${locale}/play-now?${query.toString()}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -119,10 +158,10 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
               id="match-date"
               type="date" 
               required
-              min={new Date().toISOString().slice(0, 10)}
+              min={minDate}
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
+              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
             />
           </div>
           <div className="space-y-2">
@@ -134,7 +173,7 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
               step={900}
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
+              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
             />
           </div>
         </div>
@@ -158,18 +197,21 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
         {formError ? (
           <p className="text-xs font-semibold text-rose-600">{formError}</p>
         ) : null}
+        <p className="text-[11px] text-slate-500">
+          Sélection actuelle: {date || "—"} {time || "—"}
+        </p>
       </div>
 
       <button
         type="submit"
-        disabled={!selectedClub || !date || !time || isLoading}
+        disabled={isSubmitting}
         className={cn(
           "w-full h-14 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl",
-          isLoading ? "bg-slate-100 text-slate-400" : 
+          isSubmitting ? "bg-slate-100 text-slate-400" : 
           "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200 active:scale-[0.98]"
         )}
       >
-        {isLoading ? (
+        {isSubmitting ? (
           <div className="h-5 w-5 border-2 border-slate-300 border-t-slate-900 animate-spin rounded-full" />
         ) : (
           <>
