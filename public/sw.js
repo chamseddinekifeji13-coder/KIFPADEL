@@ -1,55 +1,24 @@
-const CACHE_NAME = "kifpadel-static-v1";
-const APP_SHELL = ["/", "/fr", "/en", "/manifest.webmanifest", "/icons/icon.svg"];
+/**
+ * Kifpadel Service Worker Kill-Switch
+ * This file is designed to unregister any active service workers and clear caches.
+ */
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)),
-  );
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key)),
-        ),
-      ),
-  );
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") {
-    return;
-  }
-
-  const requestUrl = new URL(event.request.url);
-
-  if (requestUrl.pathname.startsWith("/api")) {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request)),
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse.status === 200 && requestUrl.origin === self.location.origin) {
-          const copy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        }
-        return networkResponse;
-      });
-    }),
+    caches.keys().then((names) => {
+      return Promise.all(names.map((name) => caches.delete(name)));
+    }).then(() => {
+      return self.registration.unregister();
+    }).then(() => {
+      return self.clients.claim();
+    })
   );
 });
+
+// Do NOT add a fetch listener. 
+// Adding an empty fetch listener can still trigger interception logic in some browsers.
+// By removing it, the browser will handle all requests normally via the network.

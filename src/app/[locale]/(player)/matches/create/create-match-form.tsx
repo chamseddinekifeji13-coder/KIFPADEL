@@ -14,19 +14,61 @@ interface CreateMatchFormProps {
 export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
   const router = useRouter();
   const [selectedClub, setSelectedClub] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [date, setDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().slice(0, 10);
+  });
+  const [time, setTime] = useState(() => {
+    const now = new Date();
+    now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0);
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  });
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const quickTimes = ["09:00", "12:00", "16:00", "18:00", "20:00", "21:30"];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
+
+    if (!selectedClub || !date || !time) {
+      setFormError("Merci de remplir le club, la date et l'heure.");
+      return;
+    }
+
+    const startsAtLocal = new Date(`${date}T${time}:00`);
+    if (Number.isNaN(startsAtLocal.getTime())) {
+      setFormError("Date ou heure invalide.");
+      return;
+    }
+
+    if (startsAtLocal.getTime() <= Date.now()) {
+      setFormError("Choisis un créneau futur.");
+      return;
+    }
+
     setIsLoading(true);
-    // Mocking the creation
-    setTimeout(() => {
-      setIsLoading(false);
-      alert("Match créé avec succès !");
-      router.push(`/${locale}/play-now`);
-    }, 1500);
+    const selectedClubData = clubs.find((club) => club.id === selectedClub);
+    const payload = {
+      clubId: selectedClub,
+      clubName: selectedClubData?.name ?? "",
+      date,
+      time,
+      startsAt: startsAtLocal.toISOString(),
+    };
+
+    // Keep a trace so the next screen can consume latest match draft.
+    sessionStorage.setItem("kifpadel:lastCreatedMatchDraft", JSON.stringify(payload));
+    const query = new URLSearchParams({
+      created: "1",
+      clubId: payload.clubId,
+      date: payload.date,
+      time: payload.time,
+    });
+    router.push(`/${locale}/play-now?${query.toString()}`);
   };
 
   return (
@@ -77,10 +119,10 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
               id="match-date"
               type="date" 
               required
+              min={new Date().toISOString().slice(0, 10)}
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
-              style={{ color: "#5d5353" }}
+              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
             />
           </div>
           <div className="space-y-2">
@@ -89,13 +131,33 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
               id="match-time"
               type="time" 
               required
+              step={900}
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
-              style={{ color: "#757575" }}
+              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
             />
           </div>
         </div>
+        <div className="flex flex-wrap gap-2">
+          {quickTimes.map((slot) => (
+            <button
+              key={slot}
+              type="button"
+              onClick={() => setTime(slot)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-bold transition-colors",
+                time === slot
+                  ? "border-sky-600 bg-sky-50 text-sky-700"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300",
+              )}
+            >
+              {slot}
+            </button>
+          ))}
+        </div>
+        {formError ? (
+          <p className="text-xs font-semibold text-rose-600">{formError}</p>
+        ) : null}
       </div>
 
       <button

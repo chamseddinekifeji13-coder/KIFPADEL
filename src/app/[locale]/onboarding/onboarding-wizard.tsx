@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   User,
   Phone,
@@ -12,15 +13,14 @@ import {
   CheckCircle2,
   Trophy,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { completeOnboardingAction } from "@/modules/onboarding/actions";
 import type { Dictionary } from "@/i18n/get-dictionary";
 
 type OnboardingWizardProps = {
   locale: string;
-  userId: string;
-  userEmail: string;
-  dictionary: Dictionary;
 };
 
 type Step = "profile" | "phone" | "level" | "trust";
@@ -36,8 +36,7 @@ const CITIES = [
   "Tunis", "La Marsa", "Carthage", "Sidi Bou Said", "Sousse", "Sfax", "Hammamet", "Nabeul"
 ];
 
-export function OnboardingWizard({ locale, userId, userEmail, dictionary }: OnboardingWizardProps) {
-  const router = useRouter();
+export function OnboardingWizard({ locale }: OnboardingWizardProps) {
   const [step, setStep] = useState<Step>("profile");
   const [loading, setLoading] = useState(false);
   
@@ -48,6 +47,8 @@ export function OnboardingWizard({ locale, userId, userEmail, dictionary }: Onbo
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
   const [level, setLevel] = useState("");
 
   const steps: Step[] = ["profile", "phone", "level", "trust"];
@@ -98,9 +99,25 @@ export function OnboardingWizard({ locale, userId, userEmail, dictionary }: Onbo
 
   const handleComplete = async () => {
     setLoading(true);
-    // TODO: Call API to save profile
-    await new Promise((r) => setTimeout(r, 1500));
-    router.push(`/${locale}/profile`);
+    
+    const formData = new FormData();
+    formData.append("locale", locale);
+    formData.append("displayName", displayName);
+    formData.append("city", city);
+    formData.append("phone", phone);
+    formData.append("level", level);
+    
+    // We don't catch here because redirect() throws a special error that Next.js needs to catch
+    try {
+      await completeOnboardingAction(formData);
+    } catch (err) {
+      // If it's a redirect error, re-throw it so Next.js can handle it
+      if (err instanceof Error && err.message === "NEXT_REDIRECT") {
+        throw err;
+      }
+      console.error("Onboarding failed:", err);
+      setLoading(false);
+    }
   };
 
   return (
@@ -111,13 +128,28 @@ export function OnboardingWizard({ locale, userId, userEmail, dictionary }: Onbo
           <span>Étape {currentStepIndex + 1} sur {steps.length}</span>
           <span>{Math.round(progress)}%</span>
         </div>
-        <div className="h-1 bg-[var(--border)] rounded-full overflow-hidden">
+        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden mb-8">
           <div 
-            className="h-full bg-[var(--gold)] transition-all duration-500"
-            style={{ width: `${progress}%` }}
+            className={cn(
+              "h-full bg-gradient-to-r from-[var(--gold-dark)] to-[var(--gold)] transition-all duration-500 ease-out",
+              progress === 25 ? "w-1/4" :
+              progress === 50 ? "w-1/2" :
+              progress === 75 ? "w-3/4" :
+              progress === 100 ? "w-full" : "w-0"
+            )}
           />
         </div>
       </div>
+
+      {urlError && (
+        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-400">
+          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-bold">Erreur de création</p>
+            <p className="opacity-80">{urlError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Step Content */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
@@ -154,7 +186,7 @@ export function OnboardingWizard({ locale, userId, userEmail, dictionary }: Onbo
         )}
 
         {step === "trust" && (
-          <TrustStep phoneVerified={phoneVerified} />
+          <TrustStep phoneVerified={phoneVerified} level={level} />
         )}
       </div>
 
@@ -410,7 +442,19 @@ function LevelStep({
 }
 
 // Trust Step
-function TrustStep({ phoneVerified }: { phoneVerified: boolean }) {
+function TrustStep({ phoneVerified, level }: { phoneVerified: boolean; level: string }) {
+  const levelBonuses: Record<string, number> = {
+    beginner: 5,
+    intermediate: 10,
+    advanced: 15,
+    expert: 20,
+  };
+  
+  const baseScore = 50;
+  const phoneBonus = phoneVerified ? 20 : 0;
+  const levelBonus = levelBonuses[level] || 0;
+  const totalScore = baseScore + phoneBonus + levelBonus;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -424,7 +468,7 @@ function TrustStep({ phoneVerified }: { phoneVerified: boolean }) {
       </div>
 
       <div className="p-6 rounded-xl bg-[var(--background)] border border-[var(--border)] text-center">
-        <p className="text-5xl font-black text-[var(--gold)]">{phoneVerified ? 80 : 70}</p>
+        <p className="text-5xl font-black text-[var(--gold)]">{totalScore}</p>
         <p className="text-sm text-[var(--foreground-muted)] mt-2">Score de départ</p>
       </div>
 

@@ -5,21 +5,16 @@ import { Star, ShieldCheck } from "lucide-react";
 
 interface PlayerCardProps {
   player: {
-    user_id: string;
+    id: string;
     display_name: string;
     avatar_url: string | null;
     league: "Bronze" | "Silver" | "Gold" | "Platinum";
-    trust_rating?: number | null;
-    reliability?: string | null;
+    trust_rating: number;
+    reliability: string;
   };
 }
 
 export function PlayerCard({ player }: PlayerCardProps) {
-  const trustRatingValue = Number.isFinite(player.trust_rating)
-    ? Number(player.trust_rating)
-    : 0;
-  const reliabilityLabel = player.reliability ?? "healthy";
-
   return (
     <Card className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
       <Avatar
@@ -31,21 +26,21 @@ export function PlayerCard({ player }: PlayerCardProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-slate-900 truncate">
-            {player.display_name}
+            {player.display_name || "Joueur"}
           </h3>
-          <Badge variant={player.league.toLowerCase() as BadgeProps["variant"]}>
-            {player.league}
+          <Badge variant={(player.league || "Bronze").toLowerCase() as BadgeProps["variant"]}>
+            {player.league || "Bronze"}
           </Badge>
         </div>
         
         <div className="flex items-center gap-3 mt-1">
           <div className="flex items-center gap-1 text-xs text-slate-500">
             <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-            <span>{trustRatingValue.toFixed(1)}</span>
+            <span>{(player.trust_rating || 0).toFixed(1)}</span>
           </div>
           <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
             <ShieldCheck className="h-3 w-3" />
-            <span>{reliabilityLabel}</span>
+            <span>{player.reliability || "Stable"}</span>
           </div>
         </div>
       </div>

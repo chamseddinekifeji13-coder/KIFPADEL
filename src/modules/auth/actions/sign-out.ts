@@ -2,11 +2,11 @@
 
 import { redirect } from "next/navigation";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
 export async function signOutAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerActionClient();
 
   await supabase.auth.signOut();
 

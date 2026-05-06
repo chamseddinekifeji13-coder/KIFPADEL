@@ -30,7 +30,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
     { href: `/${locale}/play-now`, label: labels.play, icon: Trophy },
     { href: `/${locale}/find-players`, label: labels.find, icon: Search },
     { href: `/${locale}/book`, label: labels.book, icon: Calendar },
-    { href: `/${locale}/profile`, label: labels.dashboard, icon: User },
+    { href: `/${locale}/dashboard`, label: labels.dashboard, icon: User },
   ];
 
   return (
@@ -59,10 +59,9 @@ export function MainNav({ locale, labels }: MainNavProps) {
                 className={cn("h-5 w-5 transition-all", active ? "fill-[var(--gold)]/20" : "")}
               />
               <span
-                aria-hidden={!active}
                 className={cn(
                   "text-[9px] font-bold uppercase tracking-tighter transition-all",
-                  active ? "opacity-100" : "opacity-0 h-0",
+                  active ? "opacity-100 block" : "hidden",
                 )}
               >
                 {item.label}

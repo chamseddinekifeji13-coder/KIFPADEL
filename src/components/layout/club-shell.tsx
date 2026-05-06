@@ -26,9 +26,14 @@ type ClubShellProps = Readonly<{
     incidents: string;
     settings: string;
   };
+  uiLabels: {
+    managerLabel: string;
+    mobileClubLabel: string;
+    backToApp: string;
+  };
 }>;
 
-export function ClubShell({ children, locale, clubName, navLabels }: ClubShellProps) {
+export function ClubShell({ children, locale, clubName, navLabels, uiLabels }: ClubShellProps) {
   const pathname = usePathname();
   const baseUrl = `/${locale}/club`;
 
@@ -44,7 +49,7 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
   return (
     <div className="min-h-screen bg-[var(--background)] flex">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)]">
+      <aside className="hidden lg:flex w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)]">
         {/* Logo / Club Header */}
         <div className="p-6 border-b border-[var(--border)]">
           <div className="flex items-center gap-3">
@@ -53,7 +58,7 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] font-medium">
-                Club Manager
+                {uiLabels.managerLabel}
               </p>
               <p className="text-sm font-bold text-white truncate">{clubName}</p>
             </div>
@@ -98,13 +103,13 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--foreground-muted)] hover:text-white hover:bg-[var(--surface-elevated)] transition-all text-sm font-medium"
           >
             <LogOut className="h-5 w-5" />
-            Retour à l&apos;app
+            {uiLabels.backToApp}
           </Link>
         </div>
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-b border-[var(--border)]">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-b border-[var(--border)]">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-lg bg-[var(--gold)] flex items-center justify-center">
@@ -112,7 +117,7 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
             </div>
             <div>
               <p className="text-[9px] uppercase tracking-widest text-[var(--foreground-muted)] font-medium">
-                Club
+                {uiLabels.mobileClubLabel}
               </p>
               <p className="text-sm font-bold text-white">{clubName}</p>
             </div>
@@ -121,15 +126,15 @@ export function ClubShell({ children, locale, clubName, navLabels }: ClubShellPr
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 md:overflow-y-auto">
-        <div className="p-6 pt-20 md:pt-6 pb-24 md:pb-6 max-w-5xl mx-auto">
+      <main className="flex-1 lg:overflow-y-auto">
+        <div className="mx-auto max-w-6xl p-4 pt-20 pb-24 sm:p-6 sm:pt-20 sm:pb-24 lg:p-6 lg:pt-6 lg:pb-6">
           {children}
         </div>
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)]">
-        <div className="flex justify-around items-center h-16 px-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl lg:hidden">
+        <div className="flex h-16 items-center justify-around px-2 pb-[max(env(safe-area-inset-bottom),0px)]">
           {navItems.slice(0, 5).map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
