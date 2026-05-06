@@ -1,6 +1,7 @@
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/modules/auth/actions/sign-out";
 import { playerService } from "@/modules/players/service";
@@ -169,14 +170,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <SectionTitle title={labels.accountSettingsTitle} className="text-sm opacity-50 px-2" />
         <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] divide-y divide-[var(--border)] shadow-sm overflow-hidden">
           {[
-            { label: labels.accountPersonalInfo, icon: "user" },
-            { label: labels.accountNotifications, icon: "bell" },
-            { label: labels.accountSupport, icon: "help" },
+            { label: labels.accountPersonalInfo, href: `/${locale}/profile/edit` },
+            { label: labels.accountNotifications, href: `/${locale}/profile/notifications` },
+            { label: labels.accountSupport, href: `/${locale}/support` },
           ].map((item) => (
-            <button key={item.label} className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface-elevated)] transition-colors group">
+            <Link key={item.label} href={item.href} className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface-elevated)] transition-colors group">
               <span className="text-sm font-bold text-slate-200 group-hover:text-white">{item.label}</span>
               <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)]" />
-            </button>
+            </Link>
           ))}
           <form action={signOutAction}>
             <input type="hidden" name="locale" value={locale} />
