@@ -33,6 +33,7 @@ type ClubRow = Partial<Club> & {
 };
 
 const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
+const MANAGED_CLUB_ROLES = ["club_manager", "club_admin", "club_staff", "platform_admin"] as const;
 
 type ManagedClubMembership = {
   role?: string | null;
@@ -176,7 +177,7 @@ export async function fetchManagedClubForUser(userId: string) {
           `,
         )
         .eq(userColumn, userId)
-        .in("role", ["club_manager", "club_staff", "platform_admin"])
+        .in("role", [...MANAGED_CLUB_ROLES])
         .limit(1);
 
       if (error) {
