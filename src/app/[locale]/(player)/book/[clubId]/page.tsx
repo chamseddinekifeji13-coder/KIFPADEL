@@ -5,6 +5,7 @@ import { playerService } from "@/modules/players/service";
 import { getClubAvailability } from "@/modules/bookings/availability-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
+import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { MapPin, ArrowLeft, Calendar as CalendarIcon, InfoIcon, Clock } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
@@ -140,7 +141,7 @@ export default async function ClubDetailPage({
           
           <div className="bg-[var(--surface)] rounded-xl p-4 flex gap-3 text-[var(--foreground-muted)] text-sm border border-[var(--border)]">
             <InfoIcon className="h-5 w-5 shrink-0 text-[var(--gold)]" />
-            <p>Toutes les réservations sont pour une durée de <span className="text-white font-bold">90 minutes</span>.</p>
+            <p>Toutes les réservations sont pour une durée de <span className="text-white font-bold">{DEFAULT_BOOKING_DURATION_MINUTES} minutes</span>.</p>
           </div>
           
           <TimeContainer 
