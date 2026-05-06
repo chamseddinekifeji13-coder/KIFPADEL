@@ -62,6 +62,10 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
     { name: "Omar T.", wins: 4, losses: 0, encounters: 1550 },
   ];
 
+  const displayName = profile.display_name.includes("@")
+    ? profile.display_name.split("@")[0]
+    : profile.display_name;
+
   return (
     <div className="flex flex-col items-center w-full min-h-screen space-y-10 pb-32 animate-fade-in pt-8 px-4">
       {/* Centered Logo */}
@@ -82,7 +86,7 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
       {/* Player Identity - LARGE & CENTERED */}
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-black text-white uppercase tracking-tighter sm:text-6xl">
-          {profile.display_name}
+          {displayName}
         </h1>
         <p className="text-lg font-black text-gold uppercase tracking-[0.15em] flex items-center justify-center gap-2">
           ELO RANK: <span className="text-white">{profile.trust_score * 15 + 800}</span>
