@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -46,9 +47,8 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
 
   if (!profile) redirect(`/${locale}/onboarding`);
 
-  const now = Date.now();
   const upcomingBooking =
-    bookings.find((booking) => new Date(booking.ends_at).getTime() >= now) ?? null;
+    bookings.find((booking) => new Date(booking.ends_at).getTime() >= new Date().getTime()) ?? null;
 
   const stats = [
     { label: "Win Rate", value: "68%" },
@@ -71,9 +71,11 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
       {/* Centered Logo - Constant across devices */}
       <div className="flex flex-col items-center gap-3 mb-12">
         <div className="relative h-16 w-16 overflow-hidden rounded-2xl glass-gold p-2 shadow-premium group">
-          <img 
+          <Image 
             src="/icons/icon.svg" 
             alt="KIFPADEL" 
+            width={64}
+            height={64}
             className="h-full w-full object-contain group-hover:scale-110 transition-transform duration-500"
           />
         </div>

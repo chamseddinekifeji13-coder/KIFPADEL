@@ -67,6 +67,7 @@ export function BookingConfirmSheet({
             {!isLoading && (
               <button
                 onClick={onClose}
+                title="Fermer"
                 className="p-2 rounded-full hover:bg-white/5 transition-colors"
               >
                 <X className="h-6 w-6 text-foreground-muted" />

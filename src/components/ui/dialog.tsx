@@ -48,6 +48,7 @@ export function Dialog({ isOpen, onClose, title, children, className }: DialogPr
           )}
           <button 
             onClick={onClose}
+            aria-label="Fermer"
             className="p-2 rounded-full hover:bg-white/5 text-foreground-muted hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />

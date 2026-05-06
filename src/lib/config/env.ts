@@ -30,18 +30,6 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
-function normalizeSiteUrl(raw: string | undefined): string | null {
-  if (!raw) return null;
-  const trimmed = raw.trim().replace(/^['"]+|['"]+$/g, "").replace(/\/+$/, "");
-  if (!trimmed) return null;
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-
-  // VERCEL_URL is often provided without protocol.
-  return `https://${trimmed}`;
-}
 
 function normalizeSupabaseUrl(raw: string): string {
   // Use regex to strip all whitespace characters including \r and \n
