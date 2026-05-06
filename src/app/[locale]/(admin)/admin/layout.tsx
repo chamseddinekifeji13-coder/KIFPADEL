@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { signOutAction } from "@/modules/auth/actions/sign-out";
 
 export default async function AdminLayout({
   children,
@@ -47,6 +48,12 @@ export default async function AdminLayout({
             <a href={`/${locale}/admin/clubs`} className="hover:text-gold transition-colors">Clubs</a>
             <a href={`/${locale}/admin/players`} className="hover:text-gold transition-colors">Joueurs</a>
             <a href={`/${locale}/admin/sponsors`} className="hover:text-gold transition-colors">Sponsors</a>
+            <form action={signOutAction}>
+              <input type="hidden" name="locale" value={locale} />
+              <button type="submit" className="hover:text-gold transition-colors">
+                Déconnexion
+              </button>
+            </form>
           </nav>
         </div>
       </header>
