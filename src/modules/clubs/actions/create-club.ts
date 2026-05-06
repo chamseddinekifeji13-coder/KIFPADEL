@@ -5,6 +5,84 @@ import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
+const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
+
+type SupabaseAdminClient = ReturnType<typeof createSupabaseAdminClient>;
+
+async function assignClubManager(
+  adminClient: SupabaseAdminClient,
+  clubId: string,
+  userId: string,
+) {
+  const errors: unknown[] = [];
+
+  for (const userColumn of MEMBERSHIP_USER_COLUMNS) {
+    const membershipPayload: Record<string, string | boolean> = {
+      club_id: clubId,
+      [userColumn]: userId,
+      role: "club_manager",
+      is_primary: true,
+    };
+
+    const { error: membershipInsertError } = await adminClient
+      .from("club_memberships")
+      .insert(membershipPayload);
+
+    if (!membershipInsertError) {
+      return { ok: true, userColumn } as const;
+    }
+
+    errors.push({ userColumn, step: "insert", error: membershipInsertError });
+
+    const { data: existingMembership, error: membershipReadError } = await adminClient
+      .from("club_memberships")
+      .select("id")
+      .eq("club_id", clubId)
+      .eq(userColumn, userId)
+      .maybeSingle();
+
+    if (membershipReadError) {
+      errors.push({ userColumn, step: "read_existing", error: membershipReadError });
+      continue;
+    }
+
+    if (!existingMembership?.id) {
+      continue;
+    }
+
+    const { error: membershipUpdateError } = await adminClient
+      .from("club_memberships")
+      .update({ role: "club_manager", is_primary: true })
+      .eq("id", existingMembership.id);
+
+    if (!membershipUpdateError) {
+      return { ok: true, userColumn } as const;
+    }
+
+    errors.push({ userColumn, step: "update_existing", error: membershipUpdateError });
+  }
+
+  return { ok: false, errors } as const;
+}
+
+async function setPrimaryClubIfEmpty(
+  adminClient: SupabaseAdminClient,
+  userId: string,
+  clubId: string,
+) {
+  for (const profileKey of ["id", "user_id"] as const) {
+    const { error } = await adminClient
+      .from("profiles")
+      .update({ main_club_id: clubId })
+      .eq(profileKey, userId)
+      .is("main_club_id", null);
+
+    if (!error) {
+      return;
+    }
+  }
+}
+
 export async function createClubAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const name = String(formData.get("name") ?? "").trim();
@@ -42,45 +120,14 @@ export async function createClubAction(formData: FormData) {
 
   const clubId = createdClub.id as string;
 
-  // Avoid upsert conflict metadata dependency; insert first, then fallback update.
-  const { error: membershipInsertError } = await adminClient.from("club_memberships").insert({
-    club_id: clubId,
-    player_id: user.id,
-    role: "club_manager",
-    is_primary: true,
-  });
-
-  if (membershipInsertError) {
-    const { data: existingMembership, error: membershipReadError } = await adminClient
-      .from("club_memberships")
-      .select("id")
-      .eq("club_id", clubId)
-      .eq("player_id", user.id)
-      .maybeSingle();
-
-    if (membershipReadError || !existingMembership?.id) {
-      console.error("[createClubAction] membership creation failed", membershipInsertError);
-      await adminClient.from("clubs").delete().eq("id", clubId);
-      redirect(`/${locale}/clubs/new?error=membership_failed`);
-    }
-
-    const { error: membershipUpdateError } = await adminClient
-      .from("club_memberships")
-      .update({ role: "club_manager", is_primary: true })
-      .eq("id", existingMembership.id);
-
-    if (membershipUpdateError) {
-      console.error("[createClubAction] membership update failed", membershipUpdateError);
-      await adminClient.from("clubs").delete().eq("id", clubId);
-      redirect(`/${locale}/clubs/new?error=membership_failed`);
-    }
+  const managerAssignment = await assignClubManager(adminClient, clubId, user.id);
+  if (!managerAssignment.ok) {
+    console.error("[createClubAction] membership assignment failed", managerAssignment.errors);
+    await adminClient.from("clubs").delete().eq("id", clubId);
+    redirect(`/${locale}/clubs/new?error=membership_failed`);
   }
 
-  await adminClient
-    .from("profiles")
-    .update({ main_club_id: clubId })
-    .eq("id", user.id)
-    .is("main_club_id", null);
+  await setPrimaryClubIfEmpty(adminClient, user.id, clubId);
 
   redirect(`/${locale}/club/dashboard?created=1`);
 }
