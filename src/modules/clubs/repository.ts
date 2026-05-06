@@ -241,7 +241,11 @@ async function fetchPrimaryClubForUser(userId: string): Promise<ManagedClubSumma
       continue;
     }
 
-    const mainClubId = (profile as { main_club_id?: string | null } | null)?.main_club_id;
+    if (!profile) {
+      continue;
+    }
+
+    const mainClubId = (profile as { main_club_id?: string | null }).main_club_id;
     if (!mainClubId) {
       return null;
     }
@@ -317,7 +321,7 @@ export async function fetchManagedClubForUser(userId: string) {
     const club = Array.isArray(clubRecord) ? clubRecord[0] : clubRecord;
 
     if (!club?.id || !club?.name) {
-      return null;
+      return fetchPrimaryClubForUser(userId);
     }
 
     return {
