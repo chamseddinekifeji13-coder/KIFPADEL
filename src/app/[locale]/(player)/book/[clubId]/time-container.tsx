@@ -118,8 +118,8 @@ export function TimeContainer({
 
       {/* Floating Action Bar when slot selected */}
       {selectedSlot && !isBlacklisted && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)] animate-in slide-in-from-bottom-2 duration-300 z-50">
-          <div className="max-w-lg mx-auto p-4 space-y-4">
+        <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+8rem)] z-[70] px-4 animate-in slide-in-from-bottom-2 duration-300">
+          <div className="mx-auto max-h-[calc(100dvh-10rem)] max-w-lg overflow-y-auto rounded-[2rem] border border-[var(--border)] bg-[var(--surface)]/95 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl space-y-4">
             {/* Payment Method Selector */}
             <PaymentMethodSelector
               selected={paymentMethod}
