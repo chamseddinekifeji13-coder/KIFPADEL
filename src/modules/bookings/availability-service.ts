@@ -1,5 +1,6 @@
 import { fetchBookingsByClubAndDate } from "./repository";
 import { fetchCourtsByClub, fetchClubById, type Club } from "@/modules/clubs/repository";
+import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { addMinutes, formatTunisHm, tunisLocalDateTimeToUtc } from "./timezone";
 
 export interface TimeSlot {
@@ -25,7 +26,7 @@ export async function getClubAvailability(clubId: string, date: string): Promise
 
   if (!club) return [];
 
-  const slotDuration = club.slot_duration_minutes || 90;
+  const slotDuration = DEFAULT_BOOKING_DURATION_MINUTES;
   const openingTime = club.opening_time || "08:00";
   const closingTime = club.closing_time || "23:00";
 
