@@ -32,9 +32,9 @@ export default async function CreateMatchPage({ params }: CreateMatchPageProps) 
       <section className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-48 h-48 bg-sky-500 rounded-full blur-[80px] opacity-20 -mr-10 -mt-10" />
         <div className="relative space-y-3">
-          <div className="flex items-center gap-2 text-sky-400">
-            <Sparkles className="h-4 w-4" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Conseil d&apos;expert</span>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" style={{ color: "#efc333" }} />
+            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#e8d36c" }}>Conseil d&apos;expert</span>
 
           </div>
           <p className="text-sm font-medium leading-relaxed opacity-90">
