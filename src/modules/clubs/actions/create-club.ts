@@ -6,7 +6,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
 const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
-const MANAGER_ROLES = ["club_manager", "club_admin", "manager", "admin", "owner"] as const;
+const MANAGER_ROLES = ["club_manager", "club_admin"] as const;
 
 type SupabaseAdminClient = ReturnType<typeof createSupabaseAdminClient>;
 type MembershipPayload = Record<string, string | boolean>;
@@ -113,7 +113,7 @@ async function assignClubManager(
   return { ok: false, errors } as const;
 }
 
-async function setPrimaryClub(
+async function setPrimaryClubIfEmpty(
   adminClient: SupabaseAdminClient,
   userId: string,
   clubId: string,
@@ -122,7 +122,8 @@ async function setPrimaryClub(
     const { error } = await adminClient
       .from("profiles")
       .update({ main_club_id: clubId })
-      .eq(profileKey, userId);
+      .eq(profileKey, userId)
+      .is("main_club_id", null);
 
     if (!error) {
       return;
@@ -195,15 +196,15 @@ export async function createClubAction(formData: FormData) {
 
   const clubId = createdClub.id as string;
 
-  await setPrimaryClub(adminClient, user.id, clubId);
-  await ensureDefaultCourt(adminClient, clubId);
-
   const managerAssignment = await assignClubManager(adminClient, clubId, user.id);
   if (!managerAssignment.ok) {
-    // Do not roll back the club: some live schemas use a different membership
-    // shape, while profile.main_club_id is enough for the current club space.
     console.error("[createClubAction] membership assignment failed", managerAssignment.errors);
+    await adminClient.from("clubs").delete().eq("id", clubId);
+    redirect(`/${locale}/clubs/new?error=membership_failed`);
   }
+
+  await setPrimaryClubIfEmpty(adminClient, user.id, clubId);
+  await ensureDefaultCourt(adminClient, clubId);
 
   redirect(`/${locale}/club/dashboard?created=1`);
 }
