@@ -7,6 +7,7 @@ const routes = [
   "/play-now",
   "/find-players",
   "/book",
+  "/clubs",
   "/dashboard",
   "/auth/sign-in",
   "/auth/sign-up",

@@ -5,6 +5,7 @@ import { type Club } from "@/modules/clubs/repository";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { CreateMatchForm } from "@/app/[locale]/(player)/matches/create/create-match-form";
+import { requireUser } from "@/modules/auth/guards/require-user";
 
 type CreateMatchPageProps = {
   params: Promise<{ locale: string }>;
@@ -13,6 +14,8 @@ type CreateMatchPageProps = {
 export default async function CreateMatchPage({ params }: CreateMatchPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
+
+  await requireUser({ locale, redirectPath: "matches/create" });
 
   const clubs = await clubService.getClubs();
 
