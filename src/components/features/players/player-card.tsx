@@ -16,7 +16,7 @@ interface PlayerCardProps {
 
 export function PlayerCard({ player }: PlayerCardProps) {
   return (
-    <Card className="p-4 flex items-center gap-4 hover:border-gold/30 hover:shadow-gold transition-all cursor-pointer">
+    <Card className="p-4 flex items-center gap-4 border-white/5 bg-surface-elevated hover:shadow-gold-strong transition-all duration-500 cursor-pointer">
       <Avatar
         src={player.avatar_url}
         alt={player.display_name}

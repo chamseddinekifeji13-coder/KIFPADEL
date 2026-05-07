@@ -23,14 +23,14 @@ export function SectionTitle({
   as: Heading = "h2",
 }: SectionTitleProps) {
   return (
-    <div className={cn("flex flex-col items-center gap-4 text-center", className)}>
+    <div className={cn("flex items-center gap-3", className)}>
       {icon && (
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/10 text-gold border border-gold/20 shadow-gold">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gold/10 text-gold shadow-sm ring-1 ring-gold/20">
           {icon}
         </div>
       )}
-      <div className="space-y-1">
-        <Heading className={cn("text-lg font-black text-white uppercase tracking-tight", titleClassName)}>
+      <div className="space-y-0.5">
+        <Heading className={cn("text-sm font-black uppercase tracking-[0.15em] text-white", titleClassName)}>
           {title}
         </Heading>
         {subtitle && (

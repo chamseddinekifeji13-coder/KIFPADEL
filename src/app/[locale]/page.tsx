@@ -91,24 +91,23 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       </header>
 
       {/* Main Section - Premium Dark */}
-      <section className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-surface-elevated p-8 text-white shadow-premium sm:p-12 group">
-        {/* Gold accent */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent opacity-30" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gold rounded-full blur-[120px] opacity-10 -mr-24 -mt-24 group-hover:opacity-20 transition-opacity duration-1000" />
+      <section className="relative overflow-hidden rounded-[2rem] bg-surface-elevated/40 p-8 text-white sm:p-16 group">
+        {/* Subtle Gold accent */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-gold rounded-full blur-[120px] opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000" />
         
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center space-y-8 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/5 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-gold animate-slide-up">
+        <div className="relative flex max-w-2xl flex-col items-start space-y-10 text-left">
+          <div className="inline-flex items-center gap-2 rounded-full bg-gold/10 px-4 py-2 text-[9px] font-black uppercase tracking-[0.3em] text-gold animate-slide-up">
             <Sparkles className="h-3 w-3" />
             {isEn ? "Elite Padel Platform" : "Plateforme Elite"}
           </div>
           
-          <div className="space-y-4 animate-slide-up">
-            <h2 className="text-4xl font-black tracking-tight text-balance sm:text-6xl uppercase leading-[0.95]">
+          <div className="space-y-6 animate-slide-up">
+            <h2 className="text-4xl font-black tracking-tight text-balance sm:text-5xl uppercase leading-[1.1]">
               {isEn
                 ? "The ultimate Padel experience"
                 : "L'expérience Padel ultime"}
             </h2>
-            <p className="text-base text-foreground-muted text-balance max-w-lg mx-auto font-medium">
+            <p className="text-sm text-foreground-muted text-balance max-w-md font-medium leading-relaxed">
               {isEn
                 ? "Join the largest community of padel players in Tunisia. Book courts in seconds and find the perfect match."
                 : "Rejoignez l'élite du padel en Tunisie. Réservez vos terrains en quelques secondes et trouvez des partenaires à votre niveau."}
@@ -118,10 +117,10 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           {!user && (
             <Link
               href={`/${locale}/auth/sign-up`}
-              className="group relative flex h-16 items-center justify-center gap-3 rounded-2xl bg-gold px-10 text-sm font-black uppercase tracking-widest text-black transition-all hover:scale-[1.02] active:scale-[0.98] shadow-gold animate-slide-up"
+              className="group relative flex h-14 items-center justify-center gap-3 rounded-2xl bg-gold px-10 text-[10px] font-black uppercase tracking-[0.2em] text-black transition-all hover:shadow-gold-strong active:scale-[0.98] animate-slide-up"
             >
               {isEn ? "Start Playing" : "Rejoindre l'aventure"}
-              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           )}
         </div>
@@ -149,23 +148,23 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       <div className="grid grid-cols-2 gap-6">
         <Link
           href={`/${locale}/clubs`}
-          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] border border-white/5 bg-surface p-8 transition-all hover:bg-surface-elevated hover:border-gold/20 hover:shadow-gold group active:scale-95"
+          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] bg-surface-elevated p-8 transition-all hover:shadow-gold-strong group active:scale-95"
         >
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-gold border border-white/5 group-hover:bg-gold group-hover:text-black transition-all">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/5 text-gold group-hover:bg-gold group-hover:text-black transition-all">
             <Building2 className="h-7 w-7" />
           </div>
-          <span className="text-xs font-black text-white uppercase tracking-widest">
+          <span className="text-[10px] font-black text-white uppercase tracking-widest">
             {isEn ? "Clubs" : "Explorer"}
           </span>
         </Link>
         <Link
           href={`/${locale}/find-players`}
-          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] border border-white/5 bg-surface p-8 transition-all hover:bg-surface-elevated hover:border-gold/20 hover:shadow-gold group active:scale-95"
+          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] bg-surface-elevated p-8 transition-all hover:shadow-gold-strong group active:scale-95"
         >
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-gold border border-white/5 group-hover:bg-gold group-hover:text-black transition-all">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/5 text-gold group-hover:bg-gold group-hover:text-black transition-all">
             <Search className="h-7 w-7" />
           </div>
-          <span className="text-xs font-black text-white uppercase tracking-widest">
+          <span className="text-[10px] font-black text-white uppercase tracking-widest">
             {isEn ? "Players" : "Joueurs"}
           </span>
         </Link>

@@ -12,22 +12,22 @@ type IntentCardProps = {
 
 export function IntentCard({ href, title, description, icon: Icon, variant = "primary" }: IntentCardProps) {
   const variants = {
-    primary: "bg-[var(--surface)] border-[var(--border)] hover:border-[var(--gold)]/30",
-    secondary: "bg-[var(--gold)] border-[var(--gold)] text-black hover:bg-[var(--gold-dark)]",
-    accent: "bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--gold)]/5"
+    primary: "bg-surface-elevated hover:bg-surface hover:shadow-gold-strong border-white/5",
+    secondary: "bg-gold text-black hover:bg-gold-light shadow-gold",
+    accent: "bg-surface-elevated hover:bg-gold/10"
   };
 
   const iconColors = {
-    primary: "bg-[var(--gold)]/10 text-[var(--gold)]",
+    primary: "bg-gold/10 text-gold",
     secondary: "bg-black/10 text-black",
-    accent: "bg-[var(--gold)]/10 text-[var(--gold)]"
+    accent: "bg-gold/10 text-gold"
   };
 
   return (
     <Link
       href={href}
       className={cn(
-        "group relative flex flex-col items-center text-center gap-4 rounded-[2rem] border p-8 transition-all duration-300 hover:shadow-2xl hover:shadow-[var(--gold)]/10 hover:-translate-y-1 active:scale-[0.98]",
+        "group relative flex items-center gap-6 rounded-[2rem] border p-6 transition-all duration-500 hover:shadow-gold-strong hover:-translate-y-1 active:scale-[0.98]",
         variants[variant]
       )}
     >
@@ -35,11 +35,11 @@ export function IntentCard({ href, title, description, icon: Icon, variant = "pr
         <Icon className="h-8 w-8" />
       </div>
       
-      <div className="space-y-2">
-        <h3 className={cn("text-lg font-black uppercase tracking-tight", variant === "secondary" ? "text-black" : "text-white")}>
+      <div className="flex-1 space-y-1 text-left">
+        <h3 className={cn("text-lg font-black uppercase tracking-tight", variant === "secondary" ? "text-black" : "text-white group-hover:text-gold transition-colors")}>
           {title}
         </h3>
-        <p className={cn("text-sm leading-relaxed max-w-[200px] mx-auto font-medium", variant === "secondary" ? "text-black/70" : "text-[var(--foreground-muted)]")}>
+        <p className={cn("text-xs leading-relaxed font-medium line-clamp-2", variant === "secondary" ? "text-black/70" : "text-muted group-hover:text-white/80 transition-colors")}>
           {description}
         </p>
       </div>

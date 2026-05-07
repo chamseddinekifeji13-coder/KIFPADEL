@@ -217,11 +217,11 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
   }, [requestUserLocation]);
 
   return (
-    <div className="w-full space-y-10 flex flex-col items-center">
+    <>
       <div
         role="tablist"
         aria-label={locale === "en" ? "Filter by city" : "Filtrer par ville"}
-        className="scrollbar-hide -mx-4 flex items-center justify-center gap-3 overflow-x-auto px-4 pb-4"
+        className="scrollbar-hide -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-2"
       >
         {cityTabs.map((city, i) => {
           const isSelected = selectedCity === city || (i === 0 && selectedCity === "Tous");
@@ -232,10 +232,10 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
             role="tab"
             aria-selected={isSelected ? "true" : "false"}
             onClick={() => setSelectedCity(city)}
-            className={`inline-flex min-h-12 items-center whitespace-nowrap rounded-2xl px-6 text-[10px] font-black uppercase tracking-widest transition-all duration-300 border ${
+            className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition-all ${
               isSelected
-                ? "bg-gold text-black border-gold shadow-gold scale-105"
-                : "bg-surface text-foreground-muted border-white/5 hover:border-gold/20 hover:text-white"
+                ? "bg-gold text-black shadow-gold"
+                : "bg-surface-elevated text-foreground-muted hover:bg-surface hover:text-white"
             }`}
           >
             {city}
@@ -244,15 +244,15 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
         })}
       </div>
 
-      <div className="flex flex-col items-center gap-6 w-full">
-        <SectionTitle title={locale === "en" ? "Best clubs" : "Meilleurs Clubs"} icon={<LayoutGrid className="h-6 w-6" />} />
+      <div className="flex items-center justify-between gap-3">
+        <SectionTitle title={locale === "en" ? "Best clubs" : "Meilleurs Clubs"} icon={<LayoutGrid className="h-4 w-4" />} />
         <button
           type="button"
           onClick={handleLocateMe}
-          className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-surface px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gold hover:bg-gold/10 hover:border-gold/30 transition-all shadow-premium active:scale-95"
+          className="inline-flex items-center gap-2 rounded-full bg-gold px-4 py-2 text-[10px] font-black uppercase tracking-widest text-black hover:bg-gold-light active:scale-95 shadow-gold transition-all"
           disabled={loadingGeo}
         >
-          <LocateFixed className="h-4 w-4" />
+          <LocateFixed className="h-3 w-3" />
           {loadingGeo
             ? locale === "en"
               ? "Locating..."

@@ -36,10 +36,8 @@ export function AppShell({
           Main Content Area 
           We use a larger bottom padding to accommodate the floating nav 
       */}
-      <main className="flex-1 flex flex-col items-center text-center p-4 pb-32 animate-in fade-in duration-700 [&_h1]:text-center [&_h2]:text-center [&_h3]:text-center">
-        <div className="w-full space-y-8 flex flex-col items-center">
-          {children}
-        </div>
+      <main className="flex-1 flex flex-col p-4 pb-32 animate-in fade-in duration-700">
+        {children}
       </main>
 
       {/* Modern Floating Bottom Navigation */}

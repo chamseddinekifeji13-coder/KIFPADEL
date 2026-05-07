@@ -49,8 +49,8 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
       </Card>
 
       {error ? (
-        <Card className="bg-rose-50 ring-rose-100">
-          <p className="text-sm text-rose-700">
+        <Card className="bg-rose-500/5 border-rose-500/20">
+          <p className="text-xs text-rose-400 font-bold uppercase tracking-wider">
             {error === "missing_fields"
               ? dictionary.auth.missingFieldsError
               : error === "email_not_confirmed"
@@ -69,14 +69,14 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
       ) : null}
 
       {status === "check_email" ? (
-        <Card className="bg-emerald-50 ring-emerald-100">
-          <p className="text-sm text-emerald-700">{dictionary.auth.checkEmailInfo}</p>
+        <Card className="bg-emerald-500/5 border-emerald-500/20">
+          <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">{dictionary.auth.checkEmailInfo}</p>
         </Card>
       ) : null}
 
       {status === "password_updated" ? (
-        <Card className="bg-emerald-50 ring-emerald-100">
-          <p className="text-sm text-emerald-700">{dictionary.auth.passwordUpdatedInfo}</p>
+        <Card className="bg-emerald-500/5 border-emerald-500/20">
+          <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">{dictionary.auth.passwordUpdatedInfo}</p>
         </Card>
       ) : null}
 

@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  /* Premium Dark Theme - Black/Gold/White */
-  --background: #050505;
-  --background-elevated: #0a0a0a;
+  /* Premium Dark Theme - Absolute Black & Vibrant Gold */
+  --background: #000000;
+  --background-elevated: #050505;
   --foreground: #ffffff;
-  --foreground-muted: #a3a3a3;
-  --surface: #121212;
-  --surface-elevated: #1a151a;
-  --gold: 45 85% 60%;
-  --gold-glow: 45 85% 60% / 0.15;
-  --border: 45 20% 20%;
-  --border-subtle: #1a1508;
+  --foreground-muted: #888888;
+  --surface: #0a0a0a;
+  --surface-elevated: #111111;
+  --gold: 45 90% 55%;
+  --gold-glow: 45 90% 55% / 0.1;
+  --border: 45 10% 15%;
+  --border-subtle: #0f0f0f;
   
   /* Brand Colors - Refined Gold */
   --gold-val: #d4af37;
@@ -46,9 +46,9 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   
-  --shadow-gold: 0 0 15px -3px rgba(212, 175, 55, 0.3);
-  --shadow-gold-strong: 0 0 25px -5px rgba(212, 175, 55, 0.5);
-  --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+  --shadow-gold: 0 4px 20px -5px rgba(212, 175, 55, 0.2);
+  --shadow-gold-strong: 0 10px 40px -10px rgba(212, 175, 55, 0.4);
+  --shadow-premium: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
 }
 
 @layer utilities {

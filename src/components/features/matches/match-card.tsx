@@ -49,13 +49,13 @@ export function MatchCard({ match, locale = "fr" }: MatchCardProps) {
   const detailHref = `/${locale}/matches/${match.id}`;
 
   return (
-    <Card className="p-0 overflow-hidden hover:shadow-2xl hover:shadow-[var(--gold)]/20 transition-all duration-300 group bg-[var(--surface)] border-[var(--border)] rounded-[2rem] hover:-translate-y-1">
+    <Card className="p-0 overflow-hidden hover:shadow-gold-strong transition-all duration-500 group bg-surface rounded-3xl border-white/5">
       <div className="flex h-full min-h-[140px] relative">
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--gold)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         {/* Date/Time Decorative Column */}
         <Link
           href={detailHref}
-          className="bg-black p-5 flex flex-col items-center justify-center min-w-[100px] text-white relative overflow-hidden border-r border-[var(--border)] hover:bg-white/5 transition-colors"
+          className="bg-black/40 p-5 flex flex-col items-center justify-center min-w-[100px] text-white relative overflow-hidden hover:bg-white/5 transition-colors"
         >
           <div className="absolute top-0 right-0 w-20 h-20 bg-[var(--gold)] rounded-full blur-3xl opacity-20 -mr-10 -mt-10" />
 

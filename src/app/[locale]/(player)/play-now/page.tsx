@@ -47,11 +47,11 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
 
   return (
     <div className="flex-1 space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-black tracking-tight text-white uppercase">
+      <header className="space-y-2 text-left">
+        <h1 className="text-4xl font-black tracking-tighter text-white uppercase leading-none">
           {pageTitle}
         </h1>
-        <p className="text-sm text-foreground-muted max-w-xs mx-auto">
+        <p className="text-sm text-foreground-muted max-w-sm font-medium">
           {labels.playNowDescription}
         </p>
       </header>
