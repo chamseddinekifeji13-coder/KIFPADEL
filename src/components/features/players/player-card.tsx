@@ -9,7 +9,7 @@ interface PlayerCardProps {
     display_name: string;
     avatar_url: string | null;
     league: "Bronze" | "Silver" | "Gold" | "Platinum";
-    trust_rating: number;
+    trust_score: number;
     reliability: string;
   };
 }
@@ -37,7 +37,7 @@ export function PlayerCard({ player }: PlayerCardProps) {
         <div className="flex items-center gap-3 mt-1.5">
           <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-foreground-muted tracking-widest">
             <Star className="h-3 w-3 text-gold fill-gold" />
-            <span>{(player.trust_rating || 0).toFixed(1)} Trust</span>
+            <span>{(player.trust_score || 0).toFixed(1)} Trust</span>
           </div>
           <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-emerald-500 tracking-widest">
             <ShieldCheck className="h-3 w-3" />

@@ -27,25 +27,25 @@ export function IntentCard({ href, title, description, icon: Icon, variant = "pr
     <Link
       href={href}
       className={cn(
-        "group relative flex items-center gap-4 rounded-3xl border p-5 transition-all duration-300 hover:shadow-2xl hover:shadow-[var(--gold)]/10 hover:-translate-y-1 active:scale-[0.98]",
+        "group relative flex flex-col items-center text-center gap-4 rounded-[2rem] border p-8 transition-all duration-300 hover:shadow-2xl hover:shadow-[var(--gold)]/10 hover:-translate-y-1 active:scale-[0.98]",
         variants[variant]
       )}
     >
-      <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110 duration-300", iconColors[variant])}>
-        <Icon className="h-6 w-6" />
+      <div className={cn("flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl transition-all group-hover:scale-110 duration-500", iconColors[variant])}>
+        <Icon className="h-8 w-8" />
       </div>
       
-      <div className="flex-1 space-y-1">
-        <h3 className={cn("font-bold tracking-tight", variant === "secondary" ? "text-black" : "text-white")}>
+      <div className="space-y-2">
+        <h3 className={cn("text-lg font-black uppercase tracking-tight", variant === "secondary" ? "text-black" : "text-white")}>
           {title}
         </h3>
-        <p className={cn("text-xs leading-relaxed opacity-70", variant === "secondary" ? "text-black/70" : "text-[var(--foreground-muted)]")}>
+        <p className={cn("text-sm leading-relaxed max-w-[200px] mx-auto font-medium", variant === "secondary" ? "text-black/70" : "text-[var(--foreground-muted)]")}>
           {description}
         </p>
       </div>
 
-      <div className={cn("h-8 w-8 flex items-center justify-center rounded-full transition-all", variant === "secondary" ? "bg-black/10 group-hover:bg-black/20" : "bg-[var(--gold)]/10 group-hover:bg-[var(--gold)] group-hover:text-black text-[var(--gold)]")}>
-        <ChevronRight className={cn("h-4 w-4 transition-transform group-hover:translate-x-0.5", variant === "secondary" ? "text-black" : "text-[var(--gold)] group-hover:text-black")} />
+      <div className={cn("mt-2 h-10 w-10 flex items-center justify-center rounded-full transition-all", variant === "secondary" ? "bg-black/10 group-hover:bg-black/20" : "bg-[var(--gold)]/10 group-hover:bg-[var(--gold)] group-hover:text-black text-[var(--gold)]")}>
+        <ChevronRight className={cn("h-5 w-5 transition-transform group-hover:translate-x-0.5", variant === "secondary" ? "text-black" : "text-[var(--gold)] group-hover:text-black")} />
       </div>
     </Link>
   );

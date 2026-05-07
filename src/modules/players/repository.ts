@@ -7,7 +7,6 @@ export interface Player {
   email: string;
   avatar_url: string | null;
   league: "Bronze" | "Silver" | "Gold" | "Platinum";
-  trust_rating: number;
   trust_score: number;
   reliability: string;
   reliability_status?: string;
@@ -28,7 +27,6 @@ type ProfileRow = {
   email?: string | null;
   avatar_url: string | null;
   league: string | null;
-  trust_rating: number | null;
   trust_score: number | null;
   reliability: string | null;
   reliability_status: string | null;
@@ -44,7 +42,7 @@ function normalizeLeague(value: string | null): Player["league"] {
 }
 
 function normalizePlayer(row: ProfileRow): Player {
-  const trustBase = row.trust_rating ?? row.trust_score ?? 0;
+  const trustBase = row.trust_score ?? 0;
 
   return {
     id: row.id,
@@ -52,7 +50,6 @@ function normalizePlayer(row: ProfileRow): Player {
     email: row.email ?? "",
     avatar_url: row.avatar_url ?? null,
     league: normalizeLeague(row.league),
-    trust_rating: Number(trustBase),
     trust_score: Number(trustBase),
     reliability: row.reliability ?? row.reliability_status ?? "healthy",
     reliability_status: row.reliability_status ?? row.reliability ?? "healthy",
@@ -70,7 +67,7 @@ export async function fetchPlayers(query?: string): Promise<Player[]> {
     let request = supabase
       .from("profiles")
       .select("*")
-      .order("trust_rating", { ascending: false });
+      .order("trust_score", { ascending: false });
 
     if (query) {
       request = request.ilike("display_name", `%${query}%`);
@@ -98,7 +95,7 @@ export async function fetchPlayerById(userId: string): Promise<Player | null> {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", userId)
+      .eq("user_id", userId)
       .single();
 
     if (error) {
@@ -210,7 +207,7 @@ export async function addTrustEvent(payload: {
   const { error: profileError } = await supabase
     .from("profiles")
     .update({ trust_score: newScore })
-    .eq("id", payload.player_id);
+    .eq("user_id", payload.player_id);
 
   if (profileError) throw new Error(profileError.message);
 
@@ -223,7 +220,7 @@ export async function updatePlayerLeague(playerId: string, league: string) {
   const { error } = await supabase
     .from("profiles")
     .update({ league })
-    .eq("id", playerId);
+    .eq("user_id", playerId);
 
   if (error) throw new Error(error.message);
 }

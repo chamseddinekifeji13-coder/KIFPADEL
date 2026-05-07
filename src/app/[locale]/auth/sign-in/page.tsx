@@ -39,8 +39,8 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
   const dictionary = await getDictionary(locale as Locale);
 
   return (
-    <section className="space-y-3">
-      <Card>
+    <section className="space-y-6 flex flex-col items-center">
+      <Card className="w-full">
         <SectionTitle
           as="h1"
           title={dictionary.auth.signInTitle}
@@ -80,29 +80,29 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
         </Card>
       ) : null}
 
-      <Card>
-        <form action={signInAction} className="space-y-3">
+      <Card className="w-full">
+        <form action={signInAction} className="space-y-4">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="next" value={next ?? `/${locale}/profile`} />
-          <div className="space-y-1">
-            <label htmlFor="email" className="text-xs font-medium text-slate-700">
+          <div className="space-y-1 text-left">
+            <label htmlFor="email" className="text-[10px] font-black text-gold uppercase tracking-widest px-1">
               {dictionary.auth.emailLabel}
             </label>
             <TextInput id="email" name="email" type="email" placeholder="you@example.com" />
           </div>
-          <div className="space-y-1">
-            <label htmlFor="password" className="text-xs font-medium text-slate-700">
+          <div className="space-y-1 text-left">
+            <label htmlFor="password" className="text-[10px] font-black text-gold uppercase tracking-widest px-1">
               {dictionary.auth.passwordLabel}
             </label>
             <TextInput id="password" name="password" type="password" placeholder="••••••••" />
           </div>
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full h-14 rounded-2xl bg-gold text-black font-black uppercase tracking-widest">
             {dictionary.auth.signInCta}
           </Button>
-          <div className="pt-1 text-right">
+          <div className="pt-1">
             <Link
               href={`/${locale}/auth/reset-password`}
-              className="text-xs font-semibold text-sky-700"
+              className="text-xs font-bold text-foreground-muted hover:text-gold transition-colors"
             >
               {dictionary.auth.forgotPasswordCta}
             </Link>
@@ -110,12 +110,11 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
         </form>
       </Card>
 
-      <Card className="text-center">
-        <p className="text-sm text-slate-600">{dictionary.auth.createAccountHint}</p>
+      <Card className="w-full text-center">
+        <p className="text-sm text-foreground-muted">{dictionary.auth.createAccountHint}</p>
         <Link
           href={`/${locale}/auth/sign-up`}
-          className="mt-2 inline-block text-sm font-semibold"
-          style={{ color: "rgba(0, 0, 0, 0.93)" }}
+          className="mt-2 inline-block text-sm font-black text-gold uppercase tracking-widest"
         >
           {dictionary.auth.createAccountCta}
         </Link>

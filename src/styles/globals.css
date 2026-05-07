@@ -7,12 +7,14 @@
   --foreground: #ffffff;
   --foreground-muted: #a3a3a3;
   --surface: #121212;
-  --surface-elevated: #1a1a1a;
-  --border: #262626;
-  --border-subtle: #1a1a1a;
+  --surface-elevated: #1a151a;
+  --gold: 45 85% 60%;
+  --gold-glow: 45 85% 60% / 0.15;
+  --border: 45 20% 20%;
+  --border-subtle: #1a1508;
   
   /* Brand Colors - Refined Gold */
-  --gold: #d4af37;
+  --gold-val: #d4af37;
   --gold-light: #f4d03f;
   --gold-dark: #aa8a2e;
   --gold-gradient: linear-gradient(135deg, #d4af37 0%, #f4d03f 50%, #aa8a2e 100%);
@@ -45,6 +47,7 @@
   --font-mono: var(--font-geist-mono);
   
   --shadow-gold: 0 0 15px -3px rgba(212, 175, 55, 0.3);
+  --shadow-gold-strong: 0 0 25px -5px rgba(212, 175, 55, 0.5);
   --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
 }
 
@@ -54,6 +57,14 @@
   }
   .glass-gold {
     @apply bg-surface/80 backdrop-blur-xl border border-gold/20 shadow-gold;
+  }
+  .border-gold-glow {
+    @apply border border-gold/30 shadow-gold/20;
+  }
+  .border-gold-gradient {
+    border: 1px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                var(--gold-gradient) border-box;
   }
   .bg-gold-gradient {
     background: var(--gold-gradient);

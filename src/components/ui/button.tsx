@@ -1,6 +1,6 @@
 import { cn } from "@/lib/ui/cn";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "glass";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "glass" | "outline";
 
 type ButtonProps = Readonly<{
   children: React.ReactNode;
@@ -15,7 +15,9 @@ const variants: Record<ButtonVariant, string> = {
   primary:
     "bg-gold text-black shadow-gold hover:bg-gold-light active:scale-95",
   secondary:
-    "bg-surface-elevated text-white border border-border hover:bg-surface active:scale-95",
+    "bg-surface-elevated text-white border border-gold/30 hover:bg-surface hover:border-gold/50 active:scale-95",
+  outline:
+    "bg-transparent text-gold border border-gold/50 hover:bg-gold/10 hover:shadow-gold active:scale-95",
   ghost: 
     "bg-transparent text-foreground-muted hover:text-white hover:bg-white/5",
   glass:

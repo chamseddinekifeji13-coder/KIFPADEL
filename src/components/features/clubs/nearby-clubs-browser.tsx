@@ -217,26 +217,25 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
   }, [requestUserLocation]);
 
   return (
-    <>
+    <div className="w-full space-y-10 flex flex-col items-center">
       <div
         role="tablist"
         aria-label={locale === "en" ? "Filter by city" : "Filtrer par ville"}
-        className="scrollbar-hide -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-2"
+        className="scrollbar-hide -mx-4 flex items-center justify-center gap-3 overflow-x-auto px-4 pb-4"
       >
         {cityTabs.map((city, i) => {
-          const isSelected = selectedCity === city;
+          const isSelected = selectedCity === city || (i === 0 && selectedCity === "Tous");
           return (
           <button
             key={city}
             type="button"
             role="tab"
-            // eslint-disable-next-line jsx-a11y/aria-proptypes
-            aria-selected={isSelected}
+            aria-selected={isSelected ? "true" : "false"}
             onClick={() => setSelectedCity(city)}
-            className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition-all ${
-              (selectedCity === city) || (i === 0 && selectedCity === "Tous")
-                ? "bg-sky-600 text-white shadow-md shadow-sky-200"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            className={`inline-flex min-h-12 items-center whitespace-nowrap rounded-2xl px-6 text-[10px] font-black uppercase tracking-widest transition-all duration-300 border ${
+              isSelected
+                ? "bg-gold text-black border-gold shadow-gold scale-105"
+                : "bg-surface text-foreground-muted border-white/5 hover:border-gold/20 hover:text-white"
             }`}
           >
             {city}
@@ -245,15 +244,15 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
         })}
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <SectionTitle title={locale === "en" ? "Best clubs" : "Meilleurs Clubs"} icon={<LayoutGrid className="h-4 w-4" />} />
+      <div className="flex flex-col items-center gap-6 w-full">
+        <SectionTitle title={locale === "en" ? "Best clubs" : "Meilleurs Clubs"} icon={<LayoutGrid className="h-6 w-6" />} />
         <button
           type="button"
           onClick={handleLocateMe}
-          className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:bg-slate-50"
+          className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-surface px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gold hover:bg-gold/10 hover:border-gold/30 transition-all shadow-premium active:scale-95"
           disabled={loadingGeo}
         >
-          <LocateFixed className="h-3 w-3" />
+          <LocateFixed className="h-4 w-4" />
           {loadingGeo
             ? locale === "en"
               ? "Locating..."
@@ -264,29 +263,29 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
         </button>
       </div>
 
-      {geoError ? <p className="text-xs text-amber-600">{geoError}</p> : null}
+      {geoError ? <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80">{geoError}</p> : null}
       {geoPermissionDenied ? (
-        <div className="rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <p className="font-semibold">
-            {locale === "en" ? "Location blocked by your browser" : "Localisation bloquée par ton navigateur"}
+        <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-amber-500/5 px-6 py-4 text-center">
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">
+            {locale === "en" ? "Location blocked" : "Localisation bloquée"}
           </p>
-          <p className="mt-1">
+          <p className="mt-2 text-xs text-foreground-muted font-medium">
             {locale === "en"
-              ? "Enable location in your browser settings (click the lock/info icon in the address bar), then reload this page."
-              : "Active la localisation dans les paramètres du navigateur (clique sur l'icône à côté de l'adresse), puis recharge la page."}
+              ? "Enable location in your browser settings (click the lock icon in the address bar), then reload."
+              : "Active la localisation dans les paramètres du navigateur (clique sur le cadenas), puis recharge."}
           </p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-4 flex justify-center gap-3">
             <button
               type="button"
               onClick={handleReloadPage}
-              className="inline-flex items-center rounded-lg bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-amber-700 transition-colors"
+              className="inline-flex items-center rounded-xl bg-amber-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-amber-700 transition-all active:scale-95"
             >
-              {locale === "en" ? "↻ Reload page" : "↻ Recharger la page"}
+              {locale === "en" ? "↻ Reload" : "↻ Recharger"}
             </button>
             <button
               type="button"
               onClick={handleLocateMe}
-              className="inline-flex items-center rounded-lg border border-amber-400/60 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-900 hover:bg-amber-100"
+              className="inline-flex items-center rounded-xl border border-white/10 bg-surface px-4 py-2 text-[10px] font-black uppercase tracking-widest text-amber-400 hover:bg-white/5 transition-all"
             >
               {locale === "en" ? "Retry" : "Réessayer"}
             </button>
@@ -294,19 +293,19 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
         </div>
       ) : null}
 
-      <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-        <MapPin className="h-3 w-3" />
+      <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-foreground-muted/60">
+        <MapPin className="h-3 w-3 text-gold/40" />
         {userPosition
           ? locale === "en"
-            ? `Sorted by nearest ${lastUpdated ? `(updated at ${lastUpdated.toLocaleTimeString()})` : ""}`
-            : `Trié par proximité ${lastUpdated ? `(mis à jour à ${lastUpdated.toLocaleTimeString()})` : ""}`
+            ? `Nearest ${lastUpdated ? `(Updated ${lastUpdated.toLocaleTimeString()})` : ""}`
+            : `Proximité ${lastUpdated ? `(MàJ ${lastUpdated.toLocaleTimeString()})` : ""}`
           : locale === "en"
-            ? "Proximity requires location"
-            : "La proximité nécessite la position"}
+            ? "Location required for distance"
+            : "Position requise pour distance"}
       </div>
 
       {displayedClubs.length === 0 ? (
-        <div className="py-12 text-center italic text-slate-500">
+        <div className="py-20 text-center italic text-foreground-muted font-medium">
           {locale === "en" ? "No clubs available right now." : "Aucun club disponible pour le moment."}
         </div>
       ) : (

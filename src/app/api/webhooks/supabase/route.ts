@@ -16,12 +16,12 @@ export async function POST(request: Request) {
       const adminClient = createSupabaseAdminClient();
 
       const { error } = await adminClient.from("profiles").insert({
-        id: user.id,
+        user_id: user.id,
         email: user.email,
         display_name: user.raw_user_meta_data?.full_name || user.email.split("@")[0],
         avatar_url: user.raw_user_meta_data?.avatar_url || null,
         league: "Bronze", // Default starting league
-        trust_rating: 100.0,
+        trust_score: 100.0,
         reliability: "Excellent",
       });
 

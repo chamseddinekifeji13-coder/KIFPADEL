@@ -46,39 +46,39 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
   }
 
   return (
-    <div className="flex-1 p-4 space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+    <div className="flex-1 space-y-8">
+      <header className="space-y-2">
+        <h1 className="text-3xl font-black tracking-tight text-white uppercase">
           {pageTitle}
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-foreground-muted max-w-xs mx-auto">
           {labels.playNowDescription}
         </p>
       </header>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-center gap-6">
         <SectionTitle
           title={labels.openMatchesSectionTitle}
-          icon={<Trophy className="h-4 w-4" />}
+          icon={<Trophy className="h-6 w-6" />}
         />
         <button
           type="button"
           aria-label={labels.filterMatchesAria}
           disabled
-          className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-foreground-muted border border-white/5 hover:bg-gold/10 hover:text-gold transition-all"
           title={labels.filtersComingSoon}
         >
-          <Filter className="h-4 w-4" />
+          <Filter className="h-5 w-5" />
         </button>
       </div>
 
       {matches.length === 0 ? (
-        <div className="py-12 text-center space-y-3">
-          <p className="text-slate-500 italic font-medium">
+        <div className="py-20 text-center space-y-6 animate-fade-in">
+          <p className="text-foreground-muted italic font-medium">
             {labels.noOpenMatchesTitle}
           </p>
-          <Link href={`/${locale}/matches/create`}>
-            <button className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold shadow-xl shadow-slate-200 active:scale-95 transition-transform">
+          <Link href={`/${locale}/matches/create`} className="inline-block">
+            <button className="px-10 py-4 bg-gold text-black rounded-2xl text-sm font-black uppercase tracking-widest shadow-gold active:scale-95 transition-all">
               {labels.createMatchCta}
             </button>
           </Link>
