@@ -69,9 +69,9 @@ BEGIN
   END IF;
 
   -- Grant platform admin membership
-  INSERT INTO public.club_memberships (club_id, player_id, role, is_primary)
+  INSERT INTO public.club_memberships (club_id, user_id, role, is_primary)
   VALUES (v_club_id, v_user_id, 'platform_admin', false)
-  ON CONFLICT (club_id, player_id)
+  ON CONFLICT (club_id, user_id)
   DO UPDATE SET role = EXCLUDED.role, is_primary = EXCLUDED.is_primary;
 
   RAISE NOTICE 'Super admin bootstrap done for % (user_id=%).', v_email, v_user_id;

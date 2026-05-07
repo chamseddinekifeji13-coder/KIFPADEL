@@ -77,10 +77,14 @@ export default async function ClubsPage({ params, searchParams }: ClubsPageProps
                 id: club.id,
                 name: club.name,
                 city: club.city,
+                address: club.address,
+                indoor_courts_count: club.indoor_courts_count,
+                outdoor_courts_count: club.outdoor_courts_count,
                 type: club.type,
                 logo_url: club.logo_url,
               }}
               locale={locale}
+              directionsLabel={isEn ? "Directions" : "Itinéraire"}
             />
           ))}
         </div>

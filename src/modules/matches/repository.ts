@@ -9,6 +9,8 @@ export interface MatchClub {
   id: string;
   name: string;
   city: string;
+  /** Adresse précise pour itinéraires si renseignée */
+  address?: string | null;
   type: string;
 }
 
@@ -27,6 +29,7 @@ export interface Match {
 export interface MatchWithDetails extends Match {
   playerCount: number;
   clubName: string;
+  clubAddress: string | null;
 }
 
 const MATCH_SELECT = `
@@ -35,6 +38,7 @@ const MATCH_SELECT = `
     id,
     name,
     city,
+    address,
     type
   ),
   match_players (
@@ -46,11 +50,15 @@ function normalizeMatches(raw: unknown): MatchWithDetails[] {
   if (!Array.isArray(raw)) return [];
   return (raw as Match[])
     .filter((m): m is Match => Boolean(m && typeof m === "object" && m.id))
-    .map((match) => ({
+    .map((match) => {
+      const addr = match.clubs?.address?.trim();
+      return {
       ...match,
       playerCount: Array.isArray(match.match_players) ? match.match_players.length : 0,
       clubName: match.clubs?.name ?? "Club Inconnu",
-    }));
+      clubAddress: addr && addr.length > 0 ? addr : null,
+    };
+    });
 }
 
 /**

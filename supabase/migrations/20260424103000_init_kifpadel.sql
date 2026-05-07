@@ -125,7 +125,7 @@ as $$
     from public.club_memberships cm
     where cm.club_id = target_club_id
       and cm.player_id = auth.uid()
-      and cm.role = any(allowed_roles)
+      and cm.role::text = any(allowed_roles)
   );
 $$;
 
@@ -138,7 +138,7 @@ as $$
     select 1
     from public.club_memberships cm
     where cm.player_id = auth.uid()
-      and cm.role = 'platform_admin'
+      and cm.role::text = 'platform_admin'
   );
 $$;
 

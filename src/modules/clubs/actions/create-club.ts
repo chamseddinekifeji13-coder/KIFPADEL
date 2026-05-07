@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import {
+  optionalTrimmedString,
+  parseNonNegativeInt,
+} from "@/lib/utils/club-form-parse";
 
 const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
 const MANAGER_ROLES = ["club_manager", "club_admin"] as const;
@@ -163,6 +167,13 @@ export async function createClubAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const name = String(formData.get("name") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
+  const addressRaw = String(formData.get("address") ?? "").trim();
+  const address = addressRaw.length > 0 ? addressRaw : null;
+  const indoorCourts = parseNonNegativeInt(formData.get("indoor_courts_count"));
+  const outdoorCourts = parseNonNegativeInt(formData.get("outdoor_courts_count"));
+  const contactName = optionalTrimmedString(formData.get("contact_name"));
+  const contactPhone = optionalTrimmedString(formData.get("contact_phone"));
+  const contactEmail = optionalTrimmedString(formData.get("contact_email"));
 
   if (!name || !city) {
     redirect(`/${locale}/clubs/new?error=missing_fields`);
@@ -184,6 +195,12 @@ export async function createClubAction(formData: FormData) {
     .insert({
       name,
       city,
+      ...(address ? { address } : {}),
+      indoor_courts_count: indoorCourts,
+      outdoor_courts_count: outdoorCourts,
+      ...(contactName ? { contact_name: contactName } : {}),
+      ...(contactPhone ? { contact_phone: contactPhone } : {}),
+      ...(contactEmail ? { contact_email: contactEmail } : {}),
       is_active: true,
     })
     .select("id")

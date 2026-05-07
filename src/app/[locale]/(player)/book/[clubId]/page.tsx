@@ -1,4 +1,4 @@
-import { isLocale } from "@/i18n/config";
+import { isLocale, type Locale } from "@/i18n/config";
 import { notFound, redirect } from "next/navigation";
 import { clubService } from "@/modules/clubs/service";
 import { playerService } from "@/modules/players/service";
@@ -10,7 +10,11 @@ import { MapPin, ArrowLeft, Calendar as CalendarIcon, InfoIcon, Clock } from "lu
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { TimeContainer } from "@/app/[locale]/(player)/book/[clubId]/time-container";
+import { ClubDirectionsButton } from "@/components/features/clubs/club-directions-button";
 import type { Metadata } from "next";
+import { getDictionary } from "@/i18n/get-dictionary";
+import { formatClubCourtsSummary } from "@/lib/utils/club-display";
+import { Mail, Phone, Building2, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -67,6 +71,18 @@ export default async function ClubDetailPage({
 
   const availability = await getClubAvailability(clubId, selectedDate);
 
+  const dictionary = await getDictionary(locale as Locale);
+  const clubLabels = dictionary.club;
+  const courtsSummary = formatClubCourtsSummary(
+    club.indoor_courts_count,
+    club.outdoor_courts_count,
+    locale,
+  );
+  const hasContact =
+    Boolean(club.contact_name?.trim()) ||
+    Boolean(club.contact_phone?.trim()) ||
+    Boolean(club.contact_email?.trim());
+
   // Generate next 7 days for the date selector
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
@@ -91,14 +107,77 @@ export default async function ClubDetailPage({
         <div className="absolute inset-0 bg-gradient-to-b from-[var(--gold)]/10 to-transparent" />
         <div className="absolute bottom-6 left-6 right-6 space-y-2">
           <h1 className="text-2xl font-bold text-white">{club.name}</h1>
-          <div className="flex items-center gap-1.5 text-sm text-[var(--foreground-muted)] font-medium">
-            <MapPin className="h-4 w-4 text-[var(--gold)]" />
-            <span>{club.city}, Tunisie</span>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--foreground-muted)] font-medium">
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="h-4 w-4 text-[var(--gold)]" />
+              <span>{club.city}, Tunisie</span>
+            </span>
+            <ClubDirectionsButton
+              club={{
+                name: club.name,
+                city: club.city,
+                address: club.address ?? undefined,
+              }}
+              label="Itinéraire"
+              className="border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs text-white hover:bg-[var(--gold)]/15"
+            />
           </div>
+          {club.address ? (
+            <p className="text-xs text-white/70 leading-relaxed pl-0.5">{club.address}</p>
+          ) : null}
         </div>
       </div>
 
       <div className="p-4 space-y-6 mt-2">
+        {(courtsSummary || hasContact) && (
+          <section className="grid gap-4 sm:grid-cols-2">
+            {courtsSummary ? (
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider font-bold text-[var(--foreground-muted)]">
+                  <Building2 className="h-4 w-4 text-[var(--gold)]" />
+                  {clubLabels.bookPlayerCourtsTitle}
+                </div>
+                <p className="text-sm text-white font-medium">{courtsSummary}</p>
+              </div>
+            ) : null}
+            {hasContact ? (
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider font-bold text-[var(--foreground-muted)]">
+                  <User className="h-4 w-4 text-[var(--gold)]" />
+                  {clubLabels.bookPlayerContactTitle}
+                </div>
+                <ul className="space-y-2 text-sm">
+                  {club.contact_name ? (
+                    <li className="text-white font-medium">{club.contact_name}</li>
+                  ) : null}
+                  {club.contact_phone ? (
+                    <li>
+                      <a
+                        href={`tel:${club.contact_phone.replace(/\s+/g, "")}`}
+                        className="inline-flex items-center gap-2 text-[var(--gold)] hover:underline"
+                      >
+                        <Phone className="h-4 w-4 shrink-0" />
+                        {club.contact_phone}
+                      </a>
+                    </li>
+                  ) : null}
+                  {club.contact_email ? (
+                    <li>
+                      <a
+                        href={`mailto:${club.contact_email}`}
+                        className="inline-flex items-center gap-2 text-[var(--gold)] hover:underline break-all"
+                      >
+                        <Mail className="h-4 w-4 shrink-0" />
+                        {club.contact_email}
+                      </a>
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+        )}
+
         {/* Date Selector */}
         <section className="space-y-3">
           <div className="flex items-center gap-2 text-[var(--foreground-muted)]">

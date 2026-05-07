@@ -1,5 +1,5 @@
 import { fetchBookingsByClubAndDate } from "./repository";
-import { fetchCourtsByClub, fetchClubById, type Club } from "@/modules/clubs/repository";
+import { fetchCourtsByClub, fetchClubById } from "@/modules/clubs/repository";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { addMinutes, formatTunisHm, tunisLocalDateTimeToUtc } from "./timezone";
 
@@ -19,7 +19,7 @@ export interface TimeSlot {
  */
 export async function getClubAvailability(clubId: string, date: string): Promise<TimeSlot[]> {
   const [club, courts, bookings] = await Promise.all([
-    fetchClubById(clubId) as Promise<Club>,
+    fetchClubById(clubId),
     fetchCourtsByClub(clubId),
     fetchBookingsByClubAndDate(clubId, date)
   ]);

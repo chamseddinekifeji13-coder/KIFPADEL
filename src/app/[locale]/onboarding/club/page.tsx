@@ -101,6 +101,101 @@ export default async function ClubOnboardingPage({
           />
         </div>
 
+        <div className="space-y-1">
+          <label htmlFor="address" className="text-xs font-medium text-[var(--foreground-muted)]">
+            {isEn ? "Full street address" : "Adresse exacte du club"}
+          </label>
+          <textarea
+            id="address"
+            name="address"
+            rows={2}
+            placeholder={
+              isEn
+                ? "Street, number, area — for directions to the court"
+                : "Rue, numéro, quartier — pour l’itinéraire jusqu’au terrain"
+            }
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-white placeholder:text-[var(--foreground-muted)]"
+          />
+          <p className="text-[11px] text-[var(--foreground-muted)]">
+            {isEn
+              ? "Optional but recommended so players find the venue."
+              : "Optionnel mais recommandé pour que les joueurs arrivent au bon endroit."}
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label
+              htmlFor="indoor_courts_count"
+              className="text-xs font-medium text-[var(--foreground-muted)]"
+            >
+              {isEn ? "Indoor courts (count)" : "Terrains couverts (nombre)"}
+            </label>
+            <input
+              id="indoor_courts_count"
+              name="indoor_courts_count"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={0}
+              className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-white"
+            />
+          </div>
+          <div className="space-y-1">
+            <label
+              htmlFor="outdoor_courts_count"
+              className="text-xs font-medium text-[var(--foreground-muted)]"
+            >
+              {isEn ? "Outdoor courts (count)" : "Terrains extérieurs (nombre)"}
+            </label>
+            <input
+              id="outdoor_courts_count"
+              name="outdoor_courts_count"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={0}
+              className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-white"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="contact_name" className="text-xs font-medium text-[var(--foreground-muted)]">
+            {isEn ? "Manager name" : "Nom du responsable"}
+          </label>
+          <input
+            id="contact_name"
+            name="contact_name"
+            type="text"
+            className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-white"
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label htmlFor="contact_phone" className="text-xs font-medium text-[var(--foreground-muted)]">
+              {isEn ? "Manager phone" : "Téléphone du responsable"}
+            </label>
+            <input
+              id="contact_phone"
+              name="contact_phone"
+              type="tel"
+              className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-white"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="contact_email" className="text-xs font-medium text-[var(--foreground-muted)]">
+              {isEn ? "Manager email" : "E-mail du responsable"}
+            </label>
+            <input
+              id="contact_email"
+              name="contact_email"
+              type="email"
+              className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-white"
+            />
+          </div>
+        </div>
+
         <button
           type="submit"
           className="h-11 w-full rounded-xl bg-[var(--gold)] text-sm font-bold text-black transition-colors hover:bg-[var(--gold-dark)]"

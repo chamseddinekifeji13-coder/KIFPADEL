@@ -9,6 +9,16 @@ export interface Club {
   id: string;
   name: string;
   city: string;
+  /** Adresse précise pour les itinéraires (rue, quartier…) — optionnel. */
+  address: string | null;
+  /** Nombre de terrains couverts (valeur indicative affichée aux joueurs). */
+  indoor_courts_count: number;
+  /** Nombre de terrains extérieurs. */
+  outdoor_courts_count: number;
+  /** Responsable / contact principal — optionnel. */
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
   type: "Outdoor" | "Indoor";
   logo_url: string | null;
   is_active: boolean;
@@ -33,6 +43,12 @@ type ClubRow = Partial<Club> & {
   id: string;
   name: string;
   city?: string | null;
+  address?: string | null;
+  indoor_courts_count?: number | null;
+  outdoor_courts_count?: number | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
   is_active?: boolean | null;
   created_at?: string | null;
   type?: string | null;
@@ -51,10 +67,17 @@ type ManagedClubMembership = {
   club?: ClubRow | ClubRow[] | null;
 };
 
-type ManagedClubSummary = {
+/** Club géré par un compte staff / manager (formulaire paramètres inclus). */
+export type ManagedClubBranding = {
   id: string;
   name: string;
   city: string;
+  address: string | null;
+  indoor_courts_count: number;
+  outdoor_courts_count: number;
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
   is_active: boolean;
 };
 
@@ -63,10 +86,22 @@ function normalizeClub(row: ClubRow): Club {
     row.type ??
     (row.is_indoor === true ? "Indoor" : "Outdoor");
 
+  const addr = row.address?.trim();
+  const indoor = Math.max(0, Math.floor(row.indoor_courts_count ?? 0));
+  const outdoor = Math.max(0, Math.floor(row.outdoor_courts_count ?? 0));
+  const cn = row.contact_name?.trim();
+  const cp = row.contact_phone?.trim();
+  const ce = row.contact_email?.trim();
   return {
     id: row.id,
     name: row.name,
     city: row.city?.trim() || "Tunis",
+    address: addr && addr.length > 0 ? addr : null,
+    indoor_courts_count: indoor,
+    outdoor_courts_count: outdoor,
+    contact_name: cn && cn.length > 0 ? cn : null,
+    contact_phone: cp && cp.length > 0 ? cp : null,
+    contact_email: ce && ce.length > 0 ? ce : null,
     type: normalizedType as Club["type"],
     logo_url: row.logo_url ?? null,
     is_active: row.is_active ?? true,
@@ -168,7 +203,7 @@ export async function fetchClubs(city?: string): Promise<Club[]> {
   }
 }
 
-export async function fetchClubById(id: string) {
+export async function fetchClubById(id: string): Promise<Club | null> {
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -183,7 +218,11 @@ export async function fetchClubById(id: string) {
       return null;
     }
 
-    return data;
+    if (!data || typeof data !== "object" || !("id" in data)) {
+      return null;
+    }
+
+    return normalizeClub(data as ClubRow);
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[clubs.fetchClubById] unexpected error", err);
@@ -219,7 +258,7 @@ export async function fetchCourtsByClub(clubId: string) {
   }
 }
 
-async function fetchPrimaryClubForUser(userId: string): Promise<ManagedClubSummary | null> {
+async function fetchPrimaryClubForUser(userId: string): Promise<ManagedClubBranding | null> {
   const adminClient = createSupabaseAdminClient();
 
   for (const profileKey of ["id", "user_id"] as const) {
@@ -242,28 +281,37 @@ async function fetchPrimaryClubForUser(userId: string): Promise<ManagedClubSumma
       return null;
     }
 
-    const { data: club, error: clubError } = await adminClient
+    const { data: clubRow, error: clubError } = await adminClient
       .from("clubs")
-      .select("id,name,city,is_active")
+      .select(
+        "id,name,city,address,indoor_courts_count,outdoor_courts_count,contact_name,contact_phone,contact_email,is_active",
+      )
       .eq("id", mainClubId)
       .maybeSingle();
 
-    if (clubError || !club?.id || !club?.name) {
+    if (clubError || !clubRow?.id || !clubRow?.name) {
       return null;
     }
 
+    const club = normalizeClub(clubRow as ClubRow);
     return {
       id: club.id,
       name: club.name,
-      city: club.city ?? "Tunis",
-      is_active: club.is_active ?? true,
+      city: club.city,
+      address: club.address,
+      indoor_courts_count: club.indoor_courts_count,
+      outdoor_courts_count: club.outdoor_courts_count,
+      contact_name: club.contact_name,
+      contact_phone: club.contact_phone,
+      contact_email: club.contact_email,
+      is_active: club.is_active,
     };
   }
 
   return null;
 }
 
-export async function fetchManagedClubForUser(userId: string) {
+export async function fetchManagedClubForUser(userId: string): Promise<ManagedClubBranding | null> {
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -280,6 +328,12 @@ export async function fetchManagedClubForUser(userId: string) {
               id,
               name,
               city,
+              address,
+              indoor_courts_count,
+              outdoor_courts_count,
+              contact_name,
+              contact_phone,
+              contact_email,
               is_active
             )
           `,
@@ -316,10 +370,22 @@ export async function fetchManagedClubForUser(userId: string) {
       return fetchPrimaryClubForUser(userId);
     }
 
+    const addr = typeof club.address === "string" ? club.address.trim() : "";
+    const indoor = Math.max(0, Math.floor(Number(club.indoor_courts_count) || 0));
+    const outdoor = Math.max(0, Math.floor(Number(club.outdoor_courts_count) || 0));
+    const cn = typeof club.contact_name === "string" ? club.contact_name.trim() : "";
+    const cp = typeof club.contact_phone === "string" ? club.contact_phone.trim() : "";
+    const ce = typeof club.contact_email === "string" ? club.contact_email.trim() : "";
     return {
       id: club.id,
       name: club.name,
       city: club.city ?? "Tunis",
+      address: addr.length > 0 ? addr : null,
+      indoor_courts_count: indoor,
+      outdoor_courts_count: outdoor,
+      contact_name: cn.length > 0 ? cn : null,
+      contact_phone: cp.length > 0 ? cp : null,
+      contact_email: ce.length > 0 ? ce : null,
       is_active: club.is_active ?? true,
     };
   } catch (err) {

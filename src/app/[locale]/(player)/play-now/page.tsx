@@ -86,7 +86,19 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
       ) : (
         <div className="grid gap-4">
           {matches.map((match) => (
-            <MatchCard key={match.id} match={match} locale={locale} />
+            <MatchCard
+              key={match.id}
+              locale={locale}
+              match={{
+                id: match.id,
+                starts_at: match.starts_at,
+                clubName: match.clubName,
+                clubCity: match.clubs?.city?.trim() || "Tunis",
+                clubAddress: match.clubAddress,
+                playerCount: match.playerCount,
+                price_per_player: match.price_per_player,
+              }}
+            />
           ))}
         </div>
       )}

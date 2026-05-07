@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { TextInput } from "@/components/ui/text-input";
+
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
@@ -81,6 +82,86 @@ export default async function NewClubPage({ params, searchParams }: NewClubPageP
             </label>
             <TextInput id="city" name="city" type="text" placeholder="Tunis" />
           </div>
+
+          <div className="space-y-1">
+            <label htmlFor="address" className="text-xs font-medium text-slate-700">
+              {dictionary.club.createAddressLabel}
+            </label>
+            <textarea
+              id="address"
+              name="address"
+              rows={2}
+              placeholder={dictionary.club.createAddressPlaceholder}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+            />
+            <p className="text-[11px] text-slate-500">{dictionary.club.createAddressHint}</p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label htmlFor="indoor_courts_count" className="text-xs font-medium text-slate-700">
+                {dictionary.club.createIndoorCourtsLabel}
+              </label>
+              <input
+                id="indoor_courts_count"
+                name="indoor_courts_count"
+                type="number"
+                min={0}
+                step={1}
+                defaultValue={0}
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none ring-sky-300 transition focus:border-sky-300 focus:ring-2"
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="outdoor_courts_count" className="text-xs font-medium text-slate-700">
+                {dictionary.club.createOutdoorCourtsLabel}
+              </label>
+              <input
+                id="outdoor_courts_count"
+                name="outdoor_courts_count"
+                type="number"
+                min={0}
+                step={1}
+                defaultValue={0}
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none ring-sky-300 transition focus:border-sky-300 focus:ring-2"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-500 -mt-1">{dictionary.club.createCourtsHint}</p>
+
+          <div className="space-y-1">
+            <label htmlFor="contact_name" className="text-xs font-medium text-slate-700">
+              {dictionary.club.createContactNameLabel}
+            </label>
+            <TextInput id="contact_name" name="contact_name" type="text" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label htmlFor="contact_phone" className="text-xs font-medium text-slate-700">
+                {dictionary.club.createContactPhoneLabel}
+              </label>
+              <input
+                id="contact_phone"
+                name="contact_phone"
+                type="tel"
+                autoComplete="tel"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none ring-sky-300 transition focus:border-sky-300 focus:ring-2"
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="contact_email" className="text-xs font-medium text-slate-700">
+                {dictionary.club.createContactEmailLabel}
+              </label>
+              <input
+                id="contact_email"
+                name="contact_email"
+                type="email"
+                autoComplete="email"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none ring-sky-300 transition focus:border-sky-300 focus:ring-2"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-500">{dictionary.club.createContactHint}</p>
 
           <Button type="submit" className="w-full">
             {dictionary.club.createCta}

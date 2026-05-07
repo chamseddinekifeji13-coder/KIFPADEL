@@ -6,6 +6,7 @@ import { MapPin, Calendar, Trophy, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type Club } from "@/modules/clubs/repository";
 import { createOpenMatchAction } from "@/modules/matches/actions";
+import { ClubDirectionsButton } from "@/components/features/clubs/club-directions-button";
 
 interface CreateMatchFormProps {
   clubs: Club[];
@@ -48,6 +49,7 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
 
   const quickTimes = ["09:00", "12:00", "16:00", "18:00", "20:00", "21:30"];
   const minDate = toLocalDateInputValue();
+  const selectedClubEntity = clubs.find((c) => c.id === selectedClub);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,6 +145,19 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
             </button>
           ))}
         </div>
+        {selectedClubEntity ? (
+          <div className="pt-2">
+            <ClubDirectionsButton
+              club={{
+                name: selectedClubEntity.name,
+                city: selectedClubEntity.city,
+                address: selectedClubEntity.address ?? undefined,
+              }}
+              label="Itinéraire vers ce club"
+              className="w-full sm:w-auto border-slate-200"
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* Step 2: Date & Time */}

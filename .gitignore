@@ -41,5 +41,6 @@ yarn-error.log*
 next-env.d.ts
 .env*.local
 
-# nested clone (do not track)
-/KIFPADEL/
+# supabase local
+supabase/.temp/
+

@@ -5,11 +5,15 @@ import { LayoutGrid, LocateFixed, MapPin } from "lucide-react";
 
 import { ClubCard } from "@/components/features/clubs/club-card";
 import { SectionTitle } from "@/components/ui/section-title";
+import { formatClubDirectionsQuery } from "@/lib/utils/club-directions";
 
 type ClubItem = {
   id: string;
   name: string;
   city: string;
+  address?: string | null;
+  indoor_courts_count?: number;
+  outdoor_courts_count?: number;
   type: "Outdoor" | "Indoor";
   logo_url: string | null;
 };
@@ -308,7 +312,11 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
       ) : (
         <div className="grid gap-6">
           {displayedClubs.map(({ club, distanceKm }) => {
-            const destination = `${club.name}, ${club.city}, Tunisie`;
+            const destination = formatClubDirectionsQuery({
+              name: club.name,
+              city: club.city,
+              address: club.address ?? undefined,
+            });
             const directionsHref = userPosition
               ? `https://www.google.com/maps/dir/?api=1&origin=${userPosition.lat},${userPosition.lng}&destination=${encodeURIComponent(destination)}`
               : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`;
