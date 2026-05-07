@@ -332,6 +332,6 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
           })}
         </div>
       )}
-    </div>
+    </>
   );
 }
