@@ -1,23 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  /* Premium Dark Theme - Absolute Black & Vibrant Gold */
+  /* Premium Dark Theme - Deep Black & Vibrant Gold */
   --background: #000000;
-  --background-elevated: #050505;
+  --background-elevated: #080808;
   --foreground: #ffffff;
-  --foreground-muted: #888888;
-  --surface: #0a0a0a;
-  --surface-elevated: #111111;
-  --gold: 45 90% 55%;
-  --gold-glow: 45 90% 55% / 0.1;
-  --border: 45 10% 15%;
-  --border-subtle: #0f0f0f;
+  --foreground-muted: #999999;
+  --surface: #0c0c0c;
+  --surface-elevated: #151515;
   
-  /* Brand Colors - Refined Gold */
-  --gold-val: #d4af37;
-  --gold-light: #f4d03f;
-  --gold-dark: #aa8a2e;
-  --gold-gradient: linear-gradient(135deg, #d4af37 0%, #f4d03f 50%, #aa8a2e 100%);
+  /* Brand Colors - Vibrant Gold */
+  --gold: oklch(0.85 0.2 90);
+  --gold-light: oklch(0.9 0.15 90);
+  --gold-dark: oklch(0.7 0.25 90);
+  --gold-glow: oklch(0.85 0.2 90 / 0.15);
+  --gold-gradient: linear-gradient(135deg, oklch(0.85 0.2 90) 0%, oklch(0.9 0.15 90) 50%, oklch(0.7 0.25 90) 100%);
   
   /* Status Colors */
   --success: #10b981;

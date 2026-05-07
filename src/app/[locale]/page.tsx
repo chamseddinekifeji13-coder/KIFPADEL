@@ -148,7 +148,7 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       <div className="grid grid-cols-2 gap-6">
         <Link
           href={`/${locale}/clubs`}
-          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] bg-surface-elevated p-8 transition-all hover:shadow-gold-strong group active:scale-95"
+          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] bg-surface-elevated border border-white/5 p-8 transition-all hover:shadow-gold-strong hover:border-gold/30 group active:scale-95"
         >
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/5 text-gold group-hover:bg-gold group-hover:text-black transition-all">
             <Building2 className="h-7 w-7" />
@@ -159,7 +159,7 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
         </Link>
         <Link
           href={`/${locale}/find-players`}
-          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] bg-surface-elevated p-8 transition-all hover:shadow-gold-strong group active:scale-95"
+          className="flex flex-col items-center justify-center gap-4 rounded-[2rem] bg-surface-elevated border border-white/5 p-8 transition-all hover:shadow-gold-strong hover:border-gold/30 group active:scale-95"
         >
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/5 text-gold group-hover:bg-gold group-hover:text-black transition-all">
             <Search className="h-7 w-7" />

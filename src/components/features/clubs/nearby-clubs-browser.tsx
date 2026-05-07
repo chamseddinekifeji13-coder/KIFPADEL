@@ -232,10 +232,10 @@ export function NearbyClubsBrowser({ clubs, locale }: NearbyClubsBrowserProps) {
             role="tab"
             aria-selected={isSelected ? "true" : "false"}
             onClick={() => setSelectedCity(city)}
-            className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition-all ${
+            className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition-all border ${
               isSelected
-                ? "bg-gold text-black shadow-gold"
-                : "bg-surface-elevated text-foreground-muted hover:bg-surface hover:text-white"
+                ? "bg-gold text-black border-gold shadow-gold"
+                : "bg-surface-elevated text-foreground-muted border-white/5 hover:border-gold/30 hover:text-white"
             }`}
           >
             {city}

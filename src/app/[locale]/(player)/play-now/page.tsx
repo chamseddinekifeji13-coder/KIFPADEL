@@ -78,7 +78,7 @@ export default async function PlayNowPage({ params }: PlayNowPageProps) {
             {labels.noOpenMatchesTitle}
           </p>
           <Link href={`/${locale}/matches/create`} className="inline-block">
-            <button className="px-10 py-4 bg-gold text-black rounded-2xl text-sm font-black uppercase tracking-widest shadow-gold active:scale-95 transition-all">
+            <button className="px-10 py-4 bg-gold text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-gold-strong hover:bg-gold-light active:scale-95 transition-all">
               {labels.createMatchCta}
             </button>
           </Link>
