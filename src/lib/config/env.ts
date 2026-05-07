@@ -16,20 +16,36 @@ function firstNonEmpty(...names: string[]): { value: string; name: string } | nu
   return null;
 }
 
-function getRequiredEnv(name: string): string {
-  const value = process.env[name];
-
-  if (!value) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error(`Missing required environment variable: ${name}. Ensure it is set in your deployment environment (e.g., Vercel Dashboard).`);
-    }
-    console.warn(`⚠️  Missing env: ${name} — using placeholder`);
-    return `MISSING_${name}`;
+/** `next build` en production : pre-rendu sans .env local (CI / machine dev). */
+function isRunningNextProductionBuild(): boolean {
+  if (process.env.NODE_ENV !== "production") {
+    return false;
   }
 
-  return value;
+  const argv = process.argv.join(" ");
+  if (/\bnext\s+build\b/i.test(argv)) {
+    return true;
+  }
+
+  return process.env.npm_lifecycle_event === "build";
 }
 
+/** URL JWT-shaped factices uniquement pour finir la compile ; jamais en prod deployee avec vraies requetes. */
+const BUILD_ONLY_SUPABASE_URL_PLACEHOLDER = "https://kz-build-placeholder.supabase.co";
+const BUILD_ONLY_SUPABASE_ANON_PLACEHOLDER =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MCwiZXhwIjo5MDAwMDAwMDAwfQ.build-placeholder-invalid-signature-but-long-enough";
+
+let buildTimeSupabasePlaceholderWarned = false;
+
+function warnOnceBuildTimeSupabasePlaceholder() {
+  if (buildTimeSupabasePlaceholderWarned) {
+    return;
+  }
+  buildTimeSupabasePlaceholderWarned = true;
+  console.warn(
+    "[Kifpadel] next build sans NEXT_PUBLIC_SUPABASE_URL / ANON_KEY : valeurs factices pour terminer le pre-rendu uniquement.",
+  );
+}
 
 function normalizeSupabaseUrl(raw: string): string {
   // Use regex to strip all whitespace characters including \r and \n
@@ -72,6 +88,11 @@ function resolveSupabaseUrl(): string {
     return normalizeSupabaseUrl(projectId);
   }
 
+  if (isRunningNextProductionBuild()) {
+    warnOnceBuildTimeSupabasePlaceholder();
+    return BUILD_ONLY_SUPABASE_URL_PLACEHOLDER;
+  }
+
   if (process.env.NODE_ENV === "production") {
     console.error("CRITICAL: Missing Supabase URL in production environment variables.");
   }
@@ -88,6 +109,11 @@ function resolveSupabaseAnonKey(): string {
               
   if (key) {
     return key.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "");
+  }
+
+  if (isRunningNextProductionBuild()) {
+    warnOnceBuildTimeSupabasePlaceholder();
+    return BUILD_ONLY_SUPABASE_ANON_PLACEHOLDER;
   }
 
   if (process.env.NODE_ENV === "production") {
@@ -146,9 +172,44 @@ if (typeof window !== "undefined") {
   }
 }
 
+let cachedSupabaseServiceRoleKey: string | null = null;
+
+/**
+ * Cle service role pour le client Supabase admin.
+ * Pendant `next build` ou sans .env local, aucune valeur n'est exigée ici : un placeholder permet la compilation ;
+ * tout appel à `createSupabaseAdminClient()` sans vraie cle echouera avec une erreur explicite.
+ */
+function resolveSupabaseServiceRoleKey(): string {
+  if (cachedSupabaseServiceRoleKey !== null) {
+    return cachedSupabaseServiceRoleKey;
+  }
+
+  const picked = firstNonEmpty("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY");
+  const raw =
+    picked?.value ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    "";
+
+  const cleaned = raw.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "");
+
+  if (cleaned.length > 0) {
+    cachedSupabaseServiceRoleKey = cleaned;
+    return cleaned;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(
+      "⚠️  Missing SUPABASE_SERVICE_ROLE_KEY — using placeholder locally; admin operations will fail until it is set.",
+    );
+  }
+
+  cachedSupabaseServiceRoleKey = "MISSING_SUPABASE_SERVICE_ROLE_KEY";
+  return cachedSupabaseServiceRoleKey;
+}
+
 export const serverEnv = {
-  supabaseServiceRoleKey: (firstNonEmpty(
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "SUPABASE_SECRET_KEY"
-  )?.value || getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY")).replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, ""),
+  get supabaseServiceRoleKey(): string {
+    return resolveSupabaseServiceRoleKey();
+  },
 };
