@@ -27,8 +27,8 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className="mx-auto flex w-full max-w-lg min-h-screen flex-col bg-background border-x border-gold/30 shadow-gold/20">
-      <div className="sticky top-0 z-50 flex justify-end bg-background/90 px-4 py-4 backdrop-blur border-b border-gold/20">
+    <div className="mx-auto flex w-full max-w-2xl min-h-screen flex-col bg-background">
+      <div className="sticky top-0 z-50 flex justify-end px-4 py-4 backdrop-blur-md">
         <LocaleSwitcher currentLocale={locale} />
       </div>
 
