@@ -74,6 +74,12 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
         </Card>
       ) : null}
 
+      {status === "email_confirmed" ? (
+        <Card className="bg-emerald-50 ring-emerald-100">
+          <p className="text-sm text-emerald-700">{dictionary.auth.emailConfirmedSignInHint}</p>
+        </Card>
+      ) : null}
+
       {status === "password_updated" ? (
         <Card className="bg-emerald-500/5 border-emerald-500/20">
           <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">{dictionary.auth.passwordUpdatedInfo}</p>

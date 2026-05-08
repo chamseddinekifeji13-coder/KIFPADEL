@@ -1,10 +1,11 @@
-import { isLocale } from "@/i18n/config";
+import { isLocale, type Locale } from "@/i18n/config";
 import { notFound } from "next/navigation";
 import { clubService } from "@/modules/clubs/service";
 import { type Club } from "@/modules/clubs/repository";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { CreateMatchForm } from "@/app/[locale]/(player)/matches/create/create-match-form";
+import { getDictionary } from "@/i18n/get-dictionary";
 
 type CreateMatchPageProps = {
   params: Promise<{ locale: string }>;
@@ -14,7 +15,22 @@ export default async function CreateMatchPage({ params }: CreateMatchPageProps) 
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
+  const dictionary = await getDictionary(locale as Locale);
+  const p = dictionary.player;
   const clubs = await clubService.getClubs();
+
+  const createMatchCopy = {
+    prompt: p.createMatchTypePrompt,
+    selectorHelper: p.createMatchTypeSelectorHelper,
+    optionDescAll: p.createMatchTypeOptionDescAll,
+    optionDescMixed: p.createMatchTypeOptionDescMixed,
+    labels: {
+      all: p.matchTypeLabelAll,
+      men_only: p.matchTypeLabelMenOnly,
+      women_only: p.matchTypeLabelWomenOnly,
+      mixed: p.matchTypeLabelMixed,
+    },
+  };
 
   return (
     <div className="flex-1 space-y-8 pb-20">
@@ -44,7 +60,7 @@ export default async function CreateMatchPage({ params }: CreateMatchPageProps) 
       </section>
 
       <section className="space-y-6">
-        <CreateMatchForm clubs={clubs as Club[]} locale={locale} />
+        <CreateMatchForm clubs={clubs as Club[]} locale={locale} copy={createMatchCopy} />
 
       </section>
     </div>

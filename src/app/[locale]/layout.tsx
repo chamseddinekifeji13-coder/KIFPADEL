@@ -32,7 +32,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         play: dictionary.navigation.play,
         find: dictionary.navigation.find,
         book: dictionary.navigation.book,
-        dashboard: dictionary.navigation.dashboard,
+        profile: dictionary.navigation.profile,
       }}
       authLabels={{
         guest: dictionary.auth.guestLabel,

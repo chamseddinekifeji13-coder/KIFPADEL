@@ -98,6 +98,25 @@ export default async function ProfileEditPage({ params, searchParams }: ProfileE
             />
           </div>
 
+          <div className="space-y-1">
+            <label
+              htmlFor="gender"
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[var(--foreground-muted)]"
+            >
+              Genre (matchmaking)
+            </label>
+            <select
+              id="gender"
+              name="gender"
+              defaultValue={profile.gender ?? ""}
+              className="h-11 w-full rounded-xl border border-border bg-surface-elevated px-4 text-sm text-white outline-none transition-all focus:border-gold/50 focus:ring-1 focus:ring-gold/50"
+            >
+              <option value="">Non renseigné</option>
+              <option value="male">Homme</option>
+              <option value="female">Femme</option>
+            </select>
+          </div>
+
           <Button type="submit" className="w-full">
             {labels.personalInfoSaveCta}
           </Button>

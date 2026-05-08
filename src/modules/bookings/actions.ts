@@ -81,7 +81,8 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     }
   }
 
-  // 5. Atomic DB booking creation to avoid race conditions.
+  // 5. Atomic DB booking — online stays pending until club / future Stripe flow.
+  // TODO(stripe): déclencher Checkout + e-mail de lien quand l'intégration sera prête.
   const bookingStatus = input.paymentMethod === "online" ? "pending" : "confirmed";
   const { data: bookingRows, error: rpcError } = await supabase.rpc("create_booking_atomic", {
     p_club_id: input.clubId,

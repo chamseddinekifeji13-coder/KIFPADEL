@@ -81,12 +81,12 @@ export function BookingConfirmSheet({
               <div className="h-20 w-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]">
                 <CheckCircle2 className="h-10 w-10 text-emerald-400" />
               </div>
-              <div className="text-center">
+              <div className="text-center space-y-2">
                 <p className="text-2xl font-black text-white uppercase tracking-tight">C&apos;est confirmé !</p>
                 <p className="text-sm text-foreground-muted mt-2 max-w-[280px]">
-                  {paymentMethod === "online" 
-                    ? "Un lien de paiement sécurisé vous a été envoyé par email."
-                    : "Votre terrain est bloqué. On vous attend au club !"}
+                  {paymentMethod === "online"
+                    ? "Réservation enregistrée en « attente paiement ». Il n'y a pas encore de prélèvement automatique ni d'e-mail avec lien : le club vous indiquera comment payer."
+                    : "Votre créneau est bien réservé. Rendez-vous au club pour le paiement."}
                 </p>
               </div>
             </div>
@@ -150,7 +150,7 @@ export function BookingConfirmSheet({
                   <div>
                     <p className="text-[10px] uppercase font-bold text-foreground-muted tracking-widest">Paiement</p>
                     <p className="text-sm font-black text-white">
-                      {paymentMethod === "online" ? "En ligne (Email)" : "Sur place au club"}
+                      {paymentMethod === "online" ? "En ligne — attente club (pas encore automatisé)" : "Sur place au club"}
                     </p>
                   </div>
                 </div>
@@ -184,7 +184,7 @@ export function BookingConfirmSheet({
                   </>
                 ) : (
                   <>
-                    {paymentMethod === "online" ? "Payer maintenant" : "Confirmer ma venue"}
+                    {paymentMethod === "online" ? "Réserver en attente de paiement" : "Confirmer ma réservation"}
                   </>
                 )}
               </button>

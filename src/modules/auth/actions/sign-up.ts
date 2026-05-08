@@ -14,7 +14,8 @@ export async function signUpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerActionClient();
-  const emailRedirectTo = `${publicEnv.siteUrl}/${locale}/auth/callback?next=/${locale}/onboarding`;
+  const onboardingPath = `/${locale}/onboarding`;
+  const emailRedirectTo = `${publicEnv.siteUrl}/${locale}/auth/confirm-email?next=${encodeURIComponent(onboardingPath)}`;
   const { error } = await supabase.auth.signUp({ 
     email, 
     password,

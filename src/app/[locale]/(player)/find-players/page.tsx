@@ -12,6 +12,7 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Search, Filter, Users } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type FindPlayersPageProps = {
   params: Promise<{ locale: string }>;
@@ -45,10 +46,16 @@ export default async function FindPlayersPage({
   const title = labels.findPlayersTitle;
   const subtitle = labels.findPlayersSubtitle;
 
+  const supabase = await createSupabaseServerClient();
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUserId = authData.user?.id;
+
   // Fetch real data from Supabase with heavy protection
   let players: Player[] = [];
   try {
-    const data = await playerService.getPlayers(q);
+    const data = await playerService.getPlayers(q, {
+      ...(currentUserId ? { excludeUserId: currentUserId } : {}),
+    });
     if (Array.isArray(data)) {
       players = data.filter((p) => p && typeof p === "object" && p.id);
     }

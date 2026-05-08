@@ -4,6 +4,12 @@ import { MapPin, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { ClubDirectionsButton } from "@/components/features/clubs/club-directions-button";
+import type { MatchGenderType } from "@/domain/types/core";
+
+export type MatchCardMatchTypeUi = {
+  labelByType: Record<MatchGenderType, string>;
+  titleByType: Record<MatchGenderType, string>;
+};
 
 interface MatchCardProps {
   match: {
@@ -14,11 +20,13 @@ interface MatchCardProps {
     clubAddress?: string | null;
     playerCount: number;
     price_per_player: number;
+    match_gender_type: MatchGenderType;
   };
   locale?: string;
+  matchTypeUi: MatchCardMatchTypeUi;
 }
 
-export function MatchCard({ match, locale = "fr" }: MatchCardProps) {
+export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps) {
   const date = match.starts_at ? new Date(match.starts_at) : new Date();
   const isValidDate = !isNaN(date.getTime());
 
@@ -82,6 +90,13 @@ export function MatchCard({ match, locale = "fr" }: MatchCardProps) {
                     {match.clubCity}, Tunisie
                   </span>
                 </div>
+                <Badge
+                  variant="secondary"
+                  title={matchTypeUi.titleByType[match.match_gender_type]}
+                  className="mt-1 rounded-md bg-white/10 text-[10px] font-bold text-white/70 border-0 normal-case leading-snug text-left max-w-[220px] whitespace-normal"
+                >
+                  {matchTypeUi.labelByType[match.match_gender_type] ?? match.match_gender_type}
+                </Badge>
               </div>
               <Badge
                 variant={slotsLeft > 0 ? "success" : "secondary"}

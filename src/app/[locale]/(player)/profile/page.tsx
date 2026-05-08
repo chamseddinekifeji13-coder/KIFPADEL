@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/modules/auth/actions/sign-out";
 import { playerService } from "@/modules/players/service";
 import { fetchBookingsForPlayer } from "@/modules/bookings/repository";
+import { fetchRecentTournamentSummariesForPlayer } from "@/modules/tournaments/repository";
 import { Player } from "@/modules/players/repository";
 import { LeagueProgress } from "@/components/features/players/league-progress";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -50,9 +51,10 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     redirect(`/${locale}/onboarding`);
   }
 
-  const [topRivals, bookings] = await Promise.all([
+  const [topRivals, bookings, recentTournaments] = await Promise.all([
     playerService.getTopRivals(user.id, 3),
     fetchBookingsForPlayer(user.id, 20),
+    fetchRecentTournamentSummariesForPlayer(user.id, 5),
   ]);
   const completedCount = bookings.filter((booking) => booking.status === "completed").length;
   const cancelledCount = bookings.filter((booking) => booking.status === "cancelled").length;
@@ -101,6 +103,16 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               <ShieldCheck className="h-4 w-4" />
               <span className="text-sm font-bold uppercase tracking-wide">{profile.reliability_status}</span>
             </div>
+            <p className="text-xs text-slate-400 font-medium">Trust {profile.trust_score}/100</p>
+            {profile.gender ? (
+              <p className="text-xs text-slate-400 font-medium">
+                Genre · {profile.gender === "male" ? "Homme" : "Femme"}
+              </p>
+            ) : (
+              <p className="text-xs text-amber-400/90 font-medium">
+                Genre non renseigné — nécessaire pour certains matchs
+              </p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-2xl font-black tracking-tighter">KIF-2026</p>
@@ -117,7 +129,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           className="bg-transparent p-0"
         />
         <LeagueProgress 
-          score={profile.trust_score} 
+          sportRating={profile.sport_rating} 
           currentLeague={profile.league} 
         />
       </Card>
@@ -156,13 +168,41 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                     {rival.encounters} {labels.rivalEncountersLabel}
                   </p>
                 </div>
-                <span className="rounded-full bg-[var(--gold)]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--gold)]">
-                  {labels.eloViewLabel}
-                </span>
               </Card>
             ))
           )}
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <SectionTitle
+          title={labels.profileRecentTournamentsTitle}
+          icon={<Trophy className="h-4 w-4" />}
+          className="text-sm opacity-80 px-2 text-white"
+        />
+        {recentTournaments.length === 0 ? (
+          <Card className="p-4 bg-[var(--surface)] border-[var(--border)] text-sm text-[var(--foreground-muted)]">
+            {labels.profileRecentTournamentsEmpty}
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {recentTournaments.map((t, index) => (
+              <Card
+                key={`${t.tournamentId}-${index}`}
+                className="p-4 bg-[var(--surface)] border-[var(--border)]"
+              >
+                <Link href={`/${locale}/tournaments/${t.tournamentId}`} className="block group">
+                  <p className="text-sm font-bold text-white group-hover:text-[var(--gold)]">{t.title}</p>
+                  <p className="text-[11px] text-[var(--foreground-muted)] mt-0.5">
+                    {t.clubName}
+                    {t.status ? ` · ${t.status}` : ""}
+                  </p>
+                  <p className="text-xs text-slate-300 mt-1.5">{t.placementLabel}</p>
+                </Link>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Account Settings List */}

@@ -1,3 +1,4 @@
+import type { Gender } from "@/domain/types/core";
 import { fetchOpenMatches, fetchOpenMatchesByClub } from "./repository";
 
 /**
@@ -5,16 +6,16 @@ import { fetchOpenMatches, fetchOpenMatchesByClub } from "./repository";
  */
 export const matchService = {
   /**
-   * Retrieves all currently open matches across all clubs.
+   * Retrieves currently open matches visible to this viewer (gender filters listing).
    */
-  async getOpenMatches() {
-    return fetchOpenMatches();
+  async getOpenMatches(viewerGender: Gender | null = null) {
+    return fetchOpenMatches(viewerGender);
   },
 
   /**
-   * Retrieves open matches for a specific club.
+   * Retrieves open matches for a specific club, visibility by viewer gender.
    */
-  async getOpenMatchesByClub(clubId: string) {
-    return fetchOpenMatchesByClub(clubId);
+  async getOpenMatchesByClub(clubId: string, viewerGender: Gender | null = null) {
+    return fetchOpenMatchesByClub(clubId, viewerGender);
   },
 };

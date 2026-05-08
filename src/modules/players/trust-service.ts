@@ -1,39 +1,30 @@
 import { addTrustEvent } from "./repository";
 
-export const LEAGUE_THRESHOLDS = {
-  BRONZE: 0,
-  SILVER: 150,
-  GOLD: 450,
-};
+function manualTrustEventKind(
+  type: "Positive" | "Negative" | "System",
+  reason: string,
+): string {
+  const safe = reason.replace(/\s+/g, " ").trim().slice(0, 120);
+  return `manual_${type.toLowerCase()}:${safe || "unspecified"}`;
+}
 
 /**
- * Service to handle truth and reliability business logic.
+ * Service for trust-score events (distinct from sport / ELO rating).
  */
 export const trustService = {
   /**
-   * Processes a new event that affects a player's trust score.
-   * Automatically handles league progression.
+   * @deprecated Unused in app flows; prefer club actions or addTrustEvent with a concrete `kind`.
    */
-  async processTrustEvent(playerId: string, delta: number, type: "Positive" | "Negative" | "System", reason: string) {
-    // 1. Log the event
+  async processTrustEvent(
+    playerId: string,
+    delta: number,
+    type: "Positive" | "Negative" | "System",
+    reason: string,
+  ) {
     await addTrustEvent({
       player_id: playerId,
-      type,
+      kind: manualTrustEventKind(type, reason),
       delta,
-      reason
     });
-
-    // 2. Fetch updated profile to check for league promotion
-    // Note: Better to do this in a single transaction or wait for update
-    // For now we'll handle progression logic here
   },
-
-  /**
-   * Evaluates if a player should be promoted or demoted based on their current score.
-   */
-  calculateLeague(score: number): "bronze" | "silver" | "gold" {
-    if (score >= LEAGUE_THRESHOLDS.GOLD) return "gold";
-    if (score >= LEAGUE_THRESHOLDS.SILVER) return "silver";
-    return "bronze";
-  }
 };

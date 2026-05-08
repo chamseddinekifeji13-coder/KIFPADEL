@@ -34,6 +34,7 @@ export default async function ClubLayout({ children, params }: ClubLayoutProps) 
         bookings: dictionary.club.navBookings,
         courts: dictionary.club.courtsTitle,
         players: dictionary.club.navPlayers,
+        tournaments: dictionary.club.navTournaments,
         incidents: dictionary.club.incidentsTitle,
         settings: dictionary.club.navSettings,
       }}

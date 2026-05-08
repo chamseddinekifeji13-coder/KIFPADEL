@@ -1,4 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { leagueFromRating } from "@/domain/rules/rating";
+import type { Gender } from "@/domain/types/core";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
 export interface Player {
@@ -7,7 +9,10 @@ export interface Player {
   email: string;
   avatar_url: string | null;
   league: "Bronze" | "Silver" | "Gold" | "Platinum";
+  sport_rating: number;
   trust_score: number;
+  /** null = profil incomplet pour matchmaking genré */
+  gender: Gender | null;
   reliability: string;
   reliability_status?: string;
   created_at: string;
@@ -27,30 +32,40 @@ type ProfileRow = {
   email?: string | null;
   avatar_url: string | null;
   league: string | null;
+  sport_rating: number | null;
   trust_score: number | null;
+  gender: string | null;
   reliability: string | null;
   reliability_status: string | null;
   created_at?: string;
 };
 
-function normalizeLeague(value: string | null): Player["league"] {
-  const normalized = (value ?? "").toLowerCase();
-  if (normalized === "silver") return "Silver";
-  if (normalized === "gold") return "Gold";
-  if (normalized === "platinum") return "Platinum";
-  return "Bronze";
+function displayLeagueFromSport(sportRating: number): Player["league"] {
+  const key = leagueFromRating(sportRating);
+  const labels: Record<string, Player["league"]> = {
+    bronze: "Bronze",
+    silver: "Silver",
+    gold: "Gold",
+    platinum: "Platinum",
+  };
+  return labels[key] ?? "Bronze";
 }
 
 function normalizePlayer(row: ProfileRow): Player {
-  const trustBase = row.trust_score ?? 0;
+  const sportRating = Number(row.sport_rating ?? 1200);
+  const trustScore = Number(row.trust_score ?? 70);
+  const g = row.gender;
+  const gender = g === "male" || g === "female" ? g : null;
 
   return {
     id: row.id,
     display_name: row.display_name ?? "Player",
     email: row.email ?? "",
     avatar_url: row.avatar_url ?? null,
-    league: normalizeLeague(row.league),
-    trust_score: Number(trustBase),
+    league: displayLeagueFromSport(sportRating),
+    sport_rating: sportRating,
+    trust_score: trustScore,
+    gender,
     reliability: row.reliability ?? row.reliability_status ?? "healthy",
     reliability_status: row.reliability_status ?? row.reliability ?? "healthy",
     created_at: row.created_at ?? new Date().toISOString(),
@@ -60,14 +75,21 @@ function normalizePlayer(row: ProfileRow): Player {
 /**
  * Repository for Player/Profile related database operations.
  */
-export async function fetchPlayers(query?: string): Promise<Player[]> {
+export async function fetchPlayers(
+  query?: string,
+  options?: { excludeUserId?: string },
+): Promise<Player[]> {
   try {
     const supabase = await createSupabaseServerClient();
 
     let request = supabase
       .from("profiles")
       .select("*")
-      .order("trust_score", { ascending: false });
+      .order("sport_rating", { ascending: false });
+
+    if (options?.excludeUserId) {
+      request = request.neq("id", options.excludeUserId);
+    }
 
     if (query) {
       request = request.ilike("display_name", `%${query}%`);
@@ -95,7 +117,7 @@ export async function fetchPlayerById(userId: string): Promise<Player | null> {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", userId)
+      .eq("id", userId)
       .single();
 
     if (error) {
@@ -180,34 +202,42 @@ export async function fetchTopRivals(userId: string, limit = 3): Promise<TopRiva
 
 export async function addTrustEvent(payload: {
   player_id: string;
-  type: "Positive" | "Negative" | "System";
+  kind: string;
   delta: number;
-  reason: string;
+  booking_id?: string | null;
 }) {
   const supabase = await createSupabaseServerClient();
 
+  const insertRow: Record<string, unknown> = {
+    player_id: payload.player_id,
+    kind: payload.kind,
+    delta: payload.delta,
+  };
+  if (payload.booking_id) {
+    insertRow.booking_id = payload.booking_id;
+  }
+
   const { data: event, error: eventError } = await supabase
     .from("trust_events")
-    .insert(payload)
+    .insert(insertRow)
     .select()
     .single();
 
   if (eventError) throw new Error(eventError.message);
 
-  // Get current score
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("trust_score")
-    .eq("id", payload.player_id)
-    .single();
+  const { data: profile } = await supabase.from("profiles").select("trust_score").eq("id", payload.player_id).single();
 
-  const newScore = (profile?.trust_score || 0) + payload.delta;
+  const newScore = Math.max(0, Math.min(100, (profile?.trust_score ?? 70) + payload.delta));
 
-  // Update original profile score
+  let newStatus = "healthy";
+  if (newScore < 25) newStatus = "blacklisted";
+  else if (newScore < 45) newStatus = "restricted";
+  else if (newScore < 70) newStatus = "warning";
+
   const { error: profileError } = await supabase
     .from("profiles")
-    .update({ trust_score: newScore })
-    .eq("user_id", payload.player_id);
+    .update({ trust_score: newScore, reliability_status: newStatus })
+    .eq("id", payload.player_id);
 
   if (profileError) throw new Error(profileError.message);
 
@@ -217,10 +247,7 @@ export async function addTrustEvent(payload: {
 export async function updatePlayerLeague(playerId: string, league: string) {
   const supabase = await createSupabaseServerClient();
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ league })
-    .eq("user_id", playerId);
+  const { error } = await supabase.from("profiles").update({ league }).eq("id", playerId);
 
   if (error) throw new Error(error.message);
 }

@@ -40,9 +40,10 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
   const dictionary = await getDictionary(locale as Locale);
   const labels = dictionary.player;
   
-  const [profile, bookings] = await Promise.all([
+  const [profile, bookings, topRivals] = await Promise.all([
     playerService.getPlayerProfile(user.id),
     fetchBookingsForPlayer(user.id, 5),
+    playerService.getTopRivals(user.id, 3),
   ]);
 
   if (!profile) redirect(`/${locale}/onboarding`);
@@ -51,15 +52,9 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
     bookings.find((booking) => new Date(booking.ends_at).getTime() >= new Date().getTime()) ?? null;
 
   const stats = [
-    { label: "Win Rate", value: "68%" },
-    { label: "Matchs", value: "12" }, // TODO: Fetch real match count
-    { label: "Streak", value: "4 Wins" },
-  ];
-
-  const dummyRivals = [
-    { name: "Sami B.", wins: 3, losses: 1, encounters: 1620 },
-    { name: "Mehdi K.", wins: 2, losses: 2, encounters: 1580 },
-    { name: "Omar T.", wins: 4, losses: 0, encounters: 1550 },
+    { label: "ELO sport", value: String(profile.sport_rating) },
+    { label: "Confiance", value: `${profile.trust_score}/100` },
+    { label: "Ligue", value: profile.league },
   ];
 
   const displayName = profile.display_name.includes("@")
@@ -91,7 +86,10 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
           {displayName}
         </h1>
         <p className="text-xl font-black text-gold uppercase tracking-[0.15em] flex items-center justify-center gap-2 sm:text-2xl lg:text-3xl">
-          ELO RANK: <span className="text-white">{profile.trust_score * 15 + 800}</span>
+          ELO sport: <span className="text-white">{profile.sport_rating}</span>
+        </p>
+        <p className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest">
+          Confiance club (trust) · {profile.trust_score}/100 · {profile.reliability_status ?? profile.reliability}
         </p>
       </div>
 
@@ -123,7 +121,7 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
           )}
 
           <div className="w-full max-w-sm lg:max-w-md">
-            <TopRivals rivals={dummyRivals} />
+            <TopRivals rivals={topRivals.map((r) => ({ name: r.name, wins: r.wins, losses: r.losses, encounters: r.encounters }))} />
           </div>
         </div>
 

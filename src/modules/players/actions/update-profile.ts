@@ -23,6 +23,9 @@ export async function updateProfileAction(formData: FormData) {
   const locale = getSafeLocale(formData.get("locale"));
   const displayName = String(formData.get("displayName") ?? "").trim();
   const email = normalizeEmail(String(formData.get("email") ?? ""));
+  const rawGender = String(formData.get("gender") ?? "").trim();
+  const gender =
+    rawGender === "male" || rawGender === "female" ? rawGender : null;
 
   if (!displayName || !email) {
     redirect(`/${locale}/profile/edit?error=missing_fields`);
@@ -44,11 +47,12 @@ export async function updateProfileAction(formData: FormData) {
   const adminClient = createSupabaseAdminClient();
   let profileUpdated = false;
   const profileErrors: unknown[] = [];
+  const profileUpdatePayload = { display_name: displayName, gender };
 
   for (const profileKey of PROFILE_USER_KEYS) {
     const { error } = await adminClient
       .from("profiles")
-      .update({ display_name: displayName })
+      .update(profileUpdatePayload)
       .eq(profileKey, user.id);
 
     if (!error) {
@@ -57,6 +61,22 @@ export async function updateProfileAction(formData: FormData) {
     }
 
     profileErrors.push({ profileKey, error });
+  }
+
+  if (!profileUpdated) {
+    const firstMsg = profileErrors.map((e) => JSON.stringify(e)).join(" ");
+    if (firstMsg.toLowerCase().includes("gender")) {
+      for (const profileKey of PROFILE_USER_KEYS) {
+        const { error } = await adminClient
+          .from("profiles")
+          .update({ display_name: displayName })
+          .eq(profileKey, user.id);
+        if (!error) {
+          profileUpdated = true;
+          break;
+        }
+      }
+    }
   }
 
   if (!profileUpdated) {
