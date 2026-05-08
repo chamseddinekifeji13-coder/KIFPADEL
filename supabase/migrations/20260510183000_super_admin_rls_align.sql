@@ -164,6 +164,7 @@ CREATE POLICY "profiles_select_self"
   );
 
 DROP POLICY IF EXISTS "profiles_select_all" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_select_super_admin_platform" ON public.profiles;
 CREATE POLICY "profiles_select_super_admin_platform"
   ON public.profiles FOR SELECT
   USING (public.is_super_admin());
@@ -255,6 +256,7 @@ CREATE POLICY "sponsors_public_read"
   USING (is_active = true OR public.is_super_admin());
 
 DROP POLICY IF EXISTS "sponsors_manage_admin" ON public.sponsors;
+DROP POLICY IF EXISTS "sponsors_manage_super_admin" ON public.sponsors;
 CREATE POLICY "sponsors_manage_super_admin"
   ON public.sponsors FOR ALL
   USING (public.is_super_admin())
@@ -265,6 +267,7 @@ CREATE POLICY "sponsors_manage_super_admin"
 DROP POLICY IF EXISTS "trust_events_insert_staff" ON public.trust_events;
 
 DROP POLICY IF EXISTS "trust_events_select_self_or_staff" ON public.trust_events;
+DROP POLICY IF EXISTS "trust_events_select_scoped" ON public.trust_events;
 CREATE POLICY "trust_events_select_scoped"
   ON public.trust_events FOR SELECT
   USING (
@@ -292,11 +295,13 @@ CREATE POLICY "incidents_select_super_admin"
 
 -- 10) member_cards — platform-only admin mutates QR records
 DROP POLICY IF EXISTS "member_cards_select_self_or_staff" ON public.member_cards;
+DROP POLICY IF EXISTS "member_cards_select_self_or_super_admin" ON public.member_cards;
 CREATE POLICY "member_cards_select_self_or_super_admin"
   ON public.member_cards FOR SELECT
   USING (player_id = auth.uid() OR public.is_super_admin());
 
 DROP POLICY IF EXISTS "member_cards_upsert_staff" ON public.member_cards;
+DROP POLICY IF EXISTS "member_cards_upsert_super_admin" ON public.member_cards;
 CREATE POLICY "member_cards_upsert_super_admin"
   ON public.member_cards FOR ALL
   USING (public.is_super_admin())

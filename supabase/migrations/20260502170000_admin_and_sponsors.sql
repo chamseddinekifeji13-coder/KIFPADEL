@@ -13,12 +13,13 @@ create table if not exists public.sponsors (
 alter table public.sponsors enable row level security;
 
 -- Policies for sponsors
+drop policy if exists "sponsors_public_read" on public.sponsors;
 create policy "sponsors_public_read"
   on public.sponsors for select
   using (is_active = true or public.is_platform_admin());
 
-create policy "sponsors_manage_admin"
-  on public.sponsors for all
+drop policy if exists "sponsors_manage_admin" on public.sponsors;
+create policy "sponsors_manage_admin"  on public.sponsors for all
   using (public.is_platform_admin())
   with check (public.is_platform_admin());
 

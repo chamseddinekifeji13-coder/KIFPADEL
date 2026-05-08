@@ -21,16 +21,19 @@ CREATE INDEX IF NOT EXISTS audit_log_created_at_idx ON public.audit_log (created
 
 ALTER TABLE public.audit_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS audit_log_insert_super_admin ON public.audit_log;
 CREATE POLICY audit_log_insert_super_admin
   ON public.audit_log FOR INSERT
   TO authenticated
   WITH CHECK (public.is_super_admin());
 
+DROP POLICY IF EXISTS audit_log_select_super_admin ON public.audit_log;
 CREATE POLICY audit_log_select_super_admin
   ON public.audit_log FOR SELECT
   TO authenticated
   USING (public.is_super_admin());
 
+DROP POLICY IF EXISTS audit_log_update_super_admin ON public.audit_log;
 CREATE POLICY audit_log_update_super_admin
   ON public.audit_log FOR UPDATE
   TO authenticated

@@ -1,8 +1,25 @@
--- Rename user_id to id in public.profiles
+-- Rename user_id to id in public.profiles (no-op if schema already uses id)
 BEGIN;
 
--- 1. Rename the column
-ALTER TABLE public.profiles RENAME COLUMN user_id TO id;
+DO $rename$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'profiles'
+      AND column_name = 'user_id'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'profiles'
+      AND column_name = 'id'
+  ) THEN
+    ALTER TABLE public.profiles RENAME COLUMN user_id TO id;
+  END IF;
+END $rename$;
 
 -- 2. Update the trigger function
 CREATE OR REPLACE FUNCTION public.handle_new_user()

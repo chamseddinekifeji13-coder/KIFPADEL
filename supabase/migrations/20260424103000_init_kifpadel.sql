@@ -28,11 +28,11 @@ create table if not exists public.clubs (
 create table if not exists public.club_memberships (
   id uuid primary key default gen_random_uuid(),
   club_id uuid not null references public.clubs(id) on delete cascade,
-  player_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
   role text not null default 'player',
   is_primary boolean not null default false,
   created_at timestamptz not null default now(),
-  unique (club_id, player_id)
+  unique (club_id, user_id)
 );
 
 create table if not exists public.courts (
@@ -114,35 +114,94 @@ create table if not exists public.member_cards (
   created_at timestamptz not null default now()
 );
 
-alter table public.profiles add constraint profiles_main_club_fk
-  foreign key (main_club_id) references public.clubs(id) on delete set null;
+do $migration$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profiles_main_club_fk'
+      and conrelid = 'public.profiles'::regclass
+  ) then
+    alter table public.profiles add constraint profiles_main_club_fk
+      foreign key (main_club_id) references public.clubs(id) on delete set null;
+  end if;
+end $migration$;
 
+-- Resolves legacy `player_id` vs current `user_id` on club_memberships (partially migrated DBs).
 create or replace function public.has_club_role(target_club_id uuid, allowed_roles text[])
 returns boolean
-language sql
+language plpgsql
 stable
-as $$
-  select exists (
-    select 1
-    from public.club_memberships cm
-    where cm.club_id = target_club_id
-      and cm.player_id = auth.uid()
-      and cm.role::text = any(allowed_roles)
-  );
-$$;
+set search_path = public
+as $fn$
+declare
+  member_col text;
+  result boolean;
+begin
+  select c.column_name into member_col
+  from information_schema.columns c
+  where c.table_schema = 'public'
+    and c.table_name = 'club_memberships'
+    and c.column_name in ('user_id', 'player_id')
+  order by case c.column_name when 'user_id' then 0 else 1 end
+  limit 1;
+
+  if member_col is null then
+    return false;
+  end if;
+
+  execute format(
+    $q$
+      select exists (
+        select 1 from public.club_memberships cm
+        where cm.club_id = $1
+          and cm.%I = auth.uid()
+          and cm.role::text = any ($2::text[])
+      )
+    $q$,
+    member_col
+  ) into result using target_club_id, allowed_roles;
+
+  return coalesce(result, false);
+end;
+$fn$;
 
 create or replace function public.is_platform_admin()
 returns boolean
-language sql
+language plpgsql
 stable
-as $$
-  select exists (
-    select 1
-    from public.club_memberships cm
-    where cm.player_id = auth.uid()
-      and cm.role::text = 'platform_admin'
-  );
-$$;
+set search_path = public
+as $fn$
+declare
+  member_col text;
+  result boolean;
+begin
+  select c.column_name into member_col
+  from information_schema.columns c
+  where c.table_schema = 'public'
+    and c.table_name = 'club_memberships'
+    and c.column_name in ('user_id', 'player_id')
+  order by case c.column_name when 'user_id' then 0 else 1 end
+  limit 1;
+
+  if member_col is null then
+    return false;
+  end if;
+
+  execute format(
+    $q$
+      select exists (
+        select 1 from public.club_memberships cm
+        where cm.%I = auth.uid()
+          and cm.role::text = 'platform_admin'
+      )
+    $q$,
+    member_col
+  ) into result;
+
+  return coalesce(result, false);
+end;
+$fn$;
 
 alter table public.profiles enable row level security;
 alter table public.clubs enable row level security;
@@ -157,23 +216,76 @@ alter table public.incidents enable row level security;
 alter table public.trust_events enable row level security;
 alter table public.member_cards enable row level security;
 
-create policy "profiles_select_self"
-  on public.profiles for select
-  using (auth.uid() = user_id or public.is_platform_admin());
+drop policy if exists "profiles_select_self" on public.profiles;
+drop policy if exists "profiles_update_self" on public.profiles;
+do $profiles_policies$
+declare
+  pk_col text;
+begin
+  select c.column_name into pk_col
+  from information_schema.columns c
+  where c.table_schema = 'public'
+    and c.table_name = 'profiles'
+    and c.column_name in ('id', 'user_id')
+  order by case c.column_name when 'id' then 0 else 1 end
+  limit 1;
 
-create policy "profiles_update_self"
-  on public.profiles for update
-  using (auth.uid() = user_id or public.is_platform_admin())
-  with check (auth.uid() = user_id or public.is_platform_admin());
+  if pk_col is null then
+    raise exception 'init_kifpadel: profiles PK column id/user_id missing';
+  end if;
 
+  execute format(
+    $q$
+      create policy "profiles_select_self"
+        on public.profiles for select
+        using (auth.uid() = %I or public.is_platform_admin())
+    $q$,
+    pk_col
+  );
+
+  execute format(
+    $q$
+      create policy "profiles_update_self"
+        on public.profiles for update
+        using (auth.uid() = %I or public.is_platform_admin())
+        with check (auth.uid() = %I or public.is_platform_admin())
+    $q$,
+    pk_col,
+    pk_col
+  );
+end $profiles_policies$;
+
+drop policy if exists "clubs_public_read" on public.clubs;
 create policy "clubs_public_read"
   on public.clubs for select
   using (is_active = true or public.is_platform_admin());
 
-create policy "club_memberships_select_self_or_admin"
-  on public.club_memberships for select
-  using (player_id = auth.uid() or public.is_platform_admin());
+drop policy if exists "club_memberships_select_self_or_admin" on public.club_memberships;
+do $policy$
+declare
+  member_col text;
+begin
+  select c.column_name into member_col
+  from information_schema.columns c
+  where c.table_schema = 'public'
+    and c.table_name = 'club_memberships'
+    and c.column_name in ('user_id', 'player_id')
+  order by case c.column_name when 'user_id' then 0 else 1 end
+  limit 1;
 
+  if member_col is not null then
+    execute format(
+      $q$
+        create policy "club_memberships_select_self_or_admin"
+          on public.club_memberships for select
+          using (%I = auth.uid() or public.is_platform_admin())
+      $q$,
+      member_col
+    );
+  end if;
+end $policy$;
+
+drop policy if exists "courts_select_by_membership" on public.courts;
 create policy "courts_select_by_membership"
   on public.courts for select
   using (
@@ -181,11 +293,13 @@ create policy "courts_select_by_membership"
     or public.is_platform_admin()
   );
 
+drop policy if exists "courts_manage_by_staff" on public.courts;
 create policy "courts_manage_by_staff"
   on public.courts for all
   using (public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin']))
   with check (public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin']));
 
+drop policy if exists "time_slots_select_by_membership" on public.time_slots;
 create policy "time_slots_select_by_membership"
   on public.time_slots for select
   using (
@@ -193,11 +307,13 @@ create policy "time_slots_select_by_membership"
     or public.is_platform_admin()
   );
 
+drop policy if exists "time_slots_manage_by_staff" on public.time_slots;
 create policy "time_slots_manage_by_staff"
   on public.time_slots for all
   using (public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin']))
   with check (public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin']));
 
+drop policy if exists "bookings_select_owner_or_staff" on public.bookings;
 create policy "bookings_select_owner_or_staff"
   on public.bookings for select
   using (
@@ -205,10 +321,12 @@ create policy "bookings_select_owner_or_staff"
     or public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin'])
   );
 
+drop policy if exists "bookings_insert_owner" on public.bookings;
 create policy "bookings_insert_owner"
   on public.bookings for insert
   with check (created_by = auth.uid());
 
+drop policy if exists "bookings_update_owner_or_staff" on public.bookings;
 create policy "bookings_update_owner_or_staff"
   on public.bookings for update
   using (
@@ -220,6 +338,7 @@ create policy "bookings_update_owner_or_staff"
     or public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin'])
   );
 
+drop policy if exists "matches_read_open_or_member" on public.matches;
 create policy "matches_read_open_or_member"
   on public.matches for select
   using (
@@ -228,10 +347,12 @@ create policy "matches_read_open_or_member"
     or (club_id is not null and public.has_club_role(club_id, array['player', 'club_staff', 'club_manager', 'platform_admin']))
   );
 
+drop policy if exists "matches_insert_owner" on public.matches;
 create policy "matches_insert_owner"
   on public.matches for insert
   with check (created_by = auth.uid());
 
+drop policy if exists "matches_update_owner_or_staff" on public.matches;
 create policy "matches_update_owner_or_staff"
   on public.matches for update
   using (
@@ -243,6 +364,7 @@ create policy "matches_update_owner_or_staff"
     or (club_id is not null and public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin']))
   );
 
+drop policy if exists "match_participants_select_match_members" on public.match_participants;
 create policy "match_participants_select_match_members"
   on public.match_participants for select
   using (
@@ -258,14 +380,17 @@ create policy "match_participants_select_match_members"
     )
   );
 
+drop policy if exists "match_participants_insert_self" on public.match_participants;
 create policy "match_participants_insert_self"
   on public.match_participants for insert
   with check (player_id = auth.uid());
 
+drop policy if exists "match_results_select" on public.match_results;
 create policy "match_results_select"
   on public.match_results for select
   using (true);
 
+drop policy if exists "match_results_insert_staff_or_creator" on public.match_results;
 create policy "match_results_insert_staff_or_creator"
   on public.match_results for insert
   with check (
@@ -281,6 +406,7 @@ create policy "match_results_insert_staff_or_creator"
     )
   );
 
+drop policy if exists "incidents_select_club_staff" on public.incidents;
 create policy "incidents_select_club_staff"
   on public.incidents for select
   using (
@@ -288,6 +414,7 @@ create policy "incidents_select_club_staff"
     or player_id = auth.uid()
   );
 
+drop policy if exists "incidents_insert_club_staff" on public.incidents;
 create policy "incidents_insert_club_staff"
   on public.incidents for insert
   with check (
@@ -295,6 +422,7 @@ create policy "incidents_insert_club_staff"
     and public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin'])
   );
 
+drop policy if exists "trust_events_select_self_or_staff" on public.trust_events;
 create policy "trust_events_select_self_or_staff"
   on public.trust_events for select
   using (
@@ -302,10 +430,12 @@ create policy "trust_events_select_self_or_staff"
     or public.is_platform_admin()
   );
 
+drop policy if exists "trust_events_insert_staff" on public.trust_events;
 create policy "trust_events_insert_staff"
   on public.trust_events for insert
   with check (public.is_platform_admin());
 
+drop policy if exists "member_cards_select_self_or_staff" on public.member_cards;
 create policy "member_cards_select_self_or_staff"
   on public.member_cards for select
   using (
@@ -313,6 +443,7 @@ create policy "member_cards_select_self_or_staff"
     or public.is_platform_admin()
   );
 
+drop policy if exists "member_cards_upsert_staff" on public.member_cards;
 create policy "member_cards_upsert_staff"
   on public.member_cards for all
   using (public.is_platform_admin())

@@ -246,10 +246,12 @@ alter table public.tournament_entries enable row level security;
 alter table public.tournament_matches enable row level security;
 
 -- Tournaments: public read (discovery); staff manage their club
+drop policy if exists "tournaments_select_all" on public.tournaments;
 create policy "tournaments_select_all"
   on public.tournaments for select
   using (true);
 
+drop policy if exists "tournaments_insert_staff" on public.tournaments;
 create policy "tournaments_insert_staff"
   on public.tournaments for insert
   with check (
@@ -257,20 +259,24 @@ create policy "tournaments_insert_staff"
     and public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin'])
   );
 
+drop policy if exists "tournaments_update_staff" on public.tournaments;
 create policy "tournaments_update_staff"
   on public.tournaments for update
   using (public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin']))
   with check (public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin']));
 
+drop policy if exists "tournaments_delete_staff" on public.tournaments;
 create policy "tournaments_delete_staff"
   on public.tournaments for delete
   using (public.has_club_role(club_id, array['club_staff', 'club_manager', 'platform_admin']));
 
 -- Entries: readable; players insert when they are player1; staff full
+drop policy if exists "tournament_entries_select_all" on public.tournament_entries;
 create policy "tournament_entries_select_all"
   on public.tournament_entries for select
   using (true);
 
+drop policy if exists "tournament_entries_insert_self_player1" on public.tournament_entries;
 create policy "tournament_entries_insert_self_player1"
   on public.tournament_entries for insert
   with check (
@@ -282,6 +288,7 @@ create policy "tournament_entries_insert_self_player1"
     )
   );
 
+drop policy if exists "tournament_entries_manage_staff" on public.tournament_entries;
 create policy "tournament_entries_manage_staff"
   on public.tournament_entries for all
   using (
@@ -302,10 +309,12 @@ create policy "tournament_entries_manage_staff"
 -- tournament_entries_manage_staff conflicts with insert_self - PostgreSQL unions policies with OR
 -- Staff needs insert without being player1: covered by manage_staff for ALL
 
+drop policy if exists "tournament_matches_select_all" on public.tournament_matches;
 create policy "tournament_matches_select_all"
   on public.tournament_matches for select
   using (true);
 
+drop policy if exists "tournament_matches_write_staff" on public.tournament_matches;
 create policy "tournament_matches_write_staff"
   on public.tournament_matches for all
   using (

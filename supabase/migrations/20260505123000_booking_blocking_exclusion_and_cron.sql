@@ -9,11 +9,11 @@
 alter table public.bookings
   add column if not exists is_blocking boolean;
 
--- Backfill and normalize existing rows.
+-- Backfill and normalize existing rows (uses ::text so values not in enum type do not error).
 update public.bookings
 set is_blocking = case
-  when status in ('cancelled', 'expired', 'completed', 'no_show') then false
-  when status = 'pending' and created_at < now() - interval '15 minutes' then false
+  when status::text in ('cancelled', 'expired', 'completed', 'no_show') then false
+  when status::text = 'pending' and created_at < now() - interval '15 minutes' then false
   else true
 end;
 
@@ -31,8 +31,8 @@ as $$
 begin
   new.is_blocking :=
     case
-      when new.status in ('cancelled', 'expired', 'completed', 'no_show') then false
-      when new.status = 'pending' and new.created_at < now() - interval '15 minutes' then false
+      when new.status::text in ('cancelled', 'expired', 'completed', 'no_show') then false
+      when new.status::text = 'pending' and new.created_at < now() - interval '15 minutes' then false
       else true
     end;
   return new;
@@ -138,9 +138,9 @@ begin
       '*/5 * * * *',
       $job$
         update public.bookings
-        set status = 'expired',
+        set status = 'cancelled',
             is_blocking = false
-        where status = 'pending'
+        where status::text = 'pending'
           and is_blocking = true
           and created_at < now() - interval '15 minutes';
       $job$

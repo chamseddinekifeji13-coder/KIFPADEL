@@ -1,9 +1,29 @@
 -- Migration: Player Stats & Elo Ranking System
 -- Creates stats tables and automated Elo calculation triggers.
 
--- 1. Table: player_stats
+-- PK column name on public.profiles is id (current) or legacy user_id — resolve dynamically.
+
+CREATE OR REPLACE FUNCTION public.profile_row_pk_column()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT c.column_name
+  FROM information_schema.columns c
+  WHERE c.table_schema = 'public'
+    AND c.table_name = 'profiles'
+    AND c.column_name IN ('id', 'user_id')
+  ORDER BY CASE WHEN c.column_name = 'id' THEN 0 ELSE 1 END
+  LIMIT 1;
+$$;
+
+COMMENT ON FUNCTION public.profile_row_pk_column() IS 'Internal helper: profiles PK column name (id vs legacy user_id).';
+
+-- 1. Table: player_stats (omit referenced column → targets profiles PK whichever name)
 CREATE TABLE IF NOT EXISTS public.player_stats (
-  player_id uuid PRIMARY KEY REFERENCES public.profiles(user_id) ON DELETE CASCADE,
+  player_id uuid PRIMARY KEY REFERENCES public.profiles ON DELETE CASCADE,
   matches_played integer NOT NULL DEFAULT 0,
   wins integer NOT NULL DEFAULT 0,
   losses integer NOT NULL DEFAULT 0,
@@ -14,14 +34,22 @@ CREATE TABLE IF NOT EXISTS public.player_stats (
 );
 
 -- Initialize existing profiles in player_stats
-INSERT INTO public.player_stats (player_id)
-SELECT user_id FROM public.profiles
-ON CONFLICT (player_id) DO NOTHING;
+DO $init_stats$
+BEGIN
+  EXECUTE format(
+    $q$
+      INSERT INTO public.player_stats (player_id)
+      SELECT %I FROM public.profiles
+      ON CONFLICT (player_id) DO NOTHING
+    $q$,
+    public.profile_row_pk_column()
+  );
+END $init_stats$;
 
 -- 2. Table: player_rating_events (History)
 CREATE TABLE IF NOT EXISTS public.player_rating_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  player_id uuid NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
+  player_id uuid NOT NULL REFERENCES public.profiles ON DELETE CASCADE,
   match_id uuid REFERENCES public.matches(id) ON DELETE SET NULL,
   old_rating integer NOT NULL,
   new_rating integer NOT NULL,
@@ -35,12 +63,24 @@ CREATE INDEX IF NOT EXISTS idx_player_rating_events_created_at ON public.player_
 
 -- 3. Function to initialize stats on new user creation
 CREATE OR REPLACE FUNCTION public.handle_new_player_stats()
-RETURNS trigger AS $$
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  pk uuid;
 BEGIN
-  INSERT INTO public.player_stats (player_id) VALUES (new.user_id) ON CONFLICT DO NOTHING;
-  RETURN new;
+  pk := COALESCE(
+    NULLIF(to_jsonb(NEW) ->> 'id', '')::uuid,
+    NULLIF(to_jsonb(NEW) ->> 'user_id', '')::uuid
+  );
+  IF pk IS NOT NULL THEN
+    INSERT INTO public.player_stats (player_id) VALUES (pk) ON CONFLICT DO NOTHING;
+  END IF;
+  RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 DROP TRIGGER IF EXISTS on_profile_created_stats ON public.profiles;
 CREATE TRIGGER on_profile_created_stats
@@ -49,7 +89,11 @@ CREATE TRIGGER on_profile_created_stats
 
 -- 4. Function: Calculate Elo & Update Stats
 CREATE OR REPLACE FUNCTION public.process_match_result()
-RETURNS trigger AS $$
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   team_a_players uuid[];
   team_b_players uuid[];
@@ -72,60 +116,72 @@ BEGIN
   SELECT array_agg(player_id) INTO team_b_players FROM public.match_participants WHERE match_id = NEW.match_id AND team = 'B';
 
   -- Calculate average rating for Team A
-  SELECT COALESCE(AVG(sport_rating), 1200) INTO team_a_avg_rating 
-  FROM public.profiles 
-  WHERE user_id = ANY(team_a_players);
+  EXECUTE format(
+    $q$
+      SELECT COALESCE(AVG(sport_rating), 1200)
+      FROM public.profiles
+      WHERE %I = ANY ($1::uuid[])
+    $q$,
+    public.profile_row_pk_column()
+  ) INTO team_a_avg_rating USING team_a_players;
 
-  -- Calculate average rating for Team B
-  SELECT COALESCE(AVG(sport_rating), 1200) INTO team_b_avg_rating 
-  FROM public.profiles 
-  WHERE user_id = ANY(team_b_players);
+  EXECUTE format(
+    $q$
+      SELECT COALESCE(AVG(sport_rating), 1200)
+      FROM public.profiles
+      WHERE %I = ANY ($1::uuid[])
+    $q$,
+    public.profile_row_pk_column()
+  ) INTO team_b_avg_rating USING team_b_players;
 
-  -- Elo Expected Probability for Team A
-  -- E_a = 1 / (1 + 10^((R_b - R_a) / 400))
   expected_a := 1.0 / (1.0 + power(10.0, (team_b_avg_rating - team_a_avg_rating) / 400.0));
 
-  -- Calculate Rating Change (Delta)
   IF NEW.winner_team = 'A' THEN
     rating_change := round(k_factor * (1.0 - expected_a));
   ELSE
     rating_change := round(k_factor * (0.0 - expected_a));
   END IF;
 
-  -- Update Team A Players
   IF team_a_players IS NOT NULL THEN
     FOREACH p_id IN ARRAY team_a_players
     LOOP
-      -- Get current rating
-      SELECT sport_rating INTO p_rating FROM public.profiles WHERE user_id = p_id;
+      EXECUTE format(
+        $q$
+          SELECT sport_rating FROM public.profiles WHERE %I = $1 LIMIT 1
+        $q$,
+        public.profile_row_pk_column()
+      ) INTO p_rating USING p_id;
+
       p_new_rating := p_rating + rating_change;
 
-      -- Update Profile
-      UPDATE public.profiles SET sport_rating = p_new_rating WHERE user_id = p_id;
+      EXECUTE format(
+        $q$
+          UPDATE public.profiles SET sport_rating = $1 WHERE %I = $2
+        $q$,
+        public.profile_row_pk_column()
+      ) USING p_new_rating, p_id;
 
-      -- Insert History
       INSERT INTO public.player_rating_events (player_id, match_id, old_rating, new_rating, rating_change)
       VALUES (p_id, NEW.match_id, p_rating, p_new_rating, rating_change);
 
-      -- Update Stats
       SELECT current_streak, best_win_streak, wins, matches_played INTO p_streak, p_best_streak, p_wins, p_matches FROM public.player_stats WHERE player_id = p_id;
-      
-      p_matches := p_matches + 1;
-      
+
+      p_matches := COALESCE(p_matches, 0) + 1;
+
       IF NEW.winner_team = 'A' THEN
-        p_wins := p_wins + 1;
-        IF p_streak < 0 THEN p_streak := 1; ELSE p_streak := p_streak + 1; END IF;
-        IF p_streak > p_best_streak THEN p_best_streak := p_streak; END IF;
+        p_wins := COALESCE(p_wins, 0) + 1;
+        IF COALESCE(p_streak, 0) < 0 THEN p_streak := 1; ELSE p_streak := COALESCE(p_streak, 0) + 1; END IF;
+        IF p_streak > COALESCE(p_best_streak, 0) THEN p_best_streak := p_streak; END IF;
       ELSE
-        IF p_streak > 0 THEN p_streak := -1; ELSE p_streak := p_streak - 1; END IF;
+        IF COALESCE(p_streak, 0) > 0 THEN p_streak := -1; ELSE p_streak := COALESCE(p_streak, 0) - 1; END IF;
       END IF;
 
       UPDATE public.player_stats 
       SET 
         matches_played = p_matches,
         wins = p_wins,
-        losses = p_matches - p_wins,
-        win_rate = ROUND((p_wins::numeric / p_matches::numeric) * 100, 2),
+        losses = p_matches - COALESCE(p_wins, 0),
+        win_rate = ROUND((COALESCE(p_wins, 0)::numeric / NULLIF(p_matches, 0)::numeric) * 100, 2),
         current_streak = p_streak,
         best_win_streak = p_best_streak,
         updated_at = now()
@@ -133,40 +189,46 @@ BEGIN
     END LOOP;
   END IF;
 
-  -- Update Team B Players
   IF team_b_players IS NOT NULL THEN
     FOREACH p_id IN ARRAY team_b_players
     LOOP
-      -- Get current rating
-      SELECT sport_rating INTO p_rating FROM public.profiles WHERE user_id = p_id;
-      p_new_rating := p_rating - rating_change; -- Opposite of A
+      EXECUTE format(
+        $q$
+          SELECT sport_rating FROM public.profiles WHERE %I = $1 LIMIT 1
+        $q$,
+        public.profile_row_pk_column()
+      ) INTO p_rating USING p_id;
 
-      -- Update Profile
-      UPDATE public.profiles SET sport_rating = p_new_rating WHERE user_id = p_id;
+      p_new_rating := p_rating - rating_change;
 
-      -- Insert History
+      EXECUTE format(
+        $q$
+          UPDATE public.profiles SET sport_rating = $1 WHERE %I = $2
+        $q$,
+        public.profile_row_pk_column()
+      ) USING p_new_rating, p_id;
+
       INSERT INTO public.player_rating_events (player_id, match_id, old_rating, new_rating, rating_change)
       VALUES (p_id, NEW.match_id, p_rating, p_new_rating, -rating_change);
 
-      -- Update Stats
       SELECT current_streak, best_win_streak, wins, matches_played INTO p_streak, p_best_streak, p_wins, p_matches FROM public.player_stats WHERE player_id = p_id;
-      
-      p_matches := p_matches + 1;
-      
+
+      p_matches := COALESCE(p_matches, 0) + 1;
+
       IF NEW.winner_team = 'B' THEN
-        p_wins := p_wins + 1;
-        IF p_streak < 0 THEN p_streak := 1; ELSE p_streak := p_streak + 1; END IF;
-        IF p_streak > p_best_streak THEN p_best_streak := p_streak; END IF;
+        p_wins := COALESCE(p_wins, 0) + 1;
+        IF COALESCE(p_streak, 0) < 0 THEN p_streak := 1; ELSE p_streak := COALESCE(p_streak, 0) + 1; END IF;
+        IF p_streak > COALESCE(p_best_streak, 0) THEN p_best_streak := p_streak; END IF;
       ELSE
-        IF p_streak > 0 THEN p_streak := -1; ELSE p_streak := p_streak - 1; END IF;
+        IF COALESCE(p_streak, 0) > 0 THEN p_streak := -1; ELSE p_streak := COALESCE(p_streak, 0) - 1; END IF;
       END IF;
 
       UPDATE public.player_stats 
       SET 
         matches_played = p_matches,
         wins = p_wins,
-        losses = p_matches - p_wins,
-        win_rate = ROUND((p_wins::numeric / p_matches::numeric) * 100, 2),
+        losses = p_matches - COALESCE(p_wins, 0),
+        win_rate = ROUND((COALESCE(p_wins, 0)::numeric / NULLIF(p_matches, 0)::numeric) * 100, 2),
         current_streak = p_streak,
         best_win_streak = p_best_streak,
         updated_at = now()
@@ -176,9 +238,8 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
--- 5. Trigger on Match Result Validation
 DROP TRIGGER IF EXISTS on_match_result_validated ON public.match_results;
 CREATE TRIGGER on_match_result_validated
   AFTER INSERT ON public.match_results
@@ -188,5 +249,8 @@ CREATE TRIGGER on_match_result_validated
 ALTER TABLE public.player_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.player_rating_events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "player_stats_select" ON public.player_stats;
 CREATE POLICY "player_stats_select" ON public.player_stats FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "player_rating_events_select" ON public.player_rating_events;
 CREATE POLICY "player_rating_events_select" ON public.player_rating_events FOR SELECT USING (true);
