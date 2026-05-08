@@ -5,6 +5,20 @@
   "dashboardMetaDescription": "Gérez les réservations, joueurs et alertes de votre club.",
   "courtsTitle": "Terrains",
   "courtsSubtitle": "Gestion des terrains, disponibilité et maintenance.",
+  "courtsManageMetaTitle": "Gérer les terrains",
+  "courtsManageMetaDescription": "Libellés des terrains (nom ou numéro) visibles dans les réservations.",
+  "courtsLabelExplainer": "Chaque terrain a un libellé — nom ou numéro — que les joueurs voient lorsqu’ils réservent.",
+  "courtsListEmpty": "Aucun terrain enregistré pour ce club pour le moment.",
+  "courtsAddComingSoon": "Ajouter",
+  "courtsAddComingSoonTitle": "Bientôt : ajouter un terrain",
+  "courtLabelEditorFieldAria": "Nom ou numéro du terrain (visible par les joueurs)",
+  "courtLabelEditorSave": "Enregistrer",
+  "courtLabelEditorSaving": "Enregistrement…",
+  "courtsDeleteComingSoonTitle": "Bientôt : archiver ou supprimer",
+  "courtsCourtIndoor": "Couvert",
+  "courtsCourtOutdoor": "Extérieur",
+  "courtsPricingComingSoonTitle": "Tarification",
+  "courtsPricingComingSoonBody": "La tarification par terrain sera proposée dans une prochaine version.",
   "slotsTitle": "Créneaux",
   "slotsSubtitle": "Pilotage des créneaux récurrents et slots spéciaux.",
   "slotsMetaTitle": "Gérer les réservations",
@@ -117,5 +131,5 @@
   "reportCta": "Signaler",
   "genericPlayerName": "Joueur",
   "unknownPhone": "N/A",
-  "fallbackCourtLabel": "Court"
+  "fallbackCourtLabel": "Terrain"
 }

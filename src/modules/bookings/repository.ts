@@ -42,6 +42,8 @@ export type PlayerBookingRow = {
   id: string;
   club_id: string;
   court_id: string;
+  /** Renseigné après jointure `courts` (nom ou numéro affiché au club / joueur). */
+  court_label?: string;
   starts_at: string;
   ends_at: string;
   status: string;
@@ -118,7 +120,21 @@ export async function fetchBookingsForClubOperations(clubId: string, date: strin
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []) as PlayerBookingRow[];
+  const rows = (data ?? []) as PlayerBookingRow[];
+  const courtIds = [...new Set(rows.map((r) => r.court_id).filter(Boolean))];
+  if (courtIds.length === 0) {
+    return rows;
+  }
+
+  const { data: courts } = await supabase.from("courts").select("id,label").in("id", courtIds);
+  const labelByCourtId = new Map(
+    (courts ?? []).map((c) => [c.id as string, String((c as { label?: string }).label ?? "").trim()]),
+  );
+
+  return rows.map((r) => ({
+    ...r,
+    court_label: labelByCourtId.get(r.court_id) || undefined,
+  }));
 }
 
 export async function fetchBookingsForClubDateRange(clubId: string, startDate: string, endDate: string) {

@@ -63,7 +63,26 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
   }
 
   // Role promotion.
+  const { data: beforeRole } = await supabase.from("profiles").select("global_role").eq("id", user.id).maybeSingle();
+
   await supabase.from("profiles").update({ global_role: "super_admin" }).eq("id", user.id);
+
+  try {
+    const { insertAuditRow } = await import("@/modules/admin/audit-log");
+    await insertAuditRow(supabase, {
+      actor_profile_id: user.id,
+      actor_global_role: "super_admin",
+      action: "SUPER_ADMIN_GRANTED",
+      target_table: "profiles",
+      target_id: user.id,
+      metadata: {
+        previous_global_role: beforeRole?.global_role ?? null,
+        source: "onboarding_secret",
+      },
+    });
+  } catch (err) {
+    console.warn("[completeSuperAdminOnboardingAction] audit_log optional insert failed", err);
+  }
 
   // Reliable fallback: signed cookie-based admin bootstrap.
   const cookieStore = await cookies();

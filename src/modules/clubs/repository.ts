@@ -394,3 +394,43 @@ export async function fetchManagedClubForUser(userId: string): Promise<ManagedCl
     return null;
   }
 }
+
+/** Terrain du club tel qu’affiché aux joueurs (`label` = nom ou numéro). */
+export type ClubCourtSummary = {
+  id: string;
+  label: string;
+  surface: string;
+  isIndoor: boolean;
+};
+
+export async function fetchCourtsByClubId(clubId: string): Promise<ClubCourtSummary[]> {
+  const supabase = await createSupabaseServerClient();
+
+  try {
+    const { data, error } = await supabase
+      .from("courts")
+      .select("id,label,surface,is_indoor")
+      .eq("club_id", clubId)
+      .order("label", { ascending: true });
+
+    if (error) {
+      console.warn("[clubs.fetchCourtsByClubId]", error.message);
+      return [];
+    }
+
+    return (data ?? []).map((row) => {
+      const r = row as { id?: string; label?: string; surface?: string | null; is_indoor?: boolean | null };
+      const rawLabel = typeof r.label === "string" ? r.label.trim() : "";
+      return {
+        id: String(r.id ?? ""),
+        label: rawLabel.length > 0 ? rawLabel : "?",
+        surface: (typeof r.surface === "string" && r.surface.trim().length > 0 ? r.surface.trim() : "standard"),
+        isIndoor: Boolean(r.is_indoor),
+      };
+    });
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[clubs.fetchCourtsByClubId] unexpected", err);
+    return [];
+  }
+}

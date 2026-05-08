@@ -208,40 +208,22 @@ export async function addTrustEvent(payload: {
 }) {
   const supabase = await createSupabaseServerClient();
 
-  const insertRow: Record<string, unknown> = {
-    player_id: payload.player_id,
-    kind: payload.kind,
-    delta: payload.delta,
-  };
-  if (payload.booking_id) {
-    insertRow.booking_id = payload.booking_id;
+  const { data: eventId, error: rpcError } = await supabase.rpc("apply_trust_adjustment", {
+    p_player_id: payload.player_id,
+    p_kind: payload.kind,
+    p_delta: payload.delta,
+    p_booking_id: payload.booking_id ?? null,
+  });
+
+  if (rpcError) {
+    throw new Error(rpcError.message);
   }
 
-  const { data: event, error: eventError } = await supabase
-    .from("trust_events")
-    .insert(insertRow)
-    .select()
-    .single();
+  if (!eventId) {
+    throw new Error("apply_trust_adjustment returned no row id");
+  }
 
-  if (eventError) throw new Error(eventError.message);
-
-  const { data: profile } = await supabase.from("profiles").select("trust_score").eq("id", payload.player_id).single();
-
-  const newScore = Math.max(0, Math.min(100, (profile?.trust_score ?? 70) + payload.delta));
-
-  let newStatus = "healthy";
-  if (newScore < 25) newStatus = "blacklisted";
-  else if (newScore < 45) newStatus = "restricted";
-  else if (newScore < 70) newStatus = "warning";
-
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({ trust_score: newScore, reliability_status: newStatus })
-    .eq("id", payload.player_id);
-
-  if (profileError) throw new Error(profileError.message);
-
-  return event;
+  return { id: String(eventId), player_id: payload.player_id } as const;
 }
 
 export async function updatePlayerLeague(playerId: string, league: string) {

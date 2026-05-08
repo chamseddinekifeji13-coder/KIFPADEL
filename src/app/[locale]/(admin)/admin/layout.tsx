@@ -11,43 +11,50 @@ export default async function AdminLayout({
 }) {
   const { locale } = await params;
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     redirect(`/${locale}/auth/sign-in?next=/${locale}/admin`);
   }
 
-  // Check if user is platform admin
-  const { data: isAdmin } = await supabase.rpc("is_platform_admin");
+  const { data: isSa, error: rpcError } = await supabase.rpc("is_super_admin");
 
-  let hasGlobalSuperAdminRole = false;
-  if (!isAdmin) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("global_role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.global_role === "super_admin") {
-      hasGlobalSuperAdminRole = true;
-    }
-  }
-
-  if (!isAdmin && !hasGlobalSuperAdminRole) {
+  if (rpcError || isSa !== true) {
     redirect(`/${locale}/dashboard`);
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-slate-900 text-white p-4 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+        <div className="max-w-7xl mx-auto flex justify-between items-center flex-wrap gap-3">
           <h1 className="font-black tracking-tighter text-xl">
-            KIF<span className="text-gold">PADEL</span> <span className="text-xs uppercase bg-gold text-black px-2 py-0.5 rounded ml-2">Admin</span>
+            KIF<span className="text-gold">PADEL</span>{" "}
+            <span className="text-xs uppercase bg-gold text-black px-2 py-0.5 rounded ml-2">Super Admin</span>
           </h1>
-          <nav className="flex gap-6 text-sm font-bold">
-            <a href={`/${locale}/admin/clubs`} className="hover:text-gold transition-colors">Clubs</a>
-            <a href={`/${locale}/admin/players`} className="hover:text-gold transition-colors">Joueurs</a>
-            <a href={`/${locale}/admin/sponsors`} className="hover:text-gold transition-colors">Sponsors</a>
+          <nav className="flex flex-wrap gap-4 md:gap-6 text-sm font-bold items-center">
+            <a href={`/${locale}/admin`} className="hover:text-gold transition-colors">
+              Dashboard
+            </a>
+            <a href={`/${locale}/admin/clubs`} className="hover:text-gold transition-colors">
+              Clubs
+            </a>
+            <a href={`/${locale}/admin/players`} className="hover:text-gold transition-colors">
+              Joueurs
+            </a>
+            <a href={`/${locale}/admin/incidents`} className="hover:text-gold transition-colors">
+              Incidents
+            </a>
+            <a href={`/${locale}/admin/tournaments`} className="hover:text-gold transition-colors">
+              Tournois
+            </a>
+            <a href={`/${locale}/admin/sponsors`} className="hover:text-gold transition-colors">
+              Sponsors
+            </a>
+            <a href={`/${locale}/admin/audit-log`} className="hover:text-gold transition-colors">
+              Journal d&apos;audit
+            </a>
             <form action={signOutAction}>
               <input type="hidden" name="locale" value={locale} />
               <button type="submit" className="hover:text-gold transition-colors">
@@ -57,9 +64,7 @@ export default async function AdminLayout({
           </nav>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto p-6">
-        {children}
-      </main>
+      <main className="max-w-7xl mx-auto p-6">{children}</main>
     </div>
   );
 }

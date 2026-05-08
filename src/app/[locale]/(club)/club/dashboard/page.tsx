@@ -177,7 +177,9 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
                   <p className="font-medium text-white text-sm truncate">
                     {playerById.get((slot.created_by ?? slot.player_id) as string)?.display_name ?? labels.genericPlayerName}
                   </p>
-                  <p className="text-[11px] text-[var(--foreground-muted)]">{labels.courtLabel} · {slot.court_id.slice(0, 6)}</p>
+                  <p className="text-[11px] text-[var(--foreground-muted)]">
+                    {(slot.court_label?.trim() || `${labels.fallbackCourtLabel} ${slot.court_id.slice(0, 4)}`)}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {slot.payment_method === "online" ? (
