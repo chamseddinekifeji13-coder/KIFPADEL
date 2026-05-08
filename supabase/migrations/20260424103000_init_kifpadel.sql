@@ -1,4 +1,6 @@
-create extension if not exists "uuid-ossp";
+-- UUID defaults: Supabase-managed PG (17+) — use pgcrypto-backed random UUIDs
+-- instead of uuid-ossp/uuid_generate_v4(), which are not enabled by default on Supabase PG 17+.
+create extension if not exists pgcrypto;
 
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -16,7 +18,7 @@ create table if not exists public.profiles (
 );
 
 create table if not exists public.clubs (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   name text not null,
   city text not null default 'Tunis',
   is_active boolean not null default true,
@@ -24,7 +26,7 @@ create table if not exists public.clubs (
 );
 
 create table if not exists public.club_memberships (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   club_id uuid not null references public.clubs(id) on delete cascade,
   player_id uuid not null references auth.users(id) on delete cascade,
   role text not null default 'player',
@@ -34,7 +36,7 @@ create table if not exists public.club_memberships (
 );
 
 create table if not exists public.courts (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   club_id uuid not null references public.clubs(id) on delete cascade,
   label text not null,
   surface text not null default 'standard',
@@ -43,7 +45,7 @@ create table if not exists public.courts (
 );
 
 create table if not exists public.time_slots (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   club_id uuid not null references public.clubs(id) on delete cascade,
   court_id uuid not null references public.courts(id) on delete cascade,
   starts_at timestamptz not null,
@@ -54,7 +56,7 @@ create table if not exists public.time_slots (
 );
 
 create table if not exists public.bookings (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   club_id uuid not null references public.clubs(id) on delete cascade,
   court_id uuid not null references public.courts(id) on delete cascade,
   created_by uuid not null references auth.users(id) on delete cascade,
@@ -65,7 +67,7 @@ create table if not exists public.bookings (
 );
 
 create table if not exists public.matches (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   club_id uuid references public.clubs(id) on delete set null,
   created_by uuid not null references auth.users(id) on delete cascade,
   starts_at timestamptz not null,
@@ -89,7 +91,7 @@ create table if not exists public.match_results (
 );
 
 create table if not exists public.incidents (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   club_id uuid not null references public.clubs(id) on delete cascade,
   player_id uuid not null references auth.users(id) on delete cascade,
   reason text not null,
@@ -98,7 +100,7 @@ create table if not exists public.incidents (
 );
 
 create table if not exists public.trust_events (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   player_id uuid not null references auth.users(id) on delete cascade,
   kind text not null,
   delta integer not null,
@@ -106,7 +108,7 @@ create table if not exists public.trust_events (
 );
 
 create table if not exists public.member_cards (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   player_id uuid not null unique references auth.users(id) on delete cascade,
   qr_code_value text not null unique,
   created_at timestamptz not null default now()

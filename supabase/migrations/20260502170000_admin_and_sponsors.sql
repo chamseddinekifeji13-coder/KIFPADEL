@@ -1,6 +1,6 @@
 -- Table for Sponsors
 create table if not exists public.sponsors (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   name text not null,
   logo_url text,
   website_url text,

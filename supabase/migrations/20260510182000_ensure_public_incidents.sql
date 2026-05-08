@@ -3,10 +3,10 @@
 -- but later migrations (e.g. super_admin RLS) reference this table.
 -- Safe to run if the table already exists (CREATE TABLE IF NOT EXISTS).
 
-create extension if not exists "uuid-ossp";
+create extension if not exists pgcrypto;
 
 create table if not exists public.incidents (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   club_id uuid not null references public.clubs(id) on delete cascade,
   player_id uuid not null references auth.users(id) on delete cascade,
   reason text not null,

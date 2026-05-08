@@ -20,7 +20,7 @@ ON CONFLICT (player_id) DO NOTHING;
 
 -- 2. Table: player_rating_events (History)
 CREATE TABLE IF NOT EXISTS public.player_rating_events (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   player_id uuid NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
   match_id uuid REFERENCES public.matches(id) ON DELETE SET NULL,
   old_rating integer NOT NULL,
