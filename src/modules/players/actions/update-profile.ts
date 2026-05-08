@@ -5,8 +5,6 @@ import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
-const PROFILE_USER_KEYS = ["id", "user_id"] as const;
-
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
@@ -44,48 +42,26 @@ export async function updateProfileAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-in?error=auth_required&next=/${locale}/profile/edit`);
   }
 
-  const adminClient = createSupabaseAdminClient();
-  let profileUpdated = false;
-  const profileErrors: unknown[] = [];
-  const profileUpdatePayload = { display_name: displayName, gender };
+  // Session utilisateur + RLS (profiles_update_self) : pas de repli qui supprime le genre.
+  const { data: updatedRows, error: profileError } = await supabase
+    .from("profiles")
+    .update({ display_name: displayName, gender })
+    .eq("id", user.id)
+    .select("id");
 
-  for (const profileKey of PROFILE_USER_KEYS) {
-    const { error } = await adminClient
-      .from("profiles")
-      .update(profileUpdatePayload)
-      .eq(profileKey, user.id);
-
-    if (!error) {
-      profileUpdated = true;
-      break;
-    }
-
-    profileErrors.push({ profileKey, error });
+  if (profileError) {
+    console.error("[updateProfileAction] profile update", profileError.message, profileError);
+    redirect(`/${locale}/profile/edit?error=update_failed`);
   }
 
-  if (!profileUpdated) {
-    const firstMsg = profileErrors.map((e) => JSON.stringify(e)).join(" ");
-    if (firstMsg.toLowerCase().includes("gender")) {
-      for (const profileKey of PROFILE_USER_KEYS) {
-        const { error } = await adminClient
-          .from("profiles")
-          .update({ display_name: displayName })
-          .eq(profileKey, user.id);
-        if (!error) {
-          profileUpdated = true;
-          break;
-        }
-      }
-    }
-  }
-
-  if (!profileUpdated) {
-    console.error("[updateProfileAction] profile update failed", profileErrors);
+  if (!updatedRows?.length) {
+    console.error("[updateProfileAction] no profile row updated for user", user.id);
     redirect(`/${locale}/profile/edit?error=update_failed`);
   }
 
   const currentEmail = normalizeEmail(user.email ?? "");
   if (email !== currentEmail) {
+    const adminClient = createSupabaseAdminClient();
     const { error: authEmailError } = await adminClient.auth.admin.updateUserById(user.id, {
       email,
       email_confirm: true,
@@ -97,11 +73,8 @@ export async function updateProfileAction(formData: FormData) {
     }
   }
 
-  // Some deployments still keep a denormalized email column on profiles.
-  // Ignore failures here because newer schemas may not have that column.
-  for (const profileKey of PROFILE_USER_KEYS) {
-    await adminClient.from("profiles").update({ email }).eq(profileKey, user.id);
-  }
+  // Profil dénormalisé : ignorer l’échec si la colonne n’existe pas en prod.
+  await supabase.from("profiles").update({ email }).eq("id", user.id);
 
   redirect(`/${locale}/profile/edit?status=updated`);
 }
