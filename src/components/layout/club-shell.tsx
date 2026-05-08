@@ -8,6 +8,7 @@ import {
   Calendar,
   MapPin,
   Users,
+  Trophy,
   AlertTriangle,
   Settings,
   LogOut,
@@ -23,6 +24,7 @@ type ClubShellProps = Readonly<{
     bookings: string;
     courts: string;
     players: string;
+    tournaments: string;
     incidents: string;
     settings: string;
   };
@@ -43,6 +45,7 @@ export function ClubShell({ children, locale, clubName, navLabels, uiLabels }: C
     { href: `${baseUrl}/courts`, label: navLabels.courts, icon: MapPin },
     { href: `${baseUrl}/players`, label: navLabels.players, icon: Users },
     { href: `${baseUrl}/incidents`, label: navLabels.incidents, icon: AlertTriangle },
+    { href: `${baseUrl}/tournaments`, label: navLabels.tournaments, icon: Trophy },
     { href: `${baseUrl}/settings`, label: navLabels.settings, icon: Settings },
   ];
 

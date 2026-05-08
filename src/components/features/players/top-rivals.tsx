@@ -29,7 +29,7 @@ export function TopRivals({ rivals }: TopRivalsProps) {
                 {rival.name}
               </span>
               <span className="text-sm font-black text-gold">
-                ({rival.encounters ?? 1500} ELO)
+                ({rival.encounters ?? 0} matchs)
               </span>
             </article>
           ))}

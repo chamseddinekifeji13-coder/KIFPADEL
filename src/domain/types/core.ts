@@ -1,6 +1,9 @@
 export type UUID = string;
 
 export type League = "bronze" | "silver" | "gold" | "platinum";
+export type Gender = "male" | "female";
+/** Open match restriction / composition mode */
+export type MatchGenderType = "all" | "men_only" | "women_only" | "mixed";
 export type VerificationLevel = 1 | 2 | 3;
 export type ReliabilityStatus = "healthy" | "warning" | "restricted" | "blacklisted";
 
@@ -20,6 +23,7 @@ export type PlayerProfile = {
   photoUrl: string | null;
   city: string;
   mainClubId: UUID | null;
+  gender: Gender | null;
   sportRating: number;
   league: League;
   trustScore: number;
@@ -80,6 +84,7 @@ export type Match = {
   createdBy: UUID;
   startsAt: string;
   status: "open" | "locked" | "played" | "cancelled";
+  matchGenderType: MatchGenderType;
 };
 
 export type MatchParticipant = {
@@ -96,10 +101,12 @@ export type MatchResult = {
   validatedBy: UUID;
 };
 
+/** DB column `kind` is free text; known values include no_show, good_behavior, manual_*:… */
 export type TrustEvent = {
   id: UUID;
   playerId: UUID;
-  kind: "no_show" | "late_cancel" | "bad_behavior" | "good_behavior";
+  bookingId?: UUID | null;
+  kind: string;
   delta: number;
   createdAt: string;
 };

@@ -9,7 +9,9 @@ interface PlayerCardProps {
     display_name: string;
     avatar_url: string | null;
     league: "Bronze" | "Silver" | "Gold" | "Platinum";
+    sport_rating: number;
     trust_score: number;
+    gender?: "male" | "female" | null;
     reliability: string;
   };
 }
@@ -23,21 +25,24 @@ export function PlayerCard({ player }: PlayerCardProps) {
         size="lg"
         className="ring-2 ring-gold/20"
       />
-      
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="font-bold text-white truncate uppercase tracking-tight">
+          <h3 className="font-bold text-white truncate tracking-tight">
             {player.display_name || "Joueur"}
           </h3>
           <Badge variant={(player.league || "Bronze").toLowerCase() as BadgeProps["variant"]}>
             {player.league || "Bronze"}
           </Badge>
         </div>
-        
+
         <div className="flex items-center gap-3 mt-1.5">
           <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-foreground-muted tracking-widest">
             <Star className="h-3 w-3 text-gold fill-gold" />
-            <span>{(player.trust_score || 0).toFixed(1)} Trust</span>
+            <span>
+              ELO {Math.round(player.sport_rating)} · Trust {player.trust_score}/100
+              {player.gender ? ` · ${player.gender === "male" ? "H" : "F"}` : ""}
+            </span>
           </div>
           <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-emerald-500 tracking-widest">
             <ShieldCheck className="h-3 w-3" />

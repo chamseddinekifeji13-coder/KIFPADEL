@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PlayerCard } from "@/components/features/players/player-card";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { playerService } from "@/modules/players/service";
 
 type SearchPlayersPageProps = {
@@ -29,7 +30,14 @@ export default async function SearchPlayersPage({ params, searchParams }: Search
   const { q } = await searchParams;
 
   const dictionary = await getDictionary(locale as Locale);
-  const players = await playerService.getPlayers(q);
+
+  const supabase = await createSupabaseServerClient();
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUserId = authData.user?.id;
+
+  const players = await playerService.getPlayers(q, {
+    ...(currentUserId ? { excludeUserId: currentUserId } : {}),
+  });
   const isEn = locale === "en";
 
   return (

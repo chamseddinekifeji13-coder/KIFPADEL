@@ -50,6 +50,7 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
   const [level, setLevel] = useState("");
+  const [gender, setGender] = useState<"" | "male" | "female">("");
 
   const steps: Step[] = ["profile", "phone", "level", "trust"];
   const currentStepIndex = steps.indexOf(step);
@@ -57,7 +58,7 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
 
   const canContinue = () => {
     switch (step) {
-      case "profile": return displayName.length >= 2 && city.length > 0;
+      case "profile": return displayName.length >= 2 && city.length > 0 && (gender === "male" || gender === "female");
       case "phone": return phoneVerified || phone.length === 0; // Phone is optional but must be verified if provided
       case "level": return level.length > 0;
       case "trust": return true;
@@ -106,6 +107,7 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
     formData.append("city", city);
     formData.append("phone", phone);
     formData.append("level", level);
+    formData.append("gender", gender);
     
     // We don't catch here because redirect() throws a special error that Next.js needs to catch
     try {
@@ -160,6 +162,8 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
             city={city}
             setCity={setCity}
             cities={CITIES}
+            gender={gender}
+            setGender={setGender}
           />
         )}
 
@@ -237,12 +241,16 @@ function ProfileStep({
   city,
   setCity,
   cities,
+  gender,
+  setGender,
 }: {
   displayName: string;
   setDisplayName: (v: string) => void;
   city: string;
   setCity: (v: string) => void;
   cities: string[];
+  gender: "" | "male" | "female";
+  setGender: (v: "" | "male" | "female") => void;
 }) {
   return (
     <div className="space-y-6">
@@ -272,12 +280,45 @@ function ProfileStep({
 
         <div className="space-y-2">
           <label className="text-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
+            Genre (matchmaking)
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setGender("male")}
+              className={cn(
+                "h-11 rounded-xl text-sm font-bold transition-all",
+                gender === "male"
+                  ? "bg-[var(--gold)] text-black"
+                  : "bg-[var(--background)] border border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--gold)]/40",
+              )}
+            >
+              Homme
+            </button>
+            <button
+              type="button"
+              onClick={() => setGender("female")}
+              className={cn(
+                "h-11 rounded-xl text-sm font-bold transition-all",
+                gender === "female"
+                  ? "bg-[var(--gold)] text-black"
+                  : "bg-[var(--background)] border border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--gold)]/40",
+              )}
+            >
+              Femme
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
             Ville
           </label>
           <div className="grid grid-cols-2 gap-2">
             {cities.map((c) => (
               <button
                 key={c}
+                type="button"
                 onClick={() => setCity(c)}
                 className={cn(
                   "h-10 px-4 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2",

@@ -20,17 +20,17 @@ function buildMembershipPayloads(
   userId: string,
   role: (typeof MANAGER_ROLES)[number],
 ) {
+  // Après migration 20260507140000 : `player_id` a souvent été renommé en `user_id` — tester `user_id` en premier.
   return [
     {
-      label: "player_id_and_user_id",
+      label: "user_id",
       payload: {
         club_id: clubId,
-        player_id: userId,
         user_id: userId,
         role,
         is_primary: true,
       },
-      lookupColumns: MEMBERSHIP_USER_COLUMNS,
+      lookupColumns: ["user_id"] as const,
     },
     {
       label: "player_id",
@@ -43,14 +43,15 @@ function buildMembershipPayloads(
       lookupColumns: ["player_id"] as const,
     },
     {
-      label: "user_id",
+      label: "player_id_and_user_id",
       payload: {
         club_id: clubId,
+        player_id: userId,
         user_id: userId,
         role,
         is_primary: true,
       },
-      lookupColumns: ["user_id"] as const,
+      lookupColumns: MEMBERSHIP_USER_COLUMNS,
     },
   ] satisfies Array<{
     label: string;
@@ -122,17 +123,84 @@ async function setPrimaryClubIfEmpty(
   userId: string,
   clubId: string,
 ) {
-  for (const profileKey of ["id", "user_id"] as const) {
-    const { error } = await adminClient
-      .from("profiles")
-      .update({ main_club_id: clubId })
-      .eq(profileKey, userId)
-      .is("main_club_id", null);
+  const { error } = await adminClient
+    .from("profiles")
+    .update({ main_club_id: clubId })
+    .eq("id", userId)
+    .is("main_club_id", null);
 
-    if (!error) {
-      return;
+  if (error) {
+    console.warn("[createClubAction] main_club_id optional update skipped", error.message);
+  }
+}
+
+function isLikelyMissingColumnClubError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { message?: string; code?: string };
+  const msg = String(e.message ?? "").toLowerCase();
+  const code = String(e.code ?? "");
+  if (code === "42703") return true;
+  if (msg.includes("does not exist")) return true;
+  if (msg.includes("schema cache")) return true;
+  return false;
+}
+
+/**
+ * Insère un club : payload complet puis repli minimal (name, city, is_active) si des colonnes
+ * étendues ne sont pas encore migrées sur l’instance Supabase.
+ */
+async function insertClubWithFallback(
+  adminClient: SupabaseAdminClient,
+  payload: Record<string, unknown>,
+): Promise<{ clubId: string | null; error: unknown }> {
+  const { data, error } = await adminClient.from("clubs").insert(payload).select("id").single();
+
+  if (!error && data?.id) {
+    return { clubId: String(data.id), error: null };
+  }
+
+  console.warn("[createClubAction] full club insert failed:", error);
+
+  if (!isLikelyMissingColumnClubError(error)) {
+    return { clubId: null, error };
+  }
+
+  const minimal = {
+    name: payload.name as string,
+    city: payload.city as string,
+    is_active: (payload.is_active as boolean) ?? true,
+  };
+
+  const { data: row, error: minimalError } = await adminClient
+    .from("clubs")
+    .insert(minimal)
+    .select("id")
+    .single();
+
+  if (minimalError || !row?.id) {
+    console.error("[createClubAction] minimal club insert failed:", minimalError);
+    return { clubId: null, error: minimalError ?? error };
+  }
+
+  const clubId = String(row.id);
+  const extras: Record<string, unknown> = { ...payload };
+  delete extras.name;
+  delete extras.city;
+  delete extras.is_active;
+
+  const patch: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(extras)) {
+    if (v !== undefined) patch[k] = v;
+  }
+
+  if (Object.keys(patch).length > 0) {
+    const { error: patchError } = await adminClient.from("clubs").update(patch).eq("id", clubId);
+    if (patchError) {
+      console.warn("[createClubAction] club extended columns not applied:", patchError.message);
     }
   }
+
+  return { clubId, error: null };
 }
 
 async function ensureDefaultCourt(adminClient: SupabaseAdminClient, clubId: string) {
@@ -189,29 +257,24 @@ export async function createClubAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-in?error=auth_required&next=/${locale}/clubs/new`);
   }
 
-  // Create club with service role to bypass restrictive RLS defaults.
-  const { data: createdClub, error: clubError } = await adminClient
-    .from("clubs")
-    .insert({
-      name,
-      city,
-      ...(address ? { address } : {}),
-      indoor_courts_count: indoorCourts,
-      outdoor_courts_count: outdoorCourts,
-      ...(contactName ? { contact_name: contactName } : {}),
-      ...(contactPhone ? { contact_phone: contactPhone } : {}),
-      ...(contactEmail ? { contact_email: contactEmail } : {}),
-      is_active: true,
-    })
-    .select("id")
-    .single();
+  const clubPayload: Record<string, unknown> = {
+    name,
+    city,
+    is_active: true,
+    indoor_courts_count: indoorCourts,
+    outdoor_courts_count: outdoorCourts,
+  };
+  if (address) clubPayload.address = address;
+  if (contactName) clubPayload.contact_name = contactName;
+  if (contactPhone) clubPayload.contact_phone = contactPhone;
+  if (contactEmail) clubPayload.contact_email = contactEmail;
 
-  if (clubError || !createdClub) {
+  const { clubId, error: clubError } = await insertClubWithFallback(adminClient, clubPayload);
+
+  if (!clubId) {
     console.error("[createClubAction] club creation failed", clubError);
     redirect(`/${locale}/clubs/new?error=create_failed`);
   }
-
-  const clubId = createdClub.id as string;
 
   const managerAssignment = await assignClubManager(adminClient, clubId, user.id);
   if (!managerAssignment.ok) {

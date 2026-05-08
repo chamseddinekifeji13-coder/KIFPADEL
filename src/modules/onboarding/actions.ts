@@ -9,6 +9,9 @@ export async function completeOnboardingAction(formData: FormData) {
   const city = String(formData.get("city") ?? "Tunis").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   const rawLevel = String(formData.get("level") ?? "beginner");
+  const rawGender = String(formData.get("gender") ?? "").trim();
+  const gender =
+    rawGender === "male" || rawGender === "female" ? rawGender : null;
 
   // Calculate trust score
   let trustScore = 50; // Base score
@@ -49,6 +52,7 @@ export async function completeOnboardingAction(formData: FormData) {
     league,
     trust_score: trustScore,
     verification_level: phone ? 2 : 1,
+    gender,
   };
 
   const fallbackProfilePayload = {
@@ -57,6 +61,7 @@ export async function completeOnboardingAction(formData: FormData) {
     phone,
     league,
     trust_score: trustScore,
+    gender,
   };
 
   // Avoid upsert here: some environments can keep stale schema cache for conflict keys.
@@ -77,6 +82,13 @@ export async function completeOnboardingAction(formData: FormData) {
     updateError = retry.error;
   }
 
+  if (updateError && `${updateError.message}`.toLowerCase().includes("gender")) {
+    const { gender: _omit, ...noGender } = profilePayload;
+    const retry = await supabase.from("profiles").update(noGender).eq("id", user.id).select("id");
+    updatedRows = retry.data;
+    updateError = retry.error;
+  }
+
   if (updateError) {
     console.error("Onboarding update error:", updateError);
     const encodedError = encodeURIComponent(updateError.message);
@@ -93,12 +105,16 @@ export async function completeOnboardingAction(formData: FormData) {
 
     const insertDiagnostic = `${insertError?.message ?? ""}`.toLowerCase();
     if (insertError && insertDiagnostic.includes("verification_level")) {
-      const retry = await supabase
-        .from("profiles")
-        .insert({
-          id: user.id,
-          ...fallbackProfilePayload,
-        });
+      const retry = await supabase.from("profiles").insert({
+        id: user.id,
+        ...fallbackProfilePayload,
+      });
+      insertError = retry.error;
+    }
+
+    if (insertError && `${insertError.message}`.toLowerCase().includes("gender")) {
+      const { gender: _omit, ...noGender } = profilePayload;
+      const retry = await supabase.from("profiles").insert({ id: user.id, ...noGender });
       insertError = retry.error;
     }
 
@@ -109,5 +125,5 @@ export async function completeOnboardingAction(formData: FormData) {
     }
   }
 
-  redirect(`/${locale}/dashboard`);
+  redirect(`/${locale}/profile`);
 }

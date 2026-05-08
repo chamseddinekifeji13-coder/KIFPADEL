@@ -6,11 +6,19 @@ import { MapPin, Calendar, Trophy, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type Club } from "@/modules/clubs/repository";
 import { createOpenMatchAction } from "@/modules/matches/actions";
+import type { MatchGenderType } from "@/domain/types/core";
 import { ClubDirectionsButton } from "@/components/features/clubs/club-directions-button";
 
 interface CreateMatchFormProps {
   clubs: Club[];
   locale: string;
+  copy: {
+    prompt: string;
+    selectorHelper: string;
+    optionDescAll: string;
+    optionDescMixed: string;
+    labels: Record<MatchGenderType, string>;
+  };
 }
 
 function toLocalDateInputValue(date = new Date()) {
@@ -39,13 +47,21 @@ function defaultTimeValue() {
   return `${hh}:${mm}`;
 }
 
-export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
+export function CreateMatchForm({ clubs, locale, copy }: CreateMatchFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClub, setSelectedClub] = useState("");
   const [date, setDate] = useState(() => toLocalDateInputValue());
   const [time, setTime] = useState(() => defaultTimeValue());
   const [formError, setFormError] = useState("");
+  const [matchGenderType, setMatchGenderType] = useState<MatchGenderType>("all");
+
+  const matchTypeOptions: { id: MatchGenderType; desc?: string }[] = [
+    { id: "all", desc: copy.optionDescAll },
+    { id: "men_only" },
+    { id: "women_only" },
+    { id: "mixed", desc: copy.optionDescMixed },
+  ];
 
   const quickTimes = ["09:00", "12:00", "16:00", "18:00", "20:00", "21:30"];
   const minDate = toLocalDateInputValue();
@@ -86,6 +102,7 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
         locale,
         clubId: selectedClub,
         startsAtIso: startsAtLocal.toISOString(),
+        matchGenderType,
       });
 
       if (!result.ok) {
@@ -114,6 +131,36 @@ export function CreateMatchForm({ clubs, locale }: CreateMatchFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Match type */}
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <p className="text-sm font-bold text-slate-800">{copy.prompt}</p>
+          <p className="text-xs text-slate-500 leading-relaxed">{copy.selectorHelper}</p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {matchTypeOptions.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setMatchGenderType(opt.id)}
+              className={cn(
+                "rounded-2xl border p-3 text-left text-sm transition-all",
+                matchGenderType === opt.id
+                  ? "border-sky-600 bg-sky-50 text-sky-900 ring-2 ring-sky-200"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+              )}
+            >
+              <span className="block font-bold">{copy.labels[opt.id]}</span>
+              {opt.desc ? (
+                <span className="mt-1 block text-[11px] font-medium text-slate-500 leading-snug">
+                  {opt.desc}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Step 1: Club */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">

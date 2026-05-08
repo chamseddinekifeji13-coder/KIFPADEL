@@ -10,7 +10,7 @@ type AppShellProps = Readonly<{
     play: string;
     find: string;
     book: string;
-    dashboard: string;
+    profile: string;
   };
   authLabels: {
     guest: string;

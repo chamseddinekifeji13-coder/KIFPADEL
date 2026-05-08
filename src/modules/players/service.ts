@@ -7,8 +7,8 @@ export const playerService = {
   /**
    * Retrieves a list of players, optionally filtered by a search query.
    */
-  async getPlayers(query?: string) {
-    return fetchPlayers(query);
+  async getPlayers(query?: string, options?: { excludeUserId?: string }) {
+    return fetchPlayers(query, options);
   },
 
   /**
