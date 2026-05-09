@@ -61,11 +61,26 @@ export async function updateProfileAction(formData: FormData) {
 
   const currentEmail = normalizeEmail(user.email ?? "");
   if (email !== currentEmail) {
-    const adminClient = createSupabaseAdminClient();
-    const { error: authEmailError } = await adminClient.auth.admin.updateUserById(user.id, {
-      email,
-      email_confirm: true,
-    });
+    type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
+    type EmailUpdateResult = Awaited<
+      ReturnType<AdminClient["auth"]["admin"]["updateUserById"]>
+    >;
+    let authEmailError: EmailUpdateResult["error"] | null;
+    authEmailError = null;
+    try {
+      const adminClient = createSupabaseAdminClient();
+      const result = await adminClient.auth.admin.updateUserById(user.id, {
+        email,
+        email_confirm: true,
+      });
+      authEmailError = result.error;
+    } catch (err) {
+      console.error(
+        "[updateProfileAction] admin email sync threw (e.g. missing SUPABASE_SERVICE_ROLE_KEY or transient failure)",
+        err,
+      );
+      redirect(`/${locale}/profile/edit?error=email_update_failed`);
+    }
 
     if (authEmailError) {
       console.error("[updateProfileAction] auth email update failed", authEmailError);

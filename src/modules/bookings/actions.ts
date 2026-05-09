@@ -2,10 +2,25 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { reliabilityFromTrustScore } from "@/domain/rules/trust";
+import {
+  assertPlayerCanBook,
+  isPlayerAccessError,
+} from "@/modules/compliance/player-access";
 
-export type BookingResult = 
+export type BookingResult =
   | { ok: true; bookingId: string }
-  | { ok: false; error: string; code: "BLACKLISTED" | "RESTRICTED_REQUIRES_ONLINE" | "SLOT_TAKEN" | "UNAUTHORIZED" | "SERVER_ERROR" };
+  | {
+      ok: false;
+      error: string;
+      code:
+        | "BLACKLISTED"
+        | "RESTRICTED_REQUIRES_ONLINE"
+        | "SLOT_TAKEN"
+        | "UNAUTHORIZED"
+        | "SERVER_ERROR"
+        | "PLAYER_SUSPENDED"
+        | "PLAYER_HAS_PENDING_DEBT";
+    };
 
 export type CreateBookingInput = {
   clubId: string;
@@ -29,6 +44,20 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return { ok: false, error: "Vous devez être connecté pour réserver.", code: "UNAUTHORIZED" };
+  }
+
+  try {
+    await assertPlayerCanBook(supabase, { playerId: user.id, clubId: input.clubId });
+  } catch (e) {
+    if (isPlayerAccessError(e)) {
+      return { ok: false, error: e.message, code: e.code };
+    }
+    console.error("[createBookingAction] eligibility check failed", e);
+    return {
+      ok: false,
+      error: "Impossible de vérifier votre situation auprès du club. Réessayez dans un instant.",
+      code: "SERVER_ERROR",
+    };
   }
 
   // 2. Fetch the player's profile to check trust score

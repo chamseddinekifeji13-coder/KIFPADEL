@@ -36,10 +36,11 @@ export function TimeContainer({
   const [bookingState, setBookingState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Get the selected slot's data for price and court
-  const selectedSlotData = slots.find(s => s.time === selectedSlot);
+  // Get the selected slot's data for price and court (match by unique ID)
+  const selectedSlotData = slots.find(s => s.id === selectedSlot);
   const slotPrice = selectedSlotData?.price ?? 40;
   const courtId = selectedSlotData?.courtId ?? "";
+  const slotTime = selectedSlotData?.time ?? "";
 
   // Determine if player is restricted (must pay online)
   const isRestricted = playerReliability === "restricted" || playerTrustScore < 45;
@@ -56,13 +57,13 @@ export function TimeContainer({
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedSlot || !paymentMethod || !courtId) return;
+    if (!selectedSlot || !paymentMethod || !courtId || !slotTime) return;
 
     setBookingState("loading");
     setErrorMessage(null);
 
-    // Calculate start and end times
-    const [hours, minutes] = selectedSlot.split(":").map(Number);
+    // Calculate start and end times using the time from the slot data
+    const [hours, minutes] = slotTime.split(":").map(Number);
     const startsAt = new Date(date);
     startsAt.setHours(hours, minutes, 0, 0);
     const endsAt = new Date(startsAt);
@@ -135,7 +136,7 @@ export function TimeContainer({
                   Résumé
                 </span>
                 <span className="text-sm font-bold text-white">
-                  {selectedSlot} • {new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                  {slotTime} • {selectedSlotData?.courtLabel} • {new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                 </span>
               </div>
               
@@ -165,7 +166,8 @@ export function TimeContainer({
         onConfirm={handleConfirmBooking}
         clubName={clubName}
         date={date}
-        time={selectedSlot ?? ""}
+        time={slotTime}
+        courtName={selectedSlotData?.courtLabel}
         paymentMethod={paymentMethod}
         price={slotPrice}
         state={bookingState}

@@ -4,7 +4,7 @@ import { type TimeSlot } from "@/modules/bookings/availability-service";
 interface TimeSlotGridProps {
   slots: TimeSlot[];
   selectedSlot: string | null;
-  onSelect: (time: string) => void;
+  onSelect: (id: string) => void;
 }
 
 export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProps) {
@@ -16,22 +16,25 @@ export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProp
   const renderGroup = (title: string, groupSlots: TimeSlot[]) => (
     <div className="space-y-3">
       <h3 className="text-xs font-bold text-[var(--foreground-muted)] uppercase tracking-widest">{title}</h3>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {groupSlots.map((slot) => (
           <button
-            key={slot.time}
+            key={slot.id}
             disabled={!slot.isAvailable}
-            onClick={() => onSelect(slot.time)}
+            onClick={() => onSelect(slot.id)}
             className={cn(
-              "py-3 rounded-xl text-sm font-bold border-2 transition-all duration-200",
+              "py-3 px-2 rounded-xl text-sm font-bold border-2 transition-all duration-200 flex flex-col items-center gap-0.5",
               slot.isAvailable 
-                ? selectedSlot === slot.time
+                ? selectedSlot === slot.id
                   ? "bg-[var(--gold)]/10 border-[var(--gold)] text-[var(--gold)]"
                   : "bg-[var(--surface)] border-[var(--border)] text-white hover:border-[var(--foreground-muted)]"
                 : "bg-[var(--background)] border-[var(--border)] text-[var(--foreground-muted)] cursor-not-allowed opacity-40"
             )}
           >
-            {slot.time}
+            <span className="text-sm">{slot.time}</span>
+            <span className="text-[10px] opacity-60 font-medium uppercase tracking-tighter">
+              {slot.courtLabel}
+            </span>
           </button>
         ))}
       </div>

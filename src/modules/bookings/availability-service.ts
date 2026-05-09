@@ -4,18 +4,19 @@ import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { addMinutes, formatTunisHm, tunisLocalDateTimeToUtc } from "./timezone";
 
 export interface TimeSlot {
+  id: string;          // Unique ID for selection (time-courtId)
   time: string;        // HH:mm format for display
   start: string;       // HH:mm
   end: string;         // HH:mm
   isAvailable: boolean;
-  availableCourtIds: string[];
-  courtId: string;     // First available court for this slot
+  courtId: string;     // Specific court for this slot
+  courtLabel: string;  // Name of the court
   price: number;       // Price in DT
 }
 
 /**
  * Service to handle complex availability calculations.
- * Returns slots with the first available court and its price.
+ * Returns one slot per court per time segment so each court is bookable individually.
  */
 export async function getClubAvailability(clubId: string, date: string): Promise<TimeSlot[]> {
   const [club, courts, bookings] = await Promise.all([
@@ -43,38 +44,30 @@ export async function getClubAvailability(clubId: string, date: string): Promise
     // Stop if the slot goes beyond closing time
     if (end > endOfDay) break;
 
-    const availableCourts = courts
-      .filter(court => {
-        // Check overlap
-        const isOccupied = bookings.some(booking => {
-          if (booking.court_id !== court.id) return false;
-          
-          const bookingStart = new Date(booking.starts_at);
-          const bookingEnd = new Date(booking.ends_at);
-          
-          return current < bookingEnd && end > bookingStart;
-        });
+    // For each court, check if it's available for this specific time segment
+    for (const court of courts) {
+      const isOccupied = bookings.some(booking => {
+        if (booking.court_id !== court.id) return false;
         
-        return !isOccupied;
+        const bookingStart = new Date(booking.starts_at);
+        const bookingEnd = new Date(booking.ends_at);
+        
+        return current < bookingEnd && end > bookingStart;
       });
 
-    const availableCourtIds = availableCourts.map(court => court.id);
-    const firstAvailableCourt = availableCourts[0];
-    
-    // Get price from the first available court, default to 40 DT
-    const price = firstAvailableCourt?.price_per_slot ?? 40;
+      slots.push({
+        id: `${startStr}-${court.id}`,
+        time: startStr,
+        start: startStr,
+        end: endStr,
+        isAvailable: !isOccupied,
+        courtId: court.id,
+        courtLabel: court.label,
+        price: court.price_per_slot ?? 40,
+      });
+    }
 
-    slots.push({
-      time: startStr,
-      start: startStr,
-      end: endStr,
-      availableCourtIds,
-      isAvailable: availableCourtIds.length > 0,
-      courtId: firstAvailableCourt?.id ?? "",
-      price,
-    });
-
-    // Move to next slot
+    // Move to next time segment
     current = addMinutes(current, slotDuration);
   }
 

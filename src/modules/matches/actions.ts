@@ -9,6 +9,10 @@ import {
 } from "@/domain/rules/match-gender";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import {
+  assertNotSuspended,
+  isPlayerAccessError,
+} from "@/modules/compliance/player-access";
 
 export type CreateOpenMatchResult =
   | { ok: true; matchId: string }
@@ -51,6 +55,15 @@ export async function createOpenMatchAction(input: {
 
   if (!user) {
     return { ok: false, error: "Connexion requise." };
+  }
+
+  try {
+    await assertNotSuspended(supabase, user.id);
+  } catch (e) {
+    if (isPlayerAccessError(e)) {
+      return { ok: false, error: e.message };
+    }
+    throw e;
   }
 
   const { data: profile } = await supabase
@@ -194,6 +207,15 @@ export async function joinOpenMatchAction(input: {
 
   if (!user) {
     return { ok: false, error: "Connexion requise." };
+  }
+
+  try {
+    await assertNotSuspended(supabase, user.id);
+  } catch (e) {
+    if (isPlayerAccessError(e)) {
+      return { ok: false, error: e.message };
+    }
+    throw e;
   }
 
   const { data: profile } = await supabase

@@ -59,11 +59,9 @@ type ClubRow = Partial<Club> & {
   is_indoor?: boolean | null;
 };
 
-const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
-const MANAGED_CLUB_ROLES = ["club_manager", "club_admin", "club_staff", "platform_admin"] as const;
-
 type ManagedClubMembership = {
   role?: string | null;
+  is_primary?: boolean | null;
   club?: ClubRow | ClubRow[] | null;
 };
 
@@ -315,51 +313,41 @@ export async function fetchManagedClubForUser(userId: string): Promise<ManagedCl
   try {
     const supabase = await createSupabaseServerClient();
 
-    let membership: ManagedClubMembership | null = null;
-    const lookupErrors: string[] = [];
+    const { data, error } = await supabase
+      .from("club_memberships")
+      .select(
+        `
+          role,
+          is_primary,
+          club:clubs (
+            id,
+            name,
+            city,
+            address,
+            indoor_courts_count,
+            outdoor_courts_count,
+            contact_name,
+            contact_phone,
+            contact_email,
+            is_active
+          )
+        `,
+      )
+      .eq("user_id", userId)
+      .eq("role", "club_admin")
+      .order("is_primary", { ascending: false })
+      .limit(1);
 
-    for (const userColumn of MEMBERSHIP_USER_COLUMNS) {
-      const { data, error } = await supabase
-        .from("club_memberships")
-        .select(
-          `
-            role,
-            club:clubs (
-              id,
-              name,
-              city,
-              address,
-              indoor_courts_count,
-              outdoor_courts_count,
-              contact_name,
-              contact_phone,
-              contact_email,
-              is_active
-            )
-          `,
-        )
-        .eq(userColumn, userId)
-        .in("role", [...MANAGED_CLUB_ROLES])
-        .limit(1);
-
-      if (error) {
-        lookupErrors.push(`${userColumn}: ${error.message}`);
-        continue;
-      }
-
-      membership = Array.isArray(data)
-        ? (data[0] as ManagedClubMembership | undefined) ?? null
-        : null;
-
-      if (membership) {
-        break;
-      }
+    if (error) {
+      console.warn("[clubs.fetchManagedClubForUser] lookup error", error.message);
+      return null;
     }
 
+    const membership = Array.isArray(data)
+      ? (data[0] as ManagedClubMembership | undefined) ?? null
+      : null;
+
     if (!membership) {
-      if (lookupErrors.length === MEMBERSHIP_USER_COLUMNS.length) {
-        console.warn("[clubs.fetchManagedClubForUser] lookup errors", lookupErrors);
-      }
       return null;
     }
 

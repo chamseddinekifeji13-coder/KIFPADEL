@@ -9,6 +9,7 @@ interface BookingConfirmSheetProps {
   clubName: string;
   date: string;
   time: string;
+  courtName?: string;
   paymentMethod: "online" | "on_site" | null;
   price: number;
   state?: "idle" | "loading" | "success" | "error";
@@ -22,6 +23,7 @@ export function BookingConfirmSheet({
   clubName,
   date,
   time,
+  courtName,
   paymentMethod,
   price,
   state = "idle",
@@ -135,7 +137,7 @@ export function BookingConfirmSheet({
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-foreground-muted tracking-widest">Date & Heure</p>
-                    <p className="text-sm font-black text-white capitalize">{formattedDate} @ {time}</p>
+                    <p className="text-sm font-black text-white capitalize">{formattedDate} @ {time} {courtName && `(${courtName})`}</p>
                   </div>
                 </div>
 

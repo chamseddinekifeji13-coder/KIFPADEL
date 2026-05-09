@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import {
+  assertNotSuspended,
+  isPlayerAccessError,
+} from "@/modules/compliance/player-access";
 import { clubService } from "@/modules/clubs/service";
 import type { TournamentStatus } from "@/domain/types/tournaments";
 import {
@@ -114,6 +118,15 @@ export async function createTournamentEntryAction(input: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Connexion requise." };
+
+  try {
+    await assertNotSuspended(supabase, user.id);
+  } catch (e) {
+    if (isPlayerAccessError(e)) {
+      return { ok: false, error: e.message };
+    }
+    throw e;
+  }
 
   const tournament = await getTournamentById(input.tournamentId);
   if (!tournament) return { ok: false, error: "Tournoi introuvable." };

@@ -9,56 +9,7 @@ import {
   parseNonNegativeInt,
 } from "@/lib/utils/club-form-parse";
 
-const MEMBERSHIP_USER_COLUMNS = ["player_id", "user_id"] as const;
-const MANAGER_ROLES = ["club_manager", "club_admin"] as const;
-
 type SupabaseAdminClient = ReturnType<typeof createSupabaseAdminClient>;
-type MembershipPayload = Record<string, string | boolean>;
-
-function buildMembershipPayloads(
-  clubId: string,
-  userId: string,
-  role: (typeof MANAGER_ROLES)[number],
-) {
-  // Après migration 20260507140000 : `player_id` a souvent été renommé en `user_id` — tester `user_id` en premier.
-  return [
-    {
-      label: "user_id",
-      payload: {
-        club_id: clubId,
-        user_id: userId,
-        role,
-        is_primary: true,
-      },
-      lookupColumns: ["user_id"] as const,
-    },
-    {
-      label: "player_id",
-      payload: {
-        club_id: clubId,
-        player_id: userId,
-        role,
-        is_primary: true,
-      },
-      lookupColumns: ["player_id"] as const,
-    },
-    {
-      label: "player_id_and_user_id",
-      payload: {
-        club_id: clubId,
-        player_id: userId,
-        user_id: userId,
-        role,
-        is_primary: true,
-      },
-      lookupColumns: MEMBERSHIP_USER_COLUMNS,
-    },
-  ] satisfies Array<{
-    label: string;
-    payload: MembershipPayload;
-    lookupColumns: readonly (typeof MEMBERSHIP_USER_COLUMNS)[number][];
-  }>;
-}
 
 async function assignClubManager(
   adminClient: SupabaseAdminClient,
@@ -66,55 +17,49 @@ async function assignClubManager(
   userId: string,
 ) {
   const errors: unknown[] = [];
+  const role = "club_admin" as const;
 
-  for (const role of MANAGER_ROLES) {
-    const payloads = buildMembershipPayloads(clubId, userId, role);
+  const payload = {
+    club_id: clubId,
+    user_id: userId,
+    role,
+    is_primary: true as const,
+  };
 
-    for (const { label, payload, lookupColumns } of payloads) {
-      const { error: membershipInsertError } = await adminClient
-        .from("club_memberships")
-        .insert(payload);
+  const { error: membershipInsertError } = await adminClient.from("club_memberships").insert(payload);
 
-      if (!membershipInsertError) {
-        return { ok: true, label, role } as const;
-      }
-
-      errors.push({ label, role, step: "insert", error: membershipInsertError });
-
-      let existingMembershipQuery = adminClient
-        .from("club_memberships")
-        .select("id")
-        .eq("club_id", clubId);
-
-      for (const userColumn of lookupColumns) {
-        existingMembershipQuery = existingMembershipQuery.eq(userColumn, userId);
-      }
-
-      const { data: existingMembership, error: membershipReadError } =
-        await existingMembershipQuery.maybeSingle();
-
-      if (membershipReadError) {
-        errors.push({ label, role, step: "read_existing", error: membershipReadError });
-        continue;
-      }
-
-      if (!existingMembership?.id) {
-        continue;
-      }
-
-      const { error: membershipUpdateError } = await adminClient
-        .from("club_memberships")
-        .update({ role, is_primary: true })
-        .eq("id", existingMembership.id);
-
-      if (!membershipUpdateError) {
-        return { ok: true, label, role } as const;
-      }
-
-      errors.push({ label, role, step: "update_existing", error: membershipUpdateError });
-    }
+  if (!membershipInsertError) {
+    return { ok: true, role } as const;
   }
 
+  errors.push({ role, step: "insert", error: membershipInsertError });
+
+  const { data: existingMembership, error: membershipReadError } = await adminClient
+    .from("club_memberships")
+    .select("id")
+    .eq("club_id", clubId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (membershipReadError) {
+    errors.push({ role, step: "read_existing", error: membershipReadError });
+    return { ok: false, errors } as const;
+  }
+
+  if (!existingMembership?.id) {
+    return { ok: false, errors } as const;
+  }
+
+  const { error: membershipUpdateError } = await adminClient
+    .from("club_memberships")
+    .update({ role, is_primary: true })
+    .eq("id", existingMembership.id);
+
+  if (!membershipUpdateError) {
+    return { ok: true, role } as const;
+  }
+
+  errors.push({ role, step: "update_existing", error: membershipUpdateError });
   return { ok: false, errors } as const;
 }
 
@@ -145,6 +90,54 @@ function isLikelyMissingColumnClubError(error: unknown): boolean {
   return false;
 }
 
+function slugifyClubName(name: string): string {
+  const asciiish = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const dashed = asciiish.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return dashed.length > 0 ? dashed : "club";
+}
+
+function isSlugUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: string; message?: string; details?: string };
+  if (String(e.code ?? "") !== "23505") return false;
+  const combined = `${e.message ?? ""} ${e.details ?? ""}`.toLowerCase();
+  return combined.includes("slug");
+}
+
+async function insertClubRowWithSlugRetries(
+  adminClient: SupabaseAdminClient,
+  payload: Record<string, unknown>,
+): Promise<{ clubId: string | null; error: unknown }> {
+  const baseSlug = slugifyClubName(String(payload.name ?? ""));
+  const slugVariants = [baseSlug, `${baseSlug}-2`, `${baseSlug}-3`, `${baseSlug}-4`];
+  let lastSlugUniqueError: unknown = null;
+
+  for (const slug of slugVariants) {
+    const { data, error } = await adminClient
+      .from("clubs")
+      .insert({ ...payload, slug })
+      .select("id")
+      .single();
+
+    if (!error && data?.id) {
+      return { clubId: String(data.id), error: null };
+    }
+
+    if (error && isSlugUniqueViolation(error)) {
+      lastSlugUniqueError = error;
+      console.warn("[createClubAction] club slug unique violation, retrying another slug", slug);
+      continue;
+    }
+
+    return { clubId: null, error };
+  }
+
+  return { clubId: null, error: lastSlugUniqueError };
+}
+
 /**
  * Insère un club : payload complet puis repli minimal (name, city, is_active) si des colonnes
  * étendues ne sont pas encore migrées sur l’instance Supabase.
@@ -153,12 +146,13 @@ async function insertClubWithFallback(
   adminClient: SupabaseAdminClient,
   payload: Record<string, unknown>,
 ): Promise<{ clubId: string | null; error: unknown }> {
-  const { data, error } = await adminClient.from("clubs").insert(payload).select("id").single();
+  const fullResult = await insertClubRowWithSlugRetries(adminClient, payload);
 
-  if (!error && data?.id) {
-    return { clubId: String(data.id), error: null };
+  if (fullResult.clubId) {
+    return { clubId: fullResult.clubId, error: null };
   }
 
+  const error = fullResult.error;
   console.warn("[createClubAction] full club insert failed:", error);
 
   if (!isLikelyMissingColumnClubError(error)) {
@@ -171,18 +165,14 @@ async function insertClubWithFallback(
     is_active: (payload.is_active as boolean) ?? true,
   };
 
-  const { data: row, error: minimalError } = await adminClient
-    .from("clubs")
-    .insert(minimal)
-    .select("id")
-    .single();
+  const minimalResult = await insertClubRowWithSlugRetries(adminClient, minimal);
 
-  if (minimalError || !row?.id) {
-    console.error("[createClubAction] minimal club insert failed:", minimalError);
-    return { clubId: null, error: minimalError ?? error };
+  if (!minimalResult.clubId) {
+    console.error("[createClubAction] minimal club insert failed:", minimalResult.error);
+    return { clubId: null, error: minimalResult.error ?? error };
   }
 
-  const clubId = String(row.id);
+  const clubId = minimalResult.clubId;
   const extras: Record<string, unknown> = { ...payload };
   delete extras.name;
   delete extras.city;
@@ -228,6 +218,60 @@ async function ensureDefaultCourt(adminClient: SupabaseAdminClient, clubId: stri
 
   if (createCourtError) {
     console.warn("[createClubAction] default court creation failed", createCourtError);
+  }
+}
+
+async function provisionCourtsFromCounts(
+  adminClient: SupabaseAdminClient,
+  clubId: string,
+  indoorCourts: number,
+  outdoorCourts: number,
+) {
+  const total = indoorCourts + outdoorCourts;
+  if (total <= 0) {
+    return;
+  }
+
+  const { data: existingCourts, error: existingCourtsError } = await adminClient
+    .from("courts")
+    .select("id")
+    .eq("club_id", clubId)
+    .limit(1);
+
+  if (existingCourtsError) {
+    console.warn("[createClubAction] court provisioning lookup failed", existingCourtsError.message);
+    return;
+  }
+
+  if ((existingCourts ?? []).length > 0) {
+    return;
+  }
+
+  const rows: Array<{ club_id: string; label: string; surface: string; is_indoor: boolean }> = [];
+  let labelSeq = 1;
+  for (let i = 0; i < indoorCourts; i++) {
+    rows.push({
+      club_id: clubId,
+      label: `Terrain ${labelSeq}`,
+      surface: "standard",
+      is_indoor: true,
+    });
+    labelSeq += 1;
+  }
+  for (let i = 0; i < outdoorCourts; i++) {
+    rows.push({
+      club_id: clubId,
+      label: `Terrain ${labelSeq}`,
+      surface: "standard",
+      is_indoor: false,
+    });
+    labelSeq += 1;
+  }
+
+  const { error: bulkError } = await adminClient.from("courts").insert(rows);
+
+  if (bulkError) {
+    console.warn("[createClubAction] bulk court provisioning failed", bulkError.message);
   }
 }
 
@@ -284,7 +328,12 @@ export async function createClubAction(formData: FormData) {
   }
 
   await setPrimaryClubIfEmpty(adminClient, user.id, clubId);
-  await ensureDefaultCourt(adminClient, clubId);
+  const totalCourtsDesired = indoorCourts + outdoorCourts;
+  if (totalCourtsDesired > 0) {
+    await provisionCourtsFromCounts(adminClient, clubId, indoorCourts, outdoorCourts);
+  } else {
+    await ensureDefaultCourt(adminClient, clubId);
+  }
 
   redirect(`/${locale}/club/dashboard?created=1`);
 }
