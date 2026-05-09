@@ -1,6 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/modules/auth/actions/sign-out";
+import { isLocale } from "@/i18n/config";
+import { getDictionary } from "@/i18n/get-dictionary";
 
 export default async function AdminLayout({
   children,
@@ -9,7 +11,11 @@ export default async function AdminLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
+  const { locale: rawLocale } = await params;
+  if (!isLocale(rawLocale)) notFound();
+  const locale = rawLocale;
+  const dictionary = await getDictionary(locale);
+  const a = dictionary.admin;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -31,34 +37,34 @@ export default async function AdminLayout({
         <div className="max-w-7xl mx-auto flex justify-between items-center flex-wrap gap-3">
           <h1 className="font-black tracking-tighter text-xl">
             KIF<span className="text-gold">PADEL</span>{" "}
-            <span className="text-xs uppercase bg-gold text-black px-2 py-0.5 rounded ml-2">Super Admin</span>
+            <span className="text-xs uppercase bg-gold text-black px-2 py-0.5 rounded ml-2">{a.badge}</span>
           </h1>
           <nav className="flex flex-wrap gap-4 md:gap-6 text-sm font-bold items-center">
             <a href={`/${locale}/admin`} className="hover:text-gold transition-colors">
-              Dashboard
+              {a.navDashboard}
             </a>
             <a href={`/${locale}/admin/clubs`} className="hover:text-gold transition-colors">
-              Clubs
+              {a.navClubs}
             </a>
             <a href={`/${locale}/admin/players`} className="hover:text-gold transition-colors">
-              Joueurs
+              {a.navPlayers}
             </a>
             <a href={`/${locale}/admin/incidents`} className="hover:text-gold transition-colors">
-              Incidents
+              {a.navIncidents}
             </a>
             <a href={`/${locale}/admin/tournaments`} className="hover:text-gold transition-colors">
-              Tournois
+              {a.navTournaments}
             </a>
             <a href={`/${locale}/admin/sponsors`} className="hover:text-gold transition-colors">
-              Sponsors
+              {a.navSponsors}
             </a>
             <a href={`/${locale}/admin/audit-log`} className="hover:text-gold transition-colors">
-              Journal d&apos;audit
+              {a.navAuditLog}
             </a>
             <form action={signOutAction}>
               <input type="hidden" name="locale" value={locale} />
               <button type="submit" className="hover:text-gold transition-colors">
-                Déconnexion
+                {a.signOut}
               </button>
             </form>
           </nav>

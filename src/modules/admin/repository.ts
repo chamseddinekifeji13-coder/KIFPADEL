@@ -267,6 +267,7 @@ export type AdminTournamentRow = {
   title: string;
   status: string;
   club_id: string;
+  tournament_scope: string;
   starts_at: string | null;
   created_at: string;
   club_name: string | null;
@@ -277,7 +278,7 @@ export async function fetchAdminTournaments(limit = 150): Promise<AdminTournamen
   try {
     const { data, error } = await supabase
       .from("tournaments")
-      .select("id,title,status,club_id,starts_at,created_at, clubs(name)")
+      .select("id,title,status,club_id,tournament_scope,starts_at,created_at, clubs(name)")
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -294,6 +295,7 @@ export async function fetchAdminTournaments(limit = 150): Promise<AdminTournamen
         title: String(raw.title),
         status: String(raw.status),
         club_id: String(raw.club_id),
+        tournament_scope: raw.tournament_scope != null ? String(raw.tournament_scope) : "single_club",
         starts_at: raw.starts_at != null ? String(raw.starts_at) : null,
         created_at: String(raw.created_at),
         club_name: c?.name?.trim() ?? null,
@@ -302,6 +304,39 @@ export async function fetchAdminTournaments(limit = 150): Promise<AdminTournamen
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[admin.fetchAdminTournaments]", err);
+    return [];
+  }
+}
+
+export type AdminClubSelectOption = {
+  id: string;
+  name: string;
+  city: string;
+};
+
+/** Clubs actifs pour formulaire “club hôte” (tournois plateforme). */
+export async function fetchActiveClubsForSelect(): Promise<AdminClubSelectOption[]> {
+  const supabase = await createSupabaseServerClient();
+  try {
+    const { data, error } = await supabase
+      .from("clubs")
+      .select("id,name,city")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.warn("[admin.fetchActiveClubsForSelect]", error.message);
+      return [];
+    }
+
+    return (data ?? []).map((r) => ({
+      id: String((r as { id: string }).id),
+      name: String((r as { name: string | null }).name ?? "").trim() || "Club",
+      city: String((r as { city: string | null }).city ?? "").trim(),
+    }));
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[admin.fetchActiveClubsForSelect]", err);
     return [];
   }
 }

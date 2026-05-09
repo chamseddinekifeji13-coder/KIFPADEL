@@ -1,0 +1,11 @@
+{
+  "badge": "Super Admin",
+  "navDashboard": "Dashboard",
+  "navClubs": "Clubs",
+  "navPlayers": "Players",
+  "navIncidents": "Incidents",
+  "navTournaments": "Tournaments (admin)",
+  "navSponsors": "Sponsors",
+  "navAuditLog": "Audit log",
+  "signOut": "Sign out"
+}

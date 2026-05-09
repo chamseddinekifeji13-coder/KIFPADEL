@@ -6,11 +6,14 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { playerService } from "@/modules/players/service";
 import { fetchBookingsForPlayer } from "@/modules/bookings/repository";
-import { Trophy, Calendar, User } from "lucide-react";
+import { Trophy, Calendar, User, LayoutDashboard, Shield } from "lucide-react";
 import Link from "next/link";
 
 import { ProfileStatsGrid } from "@/components/features/players/profile-stats-grid";
 import { TopRivals } from "@/components/features/players/top-rivals";
+import { clubService } from "@/modules/clubs/service";
+import { getSuperAdminActor } from "@/modules/admin/actor";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function bookingStatusLabel(status: string, dictionaryLabels: Record<string, string>) {
   const statusLabels = {
@@ -40,10 +43,14 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
   const dictionary = await getDictionary(locale as Locale);
   const labels = dictionary.player;
   
-  const [profile, bookings, topRivals] = await Promise.all([
+  const supabase = await createSupabaseServerClient();
+
+  const [profile, bookings, topRivals, managedClub, superAdminActor] = await Promise.all([
     playerService.getPlayerProfile(user.id),
     fetchBookingsForPlayer(user.id, 5),
     playerService.getTopRivals(user.id, 3),
+    clubService.getManagedClub(user.id),
+    getSuperAdminActor(supabase),
   ]);
 
   if (!profile) redirect(`/${locale}/onboarding`);
@@ -139,6 +146,37 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
                 <span className="text-[11px] font-black uppercase tracking-widest">Réserver</span>
               </Link>
             </div>
+
+            {superAdminActor ? (
+              <Link
+                href={`/${locale}/admin`}
+                className="flex w-full items-center justify-between gap-3 rounded-[1.75rem] border border-violet-500/25 bg-violet-950/40 p-5 text-left shadow-lg shadow-violet-950/20 transition-colors hover:bg-violet-900/50"
+              >
+                <div className="min-w-0 space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-violet-300">{labels.dashboardSuperAdminTitle}</p>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-violet-300">
+                  <Shield className="h-4 w-4" aria-hidden />
+                  {labels.dashboardSuperAdminCta}
+                </span>
+              </Link>
+            ) : null}
+
+            {managedClub ? (
+              <Link
+                href={`/${locale}/club/dashboard`}
+                className="flex w-full items-center justify-between gap-3 rounded-[1.75rem] border border-gold/30 bg-gold/5 p-5 text-left shadow-gold/10 transition-colors hover:bg-gold/15"
+              >
+                <div className="min-w-0 space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gold">{labels.dashboardClubTitle}</p>
+                  <p className="truncate text-sm font-bold text-white">{managedClub.name}</p>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gold">
+                  <LayoutDashboard className="h-4 w-4" aria-hidden />
+                  {labels.dashboardClubCta}
+                </span>
+              </Link>
+            ) : null}
             
             <Link 
               href={`/${locale}/profile`}

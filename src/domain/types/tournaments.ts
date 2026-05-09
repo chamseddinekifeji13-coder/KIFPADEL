@@ -2,6 +2,8 @@ import type { UUID } from "./core";
 
 export type TournamentFormat = "knockout";
 
+export type TournamentScope = "single_club" | "interclub" | "inter_region" | "platform";
+
 export type TournamentStatus =
   | "draft"
   | "registration_open"
@@ -18,6 +20,9 @@ export type Tournament = {
   title: string;
   description: string | null;
   format: TournamentFormat;
+  /** single_club = tournoi classique; autres = visibilité plateforme (club hôte = clubId). */
+  tournamentScope: TournamentScope;
+  scopeMetadata: Record<string, unknown>;
   status: TournamentStatus;
   entryFeeCents: number | null;
   startsAt: string | null;

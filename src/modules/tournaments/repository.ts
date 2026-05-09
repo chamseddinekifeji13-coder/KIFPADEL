@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
-import type { Tournament, TournamentEntry, TournamentMatch } from "@/domain/types/tournaments";
+import type { Tournament, TournamentEntry, TournamentMatch, TournamentScope } from "@/domain/types/tournaments";
 import type { MatchGenderType } from "@/domain/types/core";
 import {
   firstKnockoutPairingIndices,
@@ -13,6 +13,14 @@ type EntryRow = Record<string, unknown>;
 type TournamentMatchRow = Record<string, unknown>;
 
 function mapTournament(row: TournamentRow): Tournament {
+  const scopeRaw = row.tournament_scope;
+  const scope: TournamentScope =
+    scopeRaw === "interclub" ||
+    scopeRaw === "inter_region" ||
+    scopeRaw === "platform" ||
+    scopeRaw === "single_club"
+      ? scopeRaw
+      : "single_club";
   return {
     id: String(row.id),
     clubId: String(row.club_id),
@@ -20,6 +28,11 @@ function mapTournament(row: TournamentRow): Tournament {
     title: String(row.title),
     description: row.description != null ? String(row.description) : null,
     format: "knockout",
+    tournamentScope: scope,
+    scopeMetadata:
+      row.scope_metadata != null && typeof row.scope_metadata === "object"
+        ? (row.scope_metadata as Record<string, unknown>)
+        : {},
     status: row.status as Tournament["status"],
     entryFeeCents: row.entry_fee_cents != null ? Number(row.entry_fee_cents) : null,
     startsAt: row.starts_at != null ? String(row.starts_at) : null,
@@ -58,7 +71,10 @@ function mapTournamentMatch(row: TournamentMatchRow): TournamentMatch {
   };
 }
 
-export type TournamentWithClub = Tournament & { clubName: string; clubCity: string };
+export type TournamentWithClub = Tournament & {
+  clubName: string;
+  clubCity: string;
+};
 
 export type TournamentMatchWithMeta = TournamentMatch & {
   winnerTeam: "A" | "B" | null;

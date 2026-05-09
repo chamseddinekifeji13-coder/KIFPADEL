@@ -8,6 +8,8 @@ import {
   isPlayerAccessError,
 } from "@/modules/compliance/player-access";
 import { clubService } from "@/modules/clubs/service";
+import { getSuperAdminActor } from "@/modules/admin/actor";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TournamentStatus } from "@/domain/types/tournaments";
 import {
   countBracketMatches,
@@ -25,6 +27,18 @@ async function requireStaffForClub(userId: string, clubId: string): Promise<Acti
     return { ok: false, error: "Accès club refusé." };
   }
   return { ok: true };
+}
+
+async function requireStaffForClubOrSuperAdmin(
+  supabase: SupabaseClient,
+  userId: string,
+  clubId: string,
+): Promise<ActionResult> {
+  const staff = await requireStaffForClub(userId, clubId);
+  if (staff.ok) return staff;
+  const actor = await getSuperAdminActor(supabase);
+  if (actor) return { ok: true };
+  return { ok: false, error: "Accès club refusé." };
 }
 
 export async function createTournamentAction(input: {
@@ -60,6 +74,8 @@ export async function createTournamentAction(input: {
       ends_at: input.endsAtIso || null,
       entry_fee_cents: input.entryFeeCents ?? null,
       status: input.initialStatus,
+      tournament_scope: "single_club",
+      scope_metadata: {},
     })
     .select("id")
     .single();
@@ -89,7 +105,7 @@ export async function updateTournamentStatusAction(input: {
   const tournament = await getTournamentById(input.tournamentId);
   if (!tournament) return { ok: false, error: "Tournoi introuvable." };
 
-  const access = await requireStaffForClub(user.id, tournament.clubId);
+  const access = await requireStaffForClubOrSuperAdmin(supabase, user.id, tournament.clubId);
   if (!access.ok) return access;
 
   const { error } = await supabase
@@ -174,7 +190,7 @@ export async function generateKnockoutBracketAction(input: {
   const tournament = await getTournamentById(input.tournamentId);
   if (!tournament) return { ok: false, error: "Tournoi introuvable." };
 
-  const access = await requireStaffForClub(user.id, tournament.clubId);
+  const access = await requireStaffForClubOrSuperAdmin(supabase, user.id, tournament.clubId);
   if (!access.ok) return access;
 
   if (tournament.status !== "registration_open") {
@@ -226,7 +242,7 @@ export async function setTournamentMatchWinnerAction(input: {
   const tournament = await getTournamentById(input.tournamentId);
   if (!tournament) return { ok: false, error: "Tournoi introuvable." };
 
-  const access = await requireStaffForClub(user.id, tournament.clubId);
+  const access = await requireStaffForClubOrSuperAdmin(supabase, user.id, tournament.clubId);
   if (!access.ok) return access;
 
   const { data: tm, error: tmErr } = await supabase

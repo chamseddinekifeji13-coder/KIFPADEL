@@ -18,10 +18,34 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
   const { locale, tournamentId } = await params;
   if (!isLocale(locale)) notFound();
 
-  await getDictionary(locale as Locale);
+  const dictionary = await getDictionary(locale as Locale);
+  const labels = dictionary.player;
 
   const tournament = await getTournamentWithClub(tournamentId);
   if (!tournament) notFound();
+
+  const regionsDisplay =
+    typeof tournament.scopeMetadata.regions_display === "string"
+      ? tournament.scopeMetadata.regions_display.trim()
+      : "";
+  const scopeLabel =
+    tournament.tournamentScope === "interclub"
+      ? labels.tournamentsScopeInterclub
+      : tournament.tournamentScope === "inter_region"
+        ? labels.tournamentsScopeInterRegion
+        : tournament.tournamentScope === "platform"
+          ? labels.tournamentsDetailScopePlatform
+          : null;
+
+  const statusLabel = (
+    {
+      draft: labels.tournamentListStatusDraft,
+      registration_open: labels.tournamentListStatusRegistrationOpen,
+      in_progress: labels.tournamentListStatusInProgress,
+      completed: labels.tournamentListStatusCompleted,
+      cancelled: labels.tournamentListStatusCancelled,
+    } as Record<string, string>
+  )[tournament.status] ?? tournament.status;
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -44,19 +68,25 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
   return (
     <div className="flex-1 p-4 space-y-6 max-w-lg mx-auto pb-24">
       <Link href={`/${locale}/tournaments`} className="text-sm text-sky-600 font-medium">
-        ← Tournois
+        {labels.tournamentsBackToList}
       </Link>
       <header>
         <h1 className="text-2xl font-bold text-slate-900">{tournament.title}</h1>
         <p className="text-sm text-slate-500">
           {tournament.clubName}
           {tournament.clubCity ? ` · ${tournament.clubCity}` : ""}
+          {scopeLabel ? ` · ${scopeLabel}` : ""}
         </p>
-        <p className="text-xs font-bold uppercase text-slate-600 mt-1">{tournament.status}</p>
+        {regionsDisplay ? (
+          <p className="mt-1 text-xs text-slate-600">
+            {labels.tournamentsDetailRegionsLabel}: {regionsDisplay}
+          </p>
+        ) : null}
+        <p className="mt-1 text-xs font-bold uppercase text-slate-600">{statusLabel}</p>
       </header>
 
       {user && entries.some((e) => e.player1Id === user.id || e.player2Id === user.id) ? (
-        <p className="text-sm font-medium text-emerald-700">Tu es inscrit sur ce tournoi.</p>
+        <p className="text-sm font-medium text-emerald-700">{labels.tournamentDetailRegisteredBanner}</p>
       ) : null}
 
       {user ? (

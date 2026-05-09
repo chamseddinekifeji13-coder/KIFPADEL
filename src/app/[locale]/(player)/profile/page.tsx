@@ -5,6 +5,8 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/modules/auth/actions/sign-out";
 import { playerService } from "@/modules/players/service";
+import { clubService } from "@/modules/clubs/service";
+import { getSuperAdminActor } from "@/modules/admin/actor";
 import { fetchBookingsForPlayer } from "@/modules/bookings/repository";
 import { fetchRecentTournamentSummariesForPlayer } from "@/modules/tournaments/repository";
 import { Player } from "@/modules/players/repository";
@@ -19,7 +21,9 @@ import {
   ChevronRight, 
   History,
   LogOut,
-  Star
+  Star,
+  LayoutDashboard,
+  Shield,
 } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 
@@ -51,10 +55,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     redirect(`/${locale}/onboarding`);
   }
 
-  const [topRivals, bookings, recentTournaments] = await Promise.all([
+  const [topRivals, bookings, recentTournaments, managedClub, superAdminActor] = await Promise.all([
     playerService.getTopRivals(user.id, 3),
     fetchBookingsForPlayer(user.id, 20),
     fetchRecentTournamentSummariesForPlayer(user.id, 5),
+    clubService.getManagedClub(user.id),
+    getSuperAdminActor(supabase),
   ]);
   const completedCount = bookings.filter((booking) => booking.status === "completed").length;
   const cancelledCount = bookings.filter((booking) => booking.status === "cancelled").length;
@@ -209,6 +215,30 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       <section id="account-settings" className="scroll-mt-6 space-y-3">
         <SectionTitle title={labels.accountSettingsTitle} className="text-sm opacity-50 px-2" />
         <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] divide-y divide-[var(--border)] shadow-sm overflow-hidden">
+          {superAdminActor ? (
+            <Link
+              href={`/${locale}/admin`}
+              className="w-full p-4 flex items-center justify-between hover:bg-violet-500/10 transition-colors group"
+            >
+              <span className="inline-flex items-center gap-2 text-sm font-bold text-violet-300 group-hover:text-violet-200">
+                <Shield className="h-4 w-4 shrink-0" aria-hidden />
+                {labels.accountSuperAdmin}
+              </span>
+              <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)]" />
+            </Link>
+          ) : null}
+          {managedClub ? (
+            <Link
+              href={`/${locale}/club/dashboard`}
+              className="w-full p-4 flex items-center justify-between hover:bg-[var(--gold)]/10 transition-colors group"
+            >
+              <span className="inline-flex items-center gap-2 text-sm font-bold text-[var(--gold)] group-hover:text-[var(--gold-dark)]">
+                <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
+                {labels.accountClubDashboard}
+              </span>
+              <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)]" />
+            </Link>
+          ) : null}
           {[
             { label: labels.accountPersonalInfo, href: `/${locale}/profile/edit` },
             { label: labels.accountNotifications, href: `/${locale}/profile/notifications` },
