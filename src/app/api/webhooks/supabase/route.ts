@@ -1,12 +1,35 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
+function normalizeSecret(value: string | null) {
+  return (value ?? "").trim().replace(/^Bearer\s+/i, "");
+}
+
+function isAuthorizedWebhook(request: Request) {
+  const expectedSecret = process.env.SUPABASE_WEBHOOK_SECRET?.trim();
+  if (!expectedSecret) {
+    console.error("[supabase-webhook] Missing SUPABASE_WEBHOOK_SECRET");
+    return false;
+  }
+
+  const providedSecret =
+    normalizeSecret(request.headers.get("authorization")) ||
+    normalizeSecret(request.headers.get("x-webhook-secret")) ||
+    normalizeSecret(request.headers.get("x-supabase-webhook-secret"));
+
+  return providedSecret === expectedSecret;
+}
+
 /**
  * Webhook handler for Supabase Auth events.
  * Listens for new user creation in auth.users and creates a corresponding profile.
  */
 export async function POST(request: Request) {
   try {
+    if (!isAuthorizedWebhook(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const payload = await request.json();
 
     // Supabase Webhooks for Database changes follow this structure
@@ -35,7 +58,7 @@ export async function POST(request: Request) {
 
       if (error) {
         console.error("Error creating profile via webhook:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Profile creation failed" }, { status: 500 });
       }
 
       return NextResponse.json({ ok: true, created: true });

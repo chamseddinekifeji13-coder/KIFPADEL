@@ -4,6 +4,7 @@ import { createHmac } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
 function normalizeSecret(value: string) {
@@ -18,8 +19,6 @@ function getConfiguredSecret() {
     process.env.SUPER_ADMIN_ONBOARDING_KEY,
     process.env.SUPER_ADMIN_SECRET,
     process.env.ADMIN_ONBOARDING_KEY,
-    // Fallback for misconfigured environments.
-    process.env.NEXT_PUBLIC_SUPER_ADMIN_ONBOARDING_KEY,
   ];
 
   for (const candidate of candidates) {
@@ -58,18 +57,30 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
     redirect(`/${locale}/auth/sign-in?error=auth_required&next=/${locale}/onboarding/super-admin`);
   }
 
-  if (displayName) {
-    await supabase.from("profiles").update({ display_name: displayName }).eq("id", user.id);
+  const adminClient = createSupabaseAdminClient();
+  const { data: beforeRole } = await adminClient
+    .from("profiles")
+    .select("global_role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const profileUpdate = displayName
+    ? { display_name: displayName, global_role: "super_admin" }
+    : { global_role: "super_admin" };
+
+  const { error: roleUpdateError } = await adminClient
+    .from("profiles")
+    .update(profileUpdate)
+    .eq("id", user.id);
+
+  if (roleUpdateError) {
+    console.error("[completeSuperAdminOnboardingAction] role promotion failed", roleUpdateError);
+    redirect(`/${locale}/onboarding/super-admin?error=setup_failed`);
   }
-
-  // Role promotion.
-  const { data: beforeRole } = await supabase.from("profiles").select("global_role").eq("id", user.id).maybeSingle();
-
-  await supabase.from("profiles").update({ global_role: "super_admin" }).eq("id", user.id);
 
   try {
     const { insertAuditRow } = await import("@/modules/admin/audit-log");
-    await insertAuditRow(supabase, {
+    await insertAuditRow(adminClient, {
       actor_profile_id: user.id,
       actor_global_role: "super_admin",
       action: "SUPER_ADMIN_GRANTED",

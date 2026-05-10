@@ -33,7 +33,7 @@ function defaultTimeValue() {
   const d = new Date();
   d.setSeconds(0, 0);
   d.setMinutes(d.getMinutes() + 2);
-  let mins = d.getMinutes();
+  const mins = d.getMinutes();
   const step = 15;
   const rounded = Math.ceil(mins / step) * step;
   if (rounded >= 60) {
