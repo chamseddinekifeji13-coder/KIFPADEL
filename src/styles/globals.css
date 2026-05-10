@@ -8,6 +8,7 @@
   --foreground-muted: #999999;
   --surface: #0c0c0c;
   --surface-elevated: #151515;
+  --border: rgba(255, 255, 255, 0.1);
   
   /* Brand Colors - Vibrant Gold */
   --gold: oklch(0.85 0.2 90);

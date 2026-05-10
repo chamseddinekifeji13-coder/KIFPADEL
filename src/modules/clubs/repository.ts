@@ -334,7 +334,7 @@ export async function fetchManagedClubForUser(userId: string): Promise<ManagedCl
         `,
       )
       .eq("user_id", userId)
-      .eq("role", "club_admin")
+      .in("role", ["club_admin", "club_manager", "club_staff", "platform_admin"])
       .order("is_primary", { ascending: false })
       .limit(1);
 
@@ -348,7 +348,7 @@ export async function fetchManagedClubForUser(userId: string): Promise<ManagedCl
       : null;
 
     if (!membership) {
-      return null;
+      return fetchPrimaryClubForUser(userId);
     }
 
     const clubRecord = membership?.club;
