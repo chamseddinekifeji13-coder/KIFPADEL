@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { reliabilityFromTrustScore } from "@/domain/rules/trust";
 import {
   assertPlayerCanBook,
@@ -15,6 +16,7 @@ export type BookingResult =
       code:
         | "BLACKLISTED"
         | "RESTRICTED_REQUIRES_ONLINE"
+        | "PAYMENT_UNAVAILABLE"
         | "SLOT_TAKEN"
         | "UNAUTHORIZED"
         | "SERVER_ERROR"
@@ -44,6 +46,14 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return { ok: false, error: "Vous devez être connecté pour réserver.", code: "UNAUTHORIZED" };
+  }
+
+  if (input.paymentMethod === "online") {
+    return {
+      ok: false,
+      error: "Le paiement en ligne n'est pas encore disponible. Choisissez le paiement sur place.",
+      code: "PAYMENT_UNAVAILABLE",
+    };
   }
 
   try {
@@ -83,21 +93,36 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     };
   }
 
-  // Restricted players must pay online
+  // Restricted players require online payment, which is not integrated yet.
   if (reliability === "restricted" && input.paymentMethod === "on_site") {
     return { 
       ok: false, 
-      error: "Votre score de confiance ne permet pas le paiement sur place. Veuillez payer en ligne.", 
+      error: "Votre score de confiance requiert le paiement en ligne, qui n'est pas encore disponible dans l'app.",
       code: "RESTRICTED_REQUIRES_ONLINE" 
     };
   }
 
-  // 4. Fetch club policy for additional enforcement
-  const { data: club } = await supabase
-    .from("clubs")
-    .select("min_trust_for_on_site, require_payment_for_restricted")
-    .eq("id", input.clubId)
-    .single();
+  // 4. Fetch club policy and authoritative court price.
+  const adminClient = createSupabaseAdminClient();
+  const [{ data: club }, { data: court, error: courtError }] = await Promise.all([
+    supabase
+      .from("clubs")
+      .select("min_trust_for_on_site, require_payment_for_restricted")
+      .eq("id", input.clubId)
+      .single(),
+    adminClient
+      .from("courts")
+      .select("*")
+      .eq("id", input.courtId)
+      .eq("club_id", input.clubId)
+      .single(),
+  ]);
+
+  if (courtError || !court) {
+    return { ok: false, error: "Terrain introuvable pour ce club.", code: "SERVER_ERROR" };
+  }
+
+  const authoritativePrice = Number((court as { price_per_slot?: number | null }).price_per_slot ?? 40);
 
   if (club && input.paymentMethod === "on_site") {
     const minTrust = club.min_trust_for_on_site ?? 70;
@@ -110,16 +135,15 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     }
   }
 
-  // 5. Atomic DB booking — online stays pending until club / future Stripe flow.
-  // TODO(stripe): déclencher Checkout + e-mail de lien quand l'intégration sera prête.
-  const bookingStatus = input.paymentMethod === "online" ? "pending" : "confirmed";
+  // 5. Atomic DB booking. Online payment is disabled until a real checkout exists.
+  const bookingStatus = "confirmed";
   const { data: bookingRows, error: rpcError } = await supabase.rpc("create_booking_atomic", {
     p_club_id: input.clubId,
     p_court_id: input.courtId,
     p_player_id: user.id,
     p_starts_at: input.startsAt,
     p_ends_at: input.endsAt,
-    p_total_price: input.totalPrice,
+    p_total_price: authoritativePrice,
     p_payment_method: input.paymentMethod,
     p_status: bookingStatus,
   });

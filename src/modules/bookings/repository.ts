@@ -57,7 +57,7 @@ export type PlayerBookingRow = {
 export async function fetchBookingsForPlayer(userId: string, limit = PLAYER_BOOKING_LIMIT) {
   const supabase = await createSupabaseServerClient();
 
-  let data: PlayerBookingRow[] | null = null;
+  const rowsById = new Map<string, PlayerBookingRow>();
 
   const byCreatedBy = await supabase
     .from("bookings")
@@ -67,20 +67,31 @@ export async function fetchBookingsForPlayer(userId: string, limit = PLAYER_BOOK
     .limit(limit);
 
   if (!byCreatedBy.error) {
-    data = (byCreatedBy.data ?? []) as PlayerBookingRow[];
-  } else {
-    const byPlayerId = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("player_id", userId)
-      .order("starts_at", { ascending: true })
-      .limit(limit);
-
-    if (byPlayerId.error) {
-      throw new Error(byPlayerId.error.message);
+    for (const row of (byCreatedBy.data ?? []) as PlayerBookingRow[]) {
+      rowsById.set(row.id, row);
     }
-    data = (byPlayerId.data ?? []) as PlayerBookingRow[];
   }
+
+  const byPlayerId = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("player_id", userId)
+    .order("starts_at", { ascending: true })
+    .limit(limit);
+
+  if (!byPlayerId.error) {
+    for (const row of (byPlayerId.data ?? []) as PlayerBookingRow[]) {
+      rowsById.set(row.id, row);
+    }
+  }
+
+  if (byCreatedBy.error && byPlayerId.error) {
+    throw new Error(byCreatedBy.error.message);
+  }
+
+  const data = [...rowsById.values()]
+    .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+    .slice(0, limit);
 
   const clubIds = [...new Set((data ?? []).map((row) => row.club_id).filter(Boolean))];
   const courtIds = [...new Set((data ?? []).map((row) => row.court_id).filter(Boolean))];
@@ -115,6 +126,7 @@ export async function fetchBookingsForClubOperations(clubId: string, date: strin
     .eq("club_id", clubId)
     .lt("starts_at", nextDayStart.toISOString())
     .gt("ends_at", dayStart.toISOString())
+    .neq("status", "cancelled")
     .or(stalePendingBookingsExcludedOrFilter())
     .order("starts_at", { ascending: true });
 

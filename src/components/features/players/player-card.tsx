@@ -51,8 +51,13 @@ export function PlayerCard({ player }: PlayerCardProps) {
         </div>
       </div>
 
-      <button className="text-[10px] font-black uppercase tracking-widest text-black px-4 py-2 rounded-xl bg-gold hover:bg-gold-light active:scale-95 transition-all shadow-gold">
-        Inviter
+      <button
+        type="button"
+        disabled
+        title="Invitation bientôt disponible"
+        className="cursor-not-allowed rounded-xl border border-[var(--border)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground-muted opacity-70"
+      >
+        Bientôt
       </button>
     </Card>
   );

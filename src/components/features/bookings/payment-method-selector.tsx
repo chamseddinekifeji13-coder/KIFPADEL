@@ -1,6 +1,6 @@
 "use client";
 
-import { CreditCard, Banknote, ShieldAlert } from "lucide-react";
+import { Banknote, ShieldAlert } from "lucide-react";
 
 interface PaymentMethodSelectorProps {
   selected: "online" | "on_site" | null;
@@ -24,37 +24,12 @@ export function PaymentMethodSelector({
         {isRestricted && (
           <div className="flex items-center gap-1 text-amber-400">
             <ShieldAlert className="h-3 w-3" />
-            <span className="text-[10px] font-medium">Paiement en ligne requis</span>
+            <span className="text-[10px] font-medium">Réservation directe indisponible</span>
           </div>
         )}
       </div>
       
-      <div className="grid grid-cols-2 gap-3">
-        {/* Pay Online */}
-        <button
-          type="button"
-          onClick={() => onSelect("online")}
-          className={`relative p-4 rounded-xl border-2 transition-all ${
-            selected === "online"
-              ? "border-[var(--gold)] bg-[var(--gold)]/10"
-              : "border-[var(--border)] bg-[var(--background)] hover:border-[var(--foreground-muted)]"
-          }`}
-        >
-          <div className="flex flex-col items-center gap-2">
-            <CreditCard className={`h-5 w-5 ${selected === "online" ? "text-[var(--gold)]" : "text-[var(--foreground-muted)]"}`} />
-            <span className={`text-xs font-bold ${selected === "online" ? "text-[var(--gold)]" : "text-white"}`}>
-              Payer en ligne
-            </span>
-            <span className="text-[10px] text-[var(--foreground-muted)]">
-              {price} DT maintenant
-            </span>
-          </div>
-          {selected === "online" && (
-            <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[var(--gold)]" />
-          )}
-        </button>
-
-        {/* Pay on Site */}
+      <div className="grid grid-cols-1 gap-3">
         <button
           type="button"
           onClick={() => !isRestricted && onSelect("on_site")}

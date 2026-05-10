@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 
 interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -26,16 +26,12 @@ export function Avatar({
     xl: "h-16 w-16 text-base",
   };
 
-  // Track whether the remote image (e.g. Vercel Blob / Supabase) failed to
-  // load. If it did, gracefully render the initials fallback instead of a
-  // broken image — never show 401/403/404 from Blob to the end user.
-  const [errored, setErrored] = useState(false);
+  // Track the exact remote URL that failed. New URLs get another attempt
+  // without needing a state reset effect.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
-  useEffect(() => {
-    setErrored(false);
-  }, [src]);
-
-  const hasUsableSrc = Boolean(src && src.trim().length > 0) && !errored;
+  const normalizedSrc = src?.trim() ?? "";
+  const hasUsableSrc = normalizedSrc.length > 0 && normalizedSrc !== failedSrc;
 
   return (
     <div
@@ -48,11 +44,11 @@ export function Avatar({
     >
       {hasUsableSrc ? (
         <Image
-          src={src as string}
+          src={normalizedSrc}
           alt={alt}
           fill
           className="aspect-square object-cover"
-          onError={() => setErrored(true)}
+          onError={() => setFailedSrc(normalizedSrc)}
           unoptimized
         />
       ) : (

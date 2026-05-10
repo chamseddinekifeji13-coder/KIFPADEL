@@ -8,6 +8,7 @@ import { BookingConfirmSheet } from "@/components/features/bookings/booking-conf
 import { type TimeSlot } from "@/modules/bookings/availability-service";
 import { createBookingAction } from "@/modules/bookings/actions";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
+import { addMinutes, tunisLocalDateTimeToUtc } from "@/modules/bookings/timezone";
 import { ChevronRight, ShieldAlert } from "lucide-react";
 
 interface TimeContainerProps {
@@ -42,32 +43,26 @@ export function TimeContainer({
   const courtId = selectedSlotData?.courtId ?? "";
   const slotTime = selectedSlotData?.time ?? "";
 
-  // Determine if player is restricted (must pay online)
+  // Online payment is not integrated yet; restricted players cannot use on-site payment.
   const isRestricted = playerReliability === "restricted" || playerTrustScore < 45;
   const isBlacklisted = playerReliability === "blacklisted" || playerTrustScore < 25;
 
   const handleBookingClick = () => {
-    if (isBlacklisted) return;
-    if (isRestricted && paymentMethod !== "online") {
-      setPaymentMethod("online");
-    }
+    if (isBlacklisted || isRestricted) return;
     setBookingState("idle");
     setErrorMessage(null);
     setShowConfirmSheet(true);
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedSlot || !paymentMethod || !courtId || !slotTime) return;
+    if (!selectedSlot || !paymentMethod || !courtId || !slotTime || isRestricted) return;
 
     setBookingState("loading");
     setErrorMessage(null);
 
-    // Calculate start and end times using the time from the slot data
-    const [hours, minutes] = slotTime.split(":").map(Number);
-    const startsAt = new Date(date);
-    startsAt.setHours(hours, minutes, 0, 0);
-    const endsAt = new Date(startsAt);
-    endsAt.setMinutes(endsAt.getMinutes() + DEFAULT_BOOKING_DURATION_MINUTES);
+    // Keep booking payload aligned with availability, which uses Tunis wall time.
+    const startsAt = tunisLocalDateTimeToUtc(date, slotTime);
+    const endsAt = addMinutes(startsAt, DEFAULT_BOOKING_DURATION_MINUTES);
 
     startTransition(async () => {
       const result = await createBookingAction({
@@ -117,6 +112,12 @@ export function TimeContainer({
         </div>
       )}
 
+      {isRestricted && !isBlacklisted && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
+          Le paiement en ligne sera requis pour votre profil, mais il n&apos;est pas encore disponible dans l&apos;app. Contactez le club pour réserver ce créneau.
+        </div>
+      )}
+
       {/* Floating Action Bar when slot selected */}
       {selectedSlot && !isBlacklisted && (
         <div className="fixed bottom-0 left-0 right-0 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)] animate-in slide-in-from-bottom-2 duration-300 z-50">
@@ -142,7 +143,7 @@ export function TimeContainer({
               
               <button
                 onClick={handleBookingClick}
-                disabled={!paymentMethod || isPending}
+                disabled={!paymentMethod || isPending || isRestricted}
                 className="flex-1 bg-[var(--gold)] hover:bg-[var(--gold-dark)] disabled:bg-[var(--border)] disabled:text-[var(--foreground-muted)] text-black h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:active:scale-100"
               >
                 Réserver • {slotPrice} DT
@@ -168,7 +169,6 @@ export function TimeContainer({
         date={date}
         time={slotTime}
         courtName={selectedSlotData?.courtLabel}
-        paymentMethod={paymentMethod}
         price={slotPrice}
         state={bookingState}
         errorMessage={errorMessage}

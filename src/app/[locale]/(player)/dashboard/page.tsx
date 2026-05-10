@@ -55,8 +55,13 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
 
   if (!profile) redirect(`/${locale}/onboarding`);
 
+  const actionableBookingStatuses = new Set(["confirmed", "pending"]);
   const upcomingBooking =
-    bookings.find((booking) => new Date(booking.ends_at).getTime() >= new Date().getTime()) ?? null;
+    bookings.find(
+      (booking) =>
+        actionableBookingStatuses.has(booking.status) &&
+        new Date(booking.ends_at).getTime() >= new Date().getTime(),
+    ) ?? null;
 
   const stats = [
     { label: "ELO sport", value: String(profile.sport_rating) },

@@ -13,9 +13,9 @@ export async function completeOnboardingAction(formData: FormData) {
   const gender =
     rawGender === "male" || rawGender === "female" ? rawGender : null;
 
-  // Calculate trust score
+  // Calculate trust score. Phone verification is not wired to a real OTP provider yet,
+  // so a typed phone number must not increase trust or verification level.
   let trustScore = 50; // Base score
-  if (phone) trustScore += 20; // Phone bonus
   
   const levelBonuses: Record<string, number> = {
     beginner: 5,
@@ -51,7 +51,7 @@ export async function completeOnboardingAction(formData: FormData) {
     phone,
     league,
     trust_score: trustScore,
-    verification_level: phone ? 2 : 1,
+    verification_level: 1,
     gender,
   };
 

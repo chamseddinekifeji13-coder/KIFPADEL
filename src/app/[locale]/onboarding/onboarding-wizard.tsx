@@ -44,9 +44,6 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
   const [displayName, setDisplayName] = useState("");
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
   const [level, setLevel] = useState("");
@@ -59,29 +56,11 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
   const canContinue = () => {
     switch (step) {
       case "profile": return displayName.length >= 2 && city.length > 0 && (gender === "male" || gender === "female");
-      case "phone": return phoneVerified || phone.length === 0; // Phone is optional but must be verified if provided
+      case "phone": return true; // Phone is optional until real SMS verification is wired.
       case "level": return level.length > 0;
       case "trust": return true;
       default: return false;
     }
-  };
-
-  const handleSendCode = async () => {
-    if (phone.length < 8) return;
-    setLoading(true);
-    // TODO: Call API to send verification code
-    await new Promise((r) => setTimeout(r, 1500));
-    setCodeSent(true);
-    setLoading(false);
-  };
-
-  const handleVerifyCode = async () => {
-    if (verificationCode.length !== 6) return;
-    setLoading(true);
-    // TODO: Call API to verify code
-    await new Promise((r) => setTimeout(r, 1000));
-    setPhoneVerified(true);
-    setLoading(false);
   };
 
   const handleNext = () => {
@@ -171,13 +150,6 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
           <PhoneStep
             phone={phone}
             setPhone={setPhone}
-            verificationCode={verificationCode}
-            setVerificationCode={setVerificationCode}
-            codeSent={codeSent}
-            phoneVerified={phoneVerified}
-            loading={loading}
-            onSendCode={handleSendCode}
-            onVerifyCode={handleVerifyCode}
           />
         )}
 
@@ -190,7 +162,7 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
         )}
 
         {step === "trust" && (
-          <TrustStep phoneVerified={phoneVerified} level={level} />
+          <TrustStep level={level} />
         )}
       </div>
 
@@ -342,23 +314,9 @@ function ProfileStep({
 function PhoneStep({
   phone,
   setPhone,
-  verificationCode,
-  setVerificationCode,
-  codeSent,
-  phoneVerified,
-  loading,
-  onSendCode,
-  onVerifyCode,
 }: {
   phone: string;
   setPhone: (v: string) => void;
-  verificationCode: string;
-  setVerificationCode: (v: string) => void;
-  codeSent: boolean;
-  phoneVerified: boolean;
-  loading: boolean;
-  onSendCode: () => void;
-  onVerifyCode: () => void;
 }) {
   return (
     <div className="space-y-6">
@@ -368,71 +326,37 @@ function PhoneStep({
         </div>
         <div>
           <h2 className="font-bold text-white">Vérification téléphone</h2>
-          <p className="text-xs text-[var(--foreground-muted)]">Pour plus de confiance</p>
+          <p className="text-xs text-[var(--foreground-muted)]">Optionnel pour être contacté par les clubs</p>
         </div>
       </div>
 
-      {phoneVerified ? (
-        <div className="p-4 rounded-xl bg-[var(--success)]/10 border border-[var(--success)]/20 flex items-center gap-3">
-          <CheckCircle2 className="h-5 w-5 text-[var(--success)]" />
-          <div>
-            <p className="font-medium text-[var(--success)]">Numéro vérifié</p>
-            <p className="text-xs text-[var(--foreground-muted)]">{phone}</p>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
+            Numéro de téléphone
+          </label>
+          <div className="flex gap-2">
+            <div className="h-12 px-4 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center text-white font-medium">
+              +216
+            </div>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 8))}
+              placeholder="55 123 456"
+              className="flex-1 h-12 px-4 rounded-xl bg-[var(--background)] border border-[var(--border)] text-white placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--gold)] transition-colors disabled:opacity-50"
+            />
           </div>
         </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
-              Numéro de téléphone
-            </label>
-            <div className="flex gap-2">
-              <div className="h-12 px-4 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center text-white font-medium">
-                +216
-              </div>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                placeholder="55 123 456"
-                disabled={codeSent}
-                className="flex-1 h-12 px-4 rounded-xl bg-[var(--background)] border border-[var(--border)] text-white placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--gold)] transition-colors disabled:opacity-50"
-              />
-            </div>
-          </div>
 
-          {!codeSent ? (
-            <button
-              onClick={onSendCode}
-              disabled={phone.length < 8 || loading}
-              className="w-full h-12 rounded-xl bg-[var(--surface-elevated)] text-white font-bold text-sm hover:bg-[var(--border)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Envoi en cours..." : "Recevoir le code SMS"}
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="Code à 6 chiffres"
-                className="w-full h-12 px-4 rounded-xl bg-[var(--background)] border border-[var(--border)] text-white text-center text-2xl tracking-[0.5em] placeholder:text-[var(--foreground-muted)] placeholder:text-base placeholder:tracking-normal focus:outline-none focus:border-[var(--gold)] transition-colors"
-              />
-              <button
-                onClick={onVerifyCode}
-                disabled={verificationCode.length !== 6 || loading}
-                className="w-full h-12 rounded-xl bg-[var(--success)]/10 text-[var(--success)] font-bold text-sm hover:bg-[var(--success)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? "Vérification..." : "Vérifier le code"}
-              </button>
-            </div>
-          )}
-
-          <p className="text-xs text-[var(--foreground-muted)] text-center">
-            Tu peux ignorer cette étape, mais les clubs préfèrent les joueurs vérifiés.
-          </p>
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 p-3 text-xs leading-relaxed text-[var(--foreground-muted)]">
+          La vérification SMS sera ajoutée prochainement. Pour l&apos;instant, ce numéro est seulement enregistré comme contact et ne donne pas de bonus de confiance.
         </div>
-      )}
+
+        <p className="text-xs text-[var(--foreground-muted)] text-center">
+          Tu peux ignorer cette étape, puis ajouter un numéro plus tard depuis ton profil.
+        </p>
+      </div>
     </div>
   );
 }
@@ -483,7 +407,7 @@ function LevelStep({
 }
 
 // Trust Step
-function TrustStep({ phoneVerified, level }: { phoneVerified: boolean; level: string }) {
+function TrustStep({ level }: { level: string }) {
   const levelBonuses: Record<string, number> = {
     beginner: 5,
     intermediate: 10,
@@ -492,9 +416,8 @@ function TrustStep({ phoneVerified, level }: { phoneVerified: boolean; level: st
   };
   
   const baseScore = 50;
-  const phoneBonus = phoneVerified ? 20 : 0;
   const levelBonus = levelBonuses[level] || 0;
-  const totalScore = baseScore + phoneBonus + levelBonus;
+  const totalScore = baseScore + levelBonus;
 
   return (
     <div className="space-y-6">
@@ -529,16 +452,6 @@ function TrustStep({ phoneVerified, level }: { phoneVerified: boolean; level: st
             <p className="text-xs text-[var(--foreground-muted)]">No-show (-18), annulation tardive (-10), mauvais comportement (-25)</p>
           </div>
         </div>
-
-        {phoneVerified && (
-          <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--gold)]/5 border border-[var(--gold)]/20">
-            <Phone className="h-4 w-4 text-[var(--gold)] mt-0.5" />
-            <div>
-              <p className="text-[var(--gold)] font-medium">+10 points bonus</p>
-              <p className="text-xs text-[var(--foreground-muted)]">Merci d&apos;avoir vérifié ton numéro !</p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { X, MapPin, Calendar, CreditCard, Banknote, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, MapPin, Calendar, Banknote, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface BookingConfirmSheetProps {
   isOpen: boolean;
@@ -10,7 +10,6 @@ interface BookingConfirmSheetProps {
   date: string;
   time: string;
   courtName?: string;
-  paymentMethod: "online" | "on_site" | null;
   price: number;
   state?: "idle" | "loading" | "success" | "error";
   errorMessage?: string | null;
@@ -24,7 +23,6 @@ export function BookingConfirmSheet({
   date,
   time,
   courtName,
-  paymentMethod,
   price,
   state = "idle",
   errorMessage = null,
@@ -86,9 +84,7 @@ export function BookingConfirmSheet({
               <div className="text-center space-y-2">
                 <p className="text-2xl font-black text-white uppercase tracking-tight">C&apos;est confirmé !</p>
                 <p className="text-sm text-foreground-muted mt-2 max-w-[280px]">
-                  {paymentMethod === "online"
-                    ? "Réservation enregistrée en « attente paiement ». Il n'y a pas encore de prélèvement automatique ni d'e-mail avec lien : le club vous indiquera comment payer."
-                    : "Votre créneau est bien réservé. Rendez-vous au club pour le paiement."}
+                  Votre créneau est bien réservé. Rendez-vous au club pour le paiement.
                 </p>
               </div>
             </div>
@@ -143,16 +139,12 @@ export function BookingConfirmSheet({
 
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-xl bg-gold/10 flex items-center justify-center border border-gold/20">
-                    {paymentMethod === "online" ? (
-                      <CreditCard className="h-5 w-5 text-gold" />
-                    ) : (
-                      <Banknote className="h-5 w-5 text-gold" />
-                    )}
+                    <Banknote className="h-5 w-5 text-gold" />
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-foreground-muted tracking-widest">Paiement</p>
                     <p className="text-sm font-black text-white">
-                      {paymentMethod === "online" ? "En ligne — attente club (pas encore automatisé)" : "Sur place au club"}
+                      Sur place au club
                     </p>
                   </div>
                 </div>
@@ -186,7 +178,7 @@ export function BookingConfirmSheet({
                   </>
                 ) : (
                   <>
-                    {paymentMethod === "online" ? "Réserver en attente de paiement" : "Confirmer ma réservation"}
+                    Confirmer ma réservation
                   </>
                 )}
               </button>

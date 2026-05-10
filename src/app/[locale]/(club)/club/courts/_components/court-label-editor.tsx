@@ -31,10 +31,6 @@ export function CourtLabelEditor({
   const router = useRouter();
   const [value, setValue] = useState(initialLabel);
 
-  useEffect(() => {
-    setValue(initialLabel);
-  }, [initialLabel]);
-
   const [state, formAction, pending] = useActionState(
     async (_prev: ActionResult | null, formData: FormData) => updateCourtLabelAction(formData),
     null,

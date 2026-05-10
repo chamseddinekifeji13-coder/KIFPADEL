@@ -1,7 +1,7 @@
 "use client";
 
 import Image, { type ImageProps } from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /**
  * Local fallback assets (lives under /public/images).
@@ -26,14 +26,11 @@ type SafeImageProps = Omit<ImageProps, "src" | "onError"> & {
  * It also avoids passing an empty / null `src` to `next/image` (which throws).
  */
 export function SafeImage({ src, fallbackSrc, alt, ...props }: SafeImageProps) {
-  const initial = src && src.trim().length > 0 ? src : fallbackSrc;
-  const [currentSrc, setCurrentSrc] = useState<string>(initial);
+  const normalizedSrc = src?.trim() ?? "";
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
-  // If the parent passes a new `src` (e.g. user uploads a new avatar),
-  // reset to the new remote URL so we re-attempt loading it.
-  useEffect(() => {
-    setCurrentSrc(src && src.trim().length > 0 ? src : fallbackSrc);
-  }, [src, fallbackSrc]);
+  const currentSrc =
+    normalizedSrc.length > 0 && normalizedSrc !== failedSrc ? normalizedSrc : fallbackSrc;
 
   return (
     <Image
@@ -42,7 +39,7 @@ export function SafeImage({ src, fallbackSrc, alt, ...props }: SafeImageProps) {
       alt={alt}
       onError={() => {
         if (currentSrc !== fallbackSrc) {
-          setCurrentSrc(fallbackSrc);
+          setFailedSrc(currentSrc);
         }
       }}
     />

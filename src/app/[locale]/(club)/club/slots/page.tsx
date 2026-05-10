@@ -7,10 +7,12 @@ import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
 import { fetchCourtsByClub } from "@/modules/clubs/repository";
 import { fetchBookingsForClubOperations } from "@/modules/bookings/repository";
+import { formatTunisYmd } from "@/modules/bookings/timezone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ClubSlotsPageProps = {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ date?: string }>;
 };
 
 export async function generateMetadata({ params }: ClubSlotsPageProps): Promise<Metadata> {
@@ -21,8 +23,13 @@ export async function generateMetadata({ params }: ClubSlotsPageProps): Promise<
   };
 }
 
-export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
+function normalizeDateParam(value: string | undefined) {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : formatTunisYmd();
+}
+
+export default async function ClubSlotsPage({ params, searchParams }: ClubSlotsPageProps) {
   const { locale } = await params;
+  const { date } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
   const labels = dictionary.club;
@@ -37,10 +44,10 @@ export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
     );
   }
 
-  const todayDate = new Date().toISOString().slice(0, 10);
+  const selectedDate = normalizeDateParam(date);
   const timeLocale = locale === "en" ? "en-GB" : "fr-FR";
   const [bookingsRows, courtsRows] = await Promise.all([
-    fetchBookingsForClubOperations(managedClub.id, todayDate),
+    fetchBookingsForClubOperations(managedClub.id, selectedDate),
     fetchCourtsByClub(managedClub.id),
   ]);
 
@@ -92,7 +99,13 @@ export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
         </div>
       </div>
 
-      <SlotsManager bookings={bookings} courts={courts} locale={locale} labels={labels} />
+      <SlotsManager
+        bookings={bookings}
+        courts={courts}
+        locale={locale}
+        labels={labels}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 }

@@ -22,36 +22,32 @@ const DEFAULT_ENABLED: Record<NotificationPreferenceId, boolean> = {
 };
 
 export function NotificationPreferences({ labels }: NotificationPreferencesProps) {
-  const [enabledById, setEnabledById] = useState(DEFAULT_ENABLED);
-  const [hasLoadedStoredPreferences, setHasLoadedStoredPreferences] = useState(false);
-
-  useEffect(() => {
+  const [enabledById, setEnabledById] = useState(() => {
     try {
+      if (typeof window === "undefined") return DEFAULT_ENABLED;
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as Partial<Record<NotificationPreferenceId, boolean>>;
-        setEnabledById({
+        return {
           bookings: parsed.bookings ?? DEFAULT_ENABLED.bookings,
           trust: parsed.trust ?? DEFAULT_ENABLED.trust,
           marketing: parsed.marketing ?? DEFAULT_ENABLED.marketing,
-        });
+        };
       }
     } catch (error) {
       console.warn("[NotificationPreferences] failed to read stored preferences", error);
-    } finally {
-      setHasLoadedStoredPreferences(true);
     }
-  }, []);
+
+    return DEFAULT_ENABLED;
+  });
 
   useEffect(() => {
-    if (!hasLoadedStoredPreferences) return;
-
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(enabledById));
     } catch (error) {
       console.warn("[NotificationPreferences] failed to store preferences", error);
     }
-  }, [enabledById, hasLoadedStoredPreferences]);
+  }, [enabledById]);
 
   const preferences = [
     {

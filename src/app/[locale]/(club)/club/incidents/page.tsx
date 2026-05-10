@@ -3,6 +3,8 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
 import { IncidentsManager } from "./incidents-manager";
+import { requireUser } from "@/modules/auth/guards/require-user";
+import { clubService } from "@/modules/clubs/service";
 
 type ClubIncidentsPageProps = {
   params: Promise<{ locale: string }>;
@@ -19,6 +21,16 @@ export default async function ClubIncidentsPage({ params }: ClubIncidentsPagePro
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
+  const user = await requireUser({ locale, redirectPath: "club/incidents" });
+  const managedClub = await clubService.getManagedClub(user.id);
+
+  if (!managedClub) {
+    return (
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--foreground-muted)]">
+        {dictionary.club.noClubAccessSubtitle}
+      </div>
+    );
+  }
 
   // Mock data - would come from database
   const incidents = [
@@ -60,7 +72,7 @@ export default async function ClubIncidentsPage({ params }: ClubIncidentsPagePro
       <div>
         <h1 className="text-2xl font-bold text-white">{dictionary.club.incidentsTitle}</h1>
         <p className="text-[var(--foreground-muted)] text-sm mt-1">
-          Gérez les no-shows, annulations tardives et comportements
+          Prototype interne : les données affichées sont encore à raccorder aux vrais incidents.
         </p>
       </div>
 

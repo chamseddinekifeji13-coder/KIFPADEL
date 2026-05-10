@@ -39,10 +39,15 @@ type SlotsManagerProps = {
   courts: string[];
   locale: string;
   labels: Record<string, string>;
+  selectedDate: string;
 };
 
-export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerProps) {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+function toDateInputValue(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+export function SlotsManager({ bookings, courts, locale, labels, selectedDate }: SlotsManagerProps) {
+  const router = useRouter();
   const [filterCourt, setFilterCourt] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
@@ -56,7 +61,7 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
     confirmed: bookings.filter((booking) => booking.status === "confirmed").length,
     pending: bookings.filter((booking) => booking.status === "pending").length,
     blocked: bookings.filter((booking) => booking.status === "no_show").length,
-    available: Math.max(courts.length * 12 - bookings.length, 0),
+    available: null,
   };
 
   return (
@@ -66,14 +71,15 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
         {Array.from({ length: 7 }).map((_, i) => {
           const date = new Date();
           date.setDate(date.getDate() + i);
-          const isSelected = date.toDateString() === selectedDate.toDateString();
+          const dateValue = toDateInputValue(date);
+          const isSelected = dateValue === selectedDate;
           const dayName = date.toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", { weekday: "short" });
           const dayNum = date.getDate();
 
           return (
             <button
               key={i}
-              onClick={() => setSelectedDate(date)}
+              onClick={() => router.replace(`?date=${dateValue}`, { scroll: false })}
               className={cn(
                 "flex flex-col items-center px-4 py-3 rounded-xl transition-all min-w-[60px]",
                 isSelected
@@ -123,7 +129,7 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
         <StatusPill label={labels.slotsStatusConfirmed} value={statusCounts.confirmed} className="text-[var(--success)] border-[var(--success)]/25 bg-[var(--success)]/10" />
         <StatusPill label={labels.slotsStatusPendingPayment} value={statusCounts.pending} className="text-[var(--warning)] border-[var(--warning)]/25 bg-[var(--warning)]/10" />
         <StatusPill label={labels.slotsStatusBlocked} value={statusCounts.blocked} className="text-[var(--danger)] border-[var(--danger)]/25 bg-[var(--danger)]/10" />
-        <StatusPill label={labels.slotsStatusAvailable} value={statusCounts.available} className="text-slate-200 border-[var(--border)] bg-[var(--surface)]" />
+        <StatusPill label={labels.slotsStatusAvailable} value="—" className="text-slate-200 border-[var(--border)] bg-[var(--surface)]" />
       </div>
 
       {/* Bookings List */}
@@ -341,7 +347,7 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
   );
 }
 
-function StatusPill({ label, value, className }: { label: string; value: number; className: string }) {
+function StatusPill({ label, value, className }: { label: string; value: number | string; className: string }) {
   return (
     <div className={cn("rounded-xl border px-3 py-2", className)}>
       <p className="text-xs font-black">{value}</p>

@@ -60,7 +60,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
 
   const todayDate = new Date().toISOString().slice(0, 10);
   const timeLocale = locale === "en" ? "en-GB" : "fr-FR";
-  const now = Date.now();
+  const now = new Date().getTime();
   const todayBookings = await fetchBookingsForClubOperations(managedClub.id, todayDate);
 
   const playerIds = [...new Set(todayBookings.map((booking) => booking.created_by ?? booking.player_id).filter(Boolean))];
