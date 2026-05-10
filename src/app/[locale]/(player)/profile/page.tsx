@@ -215,48 +215,71 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       <section id="account-settings" className="scroll-mt-6 space-y-3">
         <SectionTitle title={labels.accountSettingsTitle} className="text-sm opacity-50 px-2" />
         <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] divide-y divide-[var(--border)] shadow-sm overflow-hidden">
-          {superAdminActor ? (
+          
+          {/* Super Admin Access */}
+          {superAdminActor && (
             <Link
               href={`/${locale}/admin`}
               className="w-full p-4 flex items-center justify-between hover:bg-violet-500/10 transition-colors group"
             >
-              <span className="inline-flex items-center gap-2 text-sm font-bold text-violet-300 group-hover:text-violet-200">
-                <Shield className="h-4 w-4 shrink-0" aria-hidden />
-                {labels.accountSuperAdmin}
-              </span>
+              <div className="flex items-center gap-3">
+                <Shield className="h-4 w-4 text-violet-400 group-hover:text-violet-300 transition-colors" />
+                <span className="text-sm font-bold text-violet-300 group-hover:text-violet-200">
+                  {labels.accountSuperAdmin}
+                </span>
+              </div>
               <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)]" />
             </Link>
-          ) : null}
-          {managedClub ? (
+          )}
+
+          {/* Club Dashboard Access */}
+          {managedClub && (
             <Link
               href={`/${locale}/club/dashboard`}
               className="w-full p-4 flex items-center justify-between hover:bg-[var(--gold)]/10 transition-colors group"
             >
-              <span className="inline-flex items-center gap-2 text-sm font-bold text-[var(--gold)] group-hover:text-[var(--gold-dark)]">
-                <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
-                {labels.accountClubDashboard}
-              </span>
+              <div className="flex items-center gap-3">
+                <LayoutDashboard className="h-4 w-4 text-[var(--gold)] group-hover:text-[var(--gold-dark)] transition-colors" />
+                <span className="text-sm font-bold text-[var(--gold)] group-hover:text-[var(--gold-dark)]">
+                  {labels.accountClubDashboard}
+                </span>
+              </div>
               <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)]" />
             </Link>
-          ) : null}
+          )}
+
+          {/* Standard Settings */}
           {[
             { label: labels.accountPersonalInfo, href: `/${locale}/profile/edit` },
             { label: labels.accountNotifications, href: `/${locale}/profile/notifications` },
             { label: labels.accountSupport, href: `/${locale}/support` },
           ].map((item) => (
-            <Link key={item.label} href={item.href} className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface-elevated)] transition-colors group">
-              <span className="text-sm font-bold text-slate-200 group-hover:text-white">{item.label}</span>
+            <Link 
+              key={item.label} 
+              href={item.href} 
+              className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface-elevated)] transition-colors group"
+            >
+              <span className="text-sm font-bold text-slate-200 group-hover:text-white pl-7">
+                {item.label}
+              </span>
               <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)]" />
             </Link>
           ))}
+
+          {/* Sign Out */}
           <form action={signOutAction}>
             <input type="hidden" name="locale" value={locale} />
-            <button className="w-full p-4 flex items-center justify-between hover:bg-red-500/10 transition-colors group" type="submit">
-              <span className="inline-flex items-center gap-2 text-sm font-bold text-red-300 group-hover:text-red-200">
-                <LogOut className="h-4 w-4" />
-                {dictionary.auth.signOutCta}
-              </span>
-              <ChevronRight className="h-4 w-4 text-red-300/70" />
+            <button 
+              className="w-full p-4 flex items-center justify-between hover:bg-red-500/10 transition-colors group" 
+              type="submit"
+            >
+              <div className="flex items-center gap-3">
+                <LogOut className="h-4 w-4 text-red-400 group-hover:text-red-300 transition-colors" />
+                <span className="text-sm font-bold text-red-400 group-hover:text-red-300">
+                  {dictionary.auth.signOutCta}
+                </span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-red-400/50" />
             </button>
           </form>
         </div>
