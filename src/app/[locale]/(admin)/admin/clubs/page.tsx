@@ -34,6 +34,8 @@ export default async function AdminClubsPage({ params }: AdminClubsPageProps) {
           title="Clubs"
           subtitle="Liste réelle depuis Supabase — suspension / réactivation journalisée dans audit_log."
           className="bg-transparent p-0"
+          titleClassName="text-slate-900"
+          subtitleClassName="text-slate-500"
         />
         <Link
           href={`/${locale}/clubs/new`}

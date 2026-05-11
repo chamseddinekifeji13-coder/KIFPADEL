@@ -14,27 +14,32 @@ export default async function AdminSponsorsPage({ params }: AdminSponsorsPagePro
 
   return (
     <div className="space-y-8">
-      <SectionTitle title="Sponsors" subtitle="Table public.sponsors — actions journalisées (audit_log)." />
+      <SectionTitle
+        title="Sponsors"
+        subtitle="Table public.sponsors — actions journalisées (audit_log)."
+        titleClassName="text-slate-900"
+        subtitleClassName="text-slate-500"
+      />
 
       <Card className="p-6 space-y-4 border-slate-100">
         <h3 className="font-black text-lg text-slate-900">Ajouter un sponsor</h3>
         <form action={adminCreateSponsorAction} className="grid gap-3 md:grid-cols-2">
           <input type="hidden" name="locale" value={locale} />
           <div className="md:col-span-2 grid gap-1">
-            <label className="text-xs font-bold text-slate-500">Nom *</label>
-            <input name="name" required className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
+            <label htmlFor="sponsor-name" className="text-xs font-bold text-slate-500">Nom *</label>
+            <input id="sponsor-name" name="name" required className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
           </div>
           <div className="grid gap-1">
-            <label className="text-xs font-bold text-slate-500">Logo URL</label>
-            <input name="logo_url" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
+            <label htmlFor="sponsor-logo" className="text-xs font-bold text-slate-500">Logo URL</label>
+            <input id="sponsor-logo" name="logo_url" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
           </div>
           <div className="grid gap-1">
-            <label className="text-xs font-bold text-slate-500">Site web</label>
-            <input name="website_url" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
+            <label htmlFor="sponsor-website" className="text-xs font-bold text-slate-500">Site web</label>
+            <input id="sponsor-website" name="website_url" className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
           </div>
           <div className="grid gap-1">
-            <label className="text-xs font-bold text-slate-500">Position (tri)</label>
-            <input name="position" type="number" defaultValue={0} className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
+            <label htmlFor="sponsor-position" className="text-xs font-bold text-slate-500">Position (tri)</label>
+            <input id="sponsor-position" name="position" type="number" defaultValue={0} className="h-11 rounded-xl border border-slate-200 px-3 text-sm" />
           </div>
           <div className="md:col-span-2">
             <button type="submit" className="h-11 px-6 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800">
@@ -75,20 +80,21 @@ export default async function AdminSponsorsPage({ params }: AdminSponsorsPagePro
               <input type="hidden" name="locale" value={locale} />
               <input type="hidden" name="id" value={s.id} />
               <div className="grid gap-1">
-                <label className="text-[10px] font-bold uppercase text-slate-500">Nom</label>
-                <input name="name" defaultValue={s.name} required className="h-10 rounded-lg border px-3 text-sm" />
+                <label htmlFor={`name-${s.id}`} className="text-[10px] font-bold uppercase text-slate-500">Nom</label>
+                <input id={`name-${s.id}`} name="name" defaultValue={s.name} required className="h-10 rounded-lg border px-3 text-sm" />
               </div>
               <div className="grid gap-1">
-                <label className="text-[10px] font-bold uppercase text-slate-500">Logo URL</label>
-                <input name="logo_url" defaultValue={s.logo_url ?? ""} className="h-10 rounded-lg border px-3 text-sm" />
+                <label htmlFor={`logo-${s.id}`} className="text-[10px] font-bold uppercase text-slate-500">Logo URL</label>
+                <input id={`logo-${s.id}`} name="logo_url" defaultValue={s.logo_url ?? ""} className="h-10 rounded-lg border px-3 text-sm" />
               </div>
               <div className="grid gap-1">
-                <label className="text-[10px] font-bold uppercase text-slate-500">Site</label>
-                <input name="website_url" defaultValue={s.website_url ?? ""} className="h-10 rounded-lg border px-3 text-sm" />
+                <label htmlFor={`website-${s.id}`} className="text-[10px] font-bold uppercase text-slate-500">Site</label>
+                <input id={`website-${s.id}`} name="website_url" defaultValue={s.website_url ?? ""} className="h-10 rounded-lg border px-3 text-sm" />
               </div>
               <div className="grid gap-1">
-                <label className="text-[10px] font-bold uppercase text-slate-500">Position</label>
+                <label htmlFor={`pos-${s.id}`} className="text-[10px] font-bold uppercase text-slate-500">Position</label>
                 <input
+                  id={`pos-${s.id}`}
                   name="position"
                   type="number"
                   defaultValue={s.position}

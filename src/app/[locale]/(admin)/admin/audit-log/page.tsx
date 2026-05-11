@@ -92,7 +92,12 @@ export default async function AdminAuditLogPage({ params, searchParams }: Props)
 
   return (
     <div className="space-y-6">
-      <SectionTitle title="Journal d'audit" subtitle="Lecture seule — lignes persistées lors des actions sensibles." />
+      <SectionTitle
+        title="Journal d'audit"
+        subtitle="Lecture seule — lignes persistées lors des actions sensibles."
+        titleClassName="text-slate-900"
+        subtitleClassName="text-slate-500"
+      />
 
       <Card className="p-4 border-slate-100 space-y-3">
         <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Raccourcis action</p>
@@ -134,8 +139,9 @@ export default async function AdminAuditLogPage({ params, searchParams }: Props)
           className="flex flex-col sm:flex-row flex-wrap gap-2 items-start sm:items-end pt-2 border-t border-slate-50"
         >
           <div className="grid gap-1 flex-1 min-w-[140px]">
-            <label className="text-[10px] font-bold uppercase text-slate-500">action (exact)</label>
+            <label htmlFor="filter-action" className="text-[10px] font-bold uppercase text-slate-500">action (exact)</label>
             <input
+              id="filter-action"
               name="action"
               defaultValue={action}
               placeholder="ex. PLAYER_SUSPEND"
@@ -143,8 +149,9 @@ export default async function AdminAuditLogPage({ params, searchParams }: Props)
             />
           </div>
           <div className="grid gap-1 flex-1 min-w-[140px]">
-            <label className="text-[10px] font-bold uppercase text-slate-500">target (table)</label>
+            <label htmlFor="filter-target" className="text-[10px] font-bold uppercase text-slate-500">target (table)</label>
             <input
+              id="filter-target"
               name="target"
               defaultValue={targetTable}
               placeholder="clubs, profiles, sponsors…"
@@ -152,8 +159,9 @@ export default async function AdminAuditLogPage({ params, searchParams }: Props)
             />
           </div>
           <div className="grid gap-1 flex-[2] min-w-[200px]">
-            <label className="text-[10px] font-bold uppercase text-slate-500">Recherche</label>
+            <label htmlFor="filter-q" className="text-[10px] font-bold uppercase text-slate-500">Recherche</label>
             <input
+              id="filter-q"
               name="q"
               defaultValue={q}
               placeholder="texte ou UUID (cible ou acteur)"
@@ -161,8 +169,9 @@ export default async function AdminAuditLogPage({ params, searchParams }: Props)
             />
           </div>
           <div className="grid gap-1 w-24">
-            <label className="text-[10px] font-bold uppercase text-slate-500">Limite</label>
+            <label htmlFor="filter-limit" className="text-[10px] font-bold uppercase text-slate-500">Limite</label>
             <input
+              id="filter-limit"
               name="limit"
               type="number"
               min={10}

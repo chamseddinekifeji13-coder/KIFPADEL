@@ -35,6 +35,8 @@ export default async function AdminPlayersPage({ params, searchParams }: AdminPl
           title="Joueurs"
           subtitle="PII réservée aux comptes super_admin (voir docs/SUPER_ADMIN.md)."
           className="bg-transparent p-0"
+          titleClassName="text-slate-900"
+          subtitleClassName="text-slate-500"
         />
 
         <form method="GET" action="" className="flex gap-2 max-w-xl">

@@ -11,6 +11,8 @@ export default async function AdminDashboardPage() {
       <SectionTitle
         title="Tableau de bord Super Admin"
         subtitle="Indicateurs issus de la base (V1 — lecture opérationnelle)."
+        titleClassName="text-slate-900"
+        subtitleClassName="text-slate-500"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

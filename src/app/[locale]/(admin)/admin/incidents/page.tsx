@@ -22,7 +22,12 @@ export default async function AdminIncidentsPage({ params }: Props) {
 
   return (
     <div className="space-y-8">
-      <SectionTitle title="Incidents & confiance (lecture seule)" subtitle="Vision transverse — pas de traitement depuis cette page." />
+      <SectionTitle
+        title="Incidents & confiance (lecture seule)"
+        subtitle="Vision transverse — pas de traitement depuis cette page."
+        titleClassName="text-slate-900"
+        subtitleClassName="text-slate-500"
+      />
 
       <Card className="overflow-hidden border-slate-100 p-4">
         <h3 className="font-bold mb-3">Incidents récents</h3>

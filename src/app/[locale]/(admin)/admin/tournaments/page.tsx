@@ -37,6 +37,8 @@ export default async function AdminTournamentsPage({ params }: Props) {
       <SectionTitle
         title="Tournois plateforme"
         subtitle="Création Super Admin (inter-clubs, inter-région, national) + liste globale."
+        titleClassName="text-slate-900"
+        subtitleClassName="text-slate-500"
       />
 
       <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
