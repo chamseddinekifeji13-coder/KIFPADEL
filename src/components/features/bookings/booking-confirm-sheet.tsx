@@ -46,7 +46,7 @@ export function BookingConfirmSheet({
   });
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-[100]">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -55,7 +55,7 @@ export function BookingConfirmSheet({
       
       {/* Sheet */}
       <div className="absolute bottom-0 left-0 right-0 glass-gold rounded-t-[3rem] animate-slide-up shadow-premium">
-        <div className="max-w-lg mx-auto p-8 space-y-8">
+        <div className="max-w-lg mx-auto p-8 pb-24 space-y-8">
           {/* Handle */}
           <div className="flex justify-center -mt-2">
             <div className="h-1.5 w-16 bg-white/10 rounded-full" />

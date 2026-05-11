@@ -95,7 +95,7 @@ export default async function ClubDetailPage({
   const playerReliability = playerProfile?.reliability_status ?? "healthy";
 
   return (
-    <div className="flex-1 pb-10">
+    <div className="flex-1 pb-24">
       {/* Hero Header - Dark Theme */}
       <div className="relative h-48 bg-[var(--surface)]">
         <Link 
