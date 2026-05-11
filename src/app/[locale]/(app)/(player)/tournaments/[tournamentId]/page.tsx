@@ -10,7 +10,7 @@ import {
   listTournamentMatchesWithResults,
 } from "@/modules/tournaments/repository";
 import type { ProfilePick } from "@/modules/tournaments/repository";
-import { TournamentRegisterForm } from "@/app/[locale]/(player)/tournaments/[tournamentId]/tournament-register-form";
+import { TournamentRegisterForm } from "@/app/[locale]/(app)/(player)/tournaments/[tournamentId]/tournament-register-form";
 
 type Props = { params: Promise<{ locale: string; tournamentId: string }> };
 

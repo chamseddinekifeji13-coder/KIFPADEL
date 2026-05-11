@@ -9,7 +9,7 @@ import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { MapPin, ArrowLeft, Calendar as CalendarIcon, InfoIcon, Clock } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
-import { TimeContainer } from "@/app/[locale]/(player)/book/[clubId]/time-container";
+import { TimeContainer } from "@/app/[locale]/(app)/(player)/book/[clubId]/time-container";
 import { ClubDirectionsButton } from "@/components/features/clubs/club-directions-button";
 import type { Metadata } from "next";
 import { getDictionary } from "@/i18n/get-dictionary";

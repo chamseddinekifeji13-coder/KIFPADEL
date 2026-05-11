@@ -4,8 +4,8 @@ import { clubService } from "@/modules/clubs/service";
 import { type Club } from "@/modules/clubs/repository";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { CreateMatchForm } from "@/app/[locale]/(player)/matches/create/create-match-form";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { CreateMatchForm } from "@/app/[locale]/(app)/(player)/matches/create/create-match-form";
 
 type CreateMatchPageProps = {
   params: Promise<{ locale: string }>;
