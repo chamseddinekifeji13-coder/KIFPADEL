@@ -4,11 +4,14 @@ import Link from "next/link";
 import { isLocale } from "@/i18n/config";
 import { notFound } from "next/navigation";
 
-import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Badge } from "@/components/ui/badge";
 import { fetchAdminClubDirectory } from "@/modules/admin/repository";
 import { AdminDeleteAccountForm } from "@/components/features/admin/admin-delete-account-form";
+import {
+  adminCardClassName,
+  adminTextareaClassName,
+} from "@/components/features/admin/admin-form-styles";
 import {
   adminDeleteClubAction,
   adminReactivateClubAction,
@@ -54,7 +57,7 @@ export default async function AdminClubsPage({ params }: AdminClubsPageProps) {
         {clubs.map((club) => {
           const suspended = Boolean(club.suspended_at);
           return (
-            <Card key={club.id} className="p-5 border-slate-100">
+            <article key={club.id} className={adminCardClassName}>
               <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                 <div className="space-y-2 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -93,7 +96,7 @@ export default async function AdminClubsPage({ params }: AdminClubsPageProps) {
                         name="reason"
                         required
                         placeholder="Raison suspension (obligatoire)"
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm min-h-[72px]"
+                        className={adminTextareaClassName}
                       />
                       <button
                         type="submit"
@@ -125,7 +128,7 @@ export default async function AdminClubsPage({ params }: AdminClubsPageProps) {
                   />
                 </div>
               </div>
-            </Card>
+            </article>
           );
         })}
       </div>

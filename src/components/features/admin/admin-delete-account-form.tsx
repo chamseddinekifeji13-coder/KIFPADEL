@@ -1,4 +1,5 @@
 import { ADMIN_DELETE_CONFIRM_PHRASE } from "@/modules/admin/account-deletion";
+import { adminInputClassName, adminTextareaClassName } from "@/components/features/admin/admin-form-styles";
 
 type AdminDeleteAccountFormProps = {
   locale: string;
@@ -18,10 +19,13 @@ export function AdminDeleteAccountForm({
   buttonLabel,
 }: AdminDeleteAccountFormProps) {
   return (
-    <form action={action} className="space-y-2 rounded-lg border border-red-200 bg-red-50/50 p-3">
+    <form
+      action={action}
+      className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3"
+    >
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name={idFieldName} value={entityId} />
-      <p className="text-[10px] font-bold uppercase tracking-wider text-red-700">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-red-800">
         Suppression définitive — {entityLabel}
       </p>
       <textarea
@@ -29,9 +33,9 @@ export function AdminDeleteAccountForm({
         required
         minLength={3}
         placeholder="Raison (audit obligatoire)"
-        className="w-full rounded border border-red-200 px-2 py-1 text-xs min-h-[48px] bg-white"
+        className={adminTextareaClassName}
       />
-      <label className="block text-[10px] text-red-800">
+      <label className="block text-[10px] font-medium text-red-900">
         Tapez <span className="font-mono font-bold">{ADMIN_DELETE_CONFIRM_PHRASE}</span> pour confirmer
       </label>
       <input
@@ -39,12 +43,12 @@ export function AdminDeleteAccountForm({
         name="confirm_phrase"
         required
         autoComplete="off"
-        className="w-full rounded border border-red-200 px-2 py-1 text-xs font-mono bg-white"
+        className={`${adminInputClassName} font-mono`}
         placeholder={ADMIN_DELETE_CONFIRM_PHRASE}
       />
       <button
         type="submit"
-        className="w-full h-8 rounded-lg bg-red-900 text-white text-xs font-bold hover:bg-red-950"
+        className="w-full h-9 rounded-lg bg-red-800 text-white text-xs font-bold hover:bg-red-900 transition-colors"
       >
         {buttonLabel}
       </button>
