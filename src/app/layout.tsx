@@ -34,6 +34,11 @@ export const metadata: Metadata = {
     "Kifpadel est la plateforme n°1 en Tunisie pour réserver un terrain de padel, trouver des partenaires et rejoindre des matchs ouverts dans les meilleurs clubs.",
   applicationName: "Kifpadel",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }],
+    shortcut: "/icons/icon.svg",
+    apple: "/icons/icon.svg",
+  },
   alternates: {
     canonical: "/",
     languages: {

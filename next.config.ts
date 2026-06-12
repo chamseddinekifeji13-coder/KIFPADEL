@@ -33,6 +33,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      // Navigateurs legacy : /favicon.ico → icône SVG existante (évite 404 console).
+      { source: "/favicon.ico", destination: "/icons/icon.svg" },
+    ];
+  },
   images: {
     // Allow remote images from Vercel Blob (true user uploads) and Supabase Storage.
     // Any host not listed here will fall back to the local /public placeholder via SafeImage.
