@@ -1,7 +1,8 @@
--- Phase 2 : 4 places par créneau, paiement par joueur, no-show individuel.
+-- Correctif / récupération si 20260612200000 a échoué ou n'a jamais été appliquée.
+-- Idempotent : create if not exists + create or replace + not exists sur backfill.
 
 -- -----------------------------------------------------------------------------
--- 1) booking_participants
+-- 1) Schéma (table + club_debts.participant_id)
 -- -----------------------------------------------------------------------------
 create table if not exists public.booking_participants (
   id uuid primary key default gen_random_uuid(),
@@ -27,9 +28,6 @@ create index if not exists booking_participants_player_id_idx
 comment on table public.booking_participants is
   'Place individuelle sur un créneau (1–4 joueurs). share_price = part joueur + raquette.';
 
--- -----------------------------------------------------------------------------
--- 2) club_debts.participant_id
--- -----------------------------------------------------------------------------
 alter table public.club_debts
   add column if not exists participant_id uuid references public.booking_participants (id) on delete set null;
 
@@ -38,8 +36,8 @@ create unique index if not exists club_debts_participant_reason_uidx
   where participant_id is not null;
 
 -- -----------------------------------------------------------------------------
--- 3) Helpers : participant actif (non stale pending)
--- Phase 2 : confirmed + is_blocking (pas de nouveaux statuts enum open/full).
+-- 2) Helpers (requis pour backfill status + RPC)
+-- Phase 2 : pas de nouveaux statuts enum (open/full) — confirmed + is_blocking.
 -- -----------------------------------------------------------------------------
 create or replace function public.is_booking_participant_active(
   p_status text,
@@ -69,9 +67,6 @@ as $$
     and public.is_booking_participant_active(bp.status, bp.created_at);
 $$;
 
--- -----------------------------------------------------------------------------
--- 4) Sync booking open/full + is_blocking (4 places = terrain bloqué)
--- -----------------------------------------------------------------------------
 create or replace function public.refresh_booking_slot_status(p_booking_id uuid)
 returns void
 language plpgsql
@@ -130,9 +125,6 @@ on public.booking_participants
 for each row
 execute function public.trg_refresh_booking_slot_status();
 
--- -----------------------------------------------------------------------------
--- 5) bookings.is_blocking trigger (phase 2 : is_blocking explicite conservé)
--- -----------------------------------------------------------------------------
 create or replace function public.sync_booking_is_blocking()
 returns trigger
 language plpgsql
@@ -166,14 +158,11 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
--- 6) Backfill participants (siège 1 = réservation legacy)
--- Certains projets n'ont que created_by, d'autres player_id.
+-- 3) Backfill participants (siège 1 = réservation legacy)
 -- -----------------------------------------------------------------------------
 do $$
 declare
   v_owner_col text;
-  v_has_total_price boolean;
-  v_has_payment_method boolean;
   v_has_racket_cols boolean;
 begin
   select
@@ -191,19 +180,8 @@ begin
   into v_owner_col;
 
   if v_owner_col is null then
-    raise notice 'booking_participants backfill skipped: no created_by/player_id on bookings';
     return;
   end if;
-
-  select exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'bookings' and column_name = 'total_price'
-  ) into v_has_total_price;
-
-  select exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'bookings' and column_name = 'payment_method'
-  ) into v_has_payment_method;
 
   select exists (
     select 1 from information_schema.columns
@@ -238,7 +216,7 @@ begin
       v_owner_col,
       v_owner_col
     );
-  elsif v_has_total_price and v_has_payment_method then
+  else
     execute format(
       $sql$
       insert into public.booking_participants (
@@ -250,30 +228,6 @@ begin
         1,
         coalesce(b.total_price, 10),
         b.payment_method,
-        case
-          when b.status::text in ('cancelled', 'expired', 'no_show', 'completed') then b.status::text
-          when b.status::text = 'pending' then 'pending'
-          else 'confirmed'
-        end,
-        b.created_at
-      from public.bookings b
-      where b.%I is not null
-        and not exists (select 1 from public.booking_participants bp where bp.booking_id = b.id)
-      $sql$,
-      v_owner_col,
-      v_owner_col
-    );
-  else
-    execute format(
-      $sql$
-      insert into public.booking_participants (
-        booking_id, player_id, seat_index, share_price, status, created_at
-      )
-      select
-        b.id,
-        b.%I,
-        1,
-        10,
         case
           when b.status::text in ('cancelled', 'expired', 'no_show', 'completed') then b.status::text
           when b.status::text = 'pending' then 'pending'
@@ -301,7 +255,7 @@ where b.status::text in ('confirmed', 'pending')
   and public.count_active_booking_participants(b.id) >= 4;
 
 -- -----------------------------------------------------------------------------
--- 7) RPC : rejoindre un créneau (create_booking_atomic → join slot)
+-- RPC create_booking_atomic (join slot / 4 places)
 -- -----------------------------------------------------------------------------
 create or replace function public.create_booking_atomic(
   p_club_id uuid,
@@ -374,7 +328,6 @@ begin
 
   perform pg_advisory_xact_lock(hashtextextended(p_court_id::text, 0));
 
-  -- Créneau déjà complet (autre session bloquante)
   if exists (
     select 1
     from public.bookings b
@@ -387,7 +340,6 @@ begin
     return;
   end if;
 
-  -- Session existante pour ce créneau
   select b.id
   into v_booking_id
   from public.bookings b
@@ -498,7 +450,7 @@ grant execute on function public.create_booking_atomic(
 ) to authenticated;
 
 -- -----------------------------------------------------------------------------
--- 8) RLS booking_participants
+-- RLS booking_participants
 -- -----------------------------------------------------------------------------
 alter table public.booking_participants enable row level security;
 

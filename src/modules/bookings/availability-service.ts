@@ -60,7 +60,7 @@ function hasBlockingFullSession(
   return bookings.some((b) => {
     if (b.court_id !== courtId) return false;
     if (excludeBookingId && b.id === excludeBookingId) return false;
-    if (!b.is_blocking && String(b.status ?? "").toLowerCase() !== "full") return false;
+    if (!b.is_blocking) return false;
     if (String(b.status ?? "").toLowerCase() === "cancelled") return false;
     return overlapsRange(slotStart, slotEnd, b.starts_at, b.ends_at);
   });
