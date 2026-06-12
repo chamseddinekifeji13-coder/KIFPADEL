@@ -1,24 +1,23 @@
-# Inscription via Gmail (Google OAuth)
+# Inscription Google (recommandée) + email
 
-Kifpadel privilégie la création de compte via **Google OAuth** avec une adresse **@gmail.com** (ou @googlemail.com).
+Kifpadel **recommande** la création de compte via **Google OAuth**, mais accepte aussi l’inscription **email / mot de passe**.
 
 ## Côté produit
 
-- Page **Créer un compte** : bouton Google uniquement (plus d’inscription email/mot de passe).
-- Page **Connexion** : Google en premier, puis email/mot de passe pour les comptes déjà créés.
-- Après OAuth : refus si l’email Google n’est pas un domaine Gmail consumer.
+- Page **Créer un compte** : bouton Google en premier (badge « Recommandé »), puis formulaire email.
+- Page **Connexion** : Google en premier, puis email / mot de passe.
+- **WhatsApp OTP obligatoire** à l’onboarding pour tous les nouveaux comptes (anti-faux profils).
+- Gates nouveaux comptes : paiement en ligne uniquement les premiers jours.
 
 ## Configuration Supabase
 
 1. Dashboard → **Authentication** → **Providers** → activer **Google**.
 2. Créer des identifiants OAuth dans [Google Cloud Console](https://console.cloud.google.com/).
-3. Authorized redirect URI Supabase (fourni par le dashboard).
-4. **URL Configuration** → ajouter les redirect URLs du site :
+3. **URL Configuration** → redirect URLs :
    - `https://www.kifpadel.tn/fr/auth/callback`
    - `https://www.kifpadel.tn/en/auth/callback`
-   - (preview / localhost selon environnement)
-5. Variable `NEXT_PUBLIC_SITE_URL` alignée avec le domaine de production.
+4. Variable `NEXT_PUBLIC_SITE_URL` alignée avec le domaine de production.
 
 ## Combinaison avec WhatsApp OTP
 
-Flux recommandé : **Google Gmail** → onboarding → **vérification WhatsApp** → réservation.
+Flux : **Google ou email** → onboarding → **vérification WhatsApp** → réservation.

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { isGmailAddress } from "@/lib/auth/gmail-email";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type CallbackRouteContext = {
@@ -36,21 +35,6 @@ export async function GET(request: Request, context: CallbackRouteContext) {
     console.error("Auth callback error:", error);
     return NextResponse.redirect(
       new URL(`/${locale}/auth/sign-in?error=callback_failed`, request.url),
-    );
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const usedGoogle =
-    user?.app_metadata?.provider === "google" ||
-    (user?.identities ?? []).some((identity) => identity.provider === "google");
-
-  if (usedGoogle && !isGmailAddress(user?.email)) {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(
-      new URL(`/${locale}/auth/sign-up?error=gmail_required`, request.url),
     );
   }
 
