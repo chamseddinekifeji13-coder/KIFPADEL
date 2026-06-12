@@ -17,6 +17,21 @@ const PLAYER_BOOKING_LIMIT = 30;
 /**
  * Repository for Booking related database operations.
  */
+export type BookingWithParticipantsRow = PlayerBookingRow & {
+  booking_participants?: BookingParticipantDbRow[];
+};
+
+export type BookingParticipantDbRow = {
+  id: string;
+  booking_id: string;
+  player_id: string;
+  seat_index: number;
+  share_price: number | null;
+  payment_method?: string | null;
+  status: string;
+  created_at: string;
+};
+
 export async function fetchBookingsByClubAndDate(clubId: string, date: string) {
   const supabase = await createSupabaseServerClient();
 
@@ -24,7 +39,7 @@ export async function fetchBookingsByClubAndDate(clubId: string, date: string) {
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("*")
+    .select("*, booking_participants(id, player_id, seat_index, status, created_at, share_price)")
     .eq("club_id", clubId)
     .lt("starts_at", nextDayStart.toISOString())
     .gt("ends_at", dayStart.toISOString())
@@ -35,7 +50,7 @@ export async function fetchBookingsByClubAndDate(clubId: string, date: string) {
     throw new Error(error.message);
   }
 
-  return data;
+  return (data ?? []) as BookingWithParticipantsRow[];
 }
 
 export type PlayerBookingRow = {
@@ -52,34 +67,64 @@ export type PlayerBookingRow = {
   created_at: string;
   created_by?: string | null;
   player_id?: string | null;
+  participant_id?: string;
+  seat_index?: number;
+  is_blocking?: boolean | null;
 };
 
 export async function fetchBookingsForPlayer(userId: string, limit = PLAYER_BOOKING_LIMIT) {
   const supabase = await createSupabaseServerClient();
 
-  let data: PlayerBookingRow[] | null = null;
-
-  const byCreatedBy = await supabase
-    .from("bookings")
-    .select("*")
-    .eq("created_by", userId)
-    .order("starts_at", { ascending: true })
+  const { data: participantRows, error: participantError } = await supabase
+    .from("booking_participants")
+    .select(
+      "id, share_price, payment_method, status, seat_index, bookings(id, club_id, court_id, starts_at, ends_at, status, created_at, created_by, player_id, total_price)",
+    )
+    .eq("player_id", userId)
+    .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (!byCreatedBy.error) {
-    data = (byCreatedBy.data ?? []) as PlayerBookingRow[];
-  } else {
-    const byPlayerId = await supabase
+  let data: PlayerBookingRow[] | null = null;
+
+  if (!participantError && (participantRows ?? []).length > 0) {
+    data = (participantRows ?? []).map((row) => {
+      const bookingRaw = (row as { bookings?: PlayerBookingRow | PlayerBookingRow[] }).bookings;
+      const booking = Array.isArray(bookingRaw) ? bookingRaw[0] : bookingRaw;
+      const b = (booking ?? {}) as PlayerBookingRow;
+      return {
+        ...b,
+        id: b.id ?? String((row as { booking_id?: string }).booking_id ?? ""),
+        total_price: (row as { share_price?: number }).share_price ?? b.total_price,
+        status: String((row as { status?: string }).status ?? b.status),
+        participant_id: String((row as { id: string }).id),
+        seat_index: (row as { seat_index?: number }).seat_index,
+      };
+    });
+  }
+
+  if (!data) {
+    const byCreatedBy = await supabase
       .from("bookings")
       .select("*")
-      .eq("player_id", userId)
+      .eq("created_by", userId)
       .order("starts_at", { ascending: true })
       .limit(limit);
 
-    if (byPlayerId.error) {
-      throw new Error(byPlayerId.error.message);
+    if (!byCreatedBy.error) {
+      data = (byCreatedBy.data ?? []) as PlayerBookingRow[];
+    } else {
+      const byPlayerId = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("player_id", userId)
+        .order("starts_at", { ascending: true })
+        .limit(limit);
+
+      if (byPlayerId.error) {
+        throw new Error(byPlayerId.error.message);
+      }
+      data = (byPlayerId.data ?? []) as PlayerBookingRow[];
     }
-    data = (byPlayerId.data ?? []) as PlayerBookingRow[];
   }
 
   const clubIds = [...new Set((data ?? []).map((row) => row.club_id).filter(Boolean))];
@@ -103,6 +148,39 @@ export async function fetchBookingsForPlayer(userId: string, limit = PLAYER_BOOK
     club_city: clubsById.get(booking.club_id)?.city ?? "Tunis",
     court_label: courtsById.get(booking.court_id)?.label ?? "Court",
   }));
+}
+
+export type ClubOperationsParticipantRow = {
+  id: string;
+  booking_id: string;
+  player_id: string;
+  seat_index: number;
+  share_price: number | null;
+  payment_method?: string | null;
+  status: string;
+  created_at: string;
+  bookings?: PlayerBookingRow | PlayerBookingRow[] | null;
+};
+
+export async function fetchBookingParticipantsForClubOperations(clubId: string, date: string) {
+  const supabase = await createSupabaseServerClient();
+  const { dayStart, nextDayStart } = tunisDayRangeUtc(date);
+
+  const { data, error } = await supabase
+    .from("booking_participants")
+    .select(
+      "id, booking_id, player_id, seat_index, share_price, payment_method, status, created_at, bookings!inner(id, club_id, court_id, starts_at, ends_at, status)",
+    )
+    .eq("bookings.club_id", clubId)
+    .lt("bookings.starts_at", nextDayStart.toISOString())
+    .gt("bookings.ends_at", dayStart.toISOString())
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ClubOperationsParticipantRow[];
 }
 
 export async function fetchBookingsForClubOperations(clubId: string, date: string) {

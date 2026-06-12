@@ -16,11 +16,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { reliabilityFromTrustScore } from "@/domain/rules/trust";
-import { confirmArrivalAction, reportNoShowAction } from "@/modules/clubs/actions";
+import {
+  confirmParticipantArrivalAction,
+  reportParticipantNoShowAction,
+} from "@/modules/clubs/actions";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 
 type Booking = {
   id: string;
+  bookingId: string;
+  seatIndex: number;
   time: string;
   endTime: string;
   court: string;
@@ -178,7 +183,7 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
 
   const handleConfirmArrival = () => {
     startTransition(async () => {
-      const result = await confirmArrivalAction(booking.id);
+      const result = await confirmParticipantArrivalAction(booking.id);
       if (result.ok) {
         setActionState("success");
         setActionMessage(labels.arrivalConfirmedMessage);
@@ -192,7 +197,7 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
 
   const handleReportNoShow = () => {
     startTransition(async () => {
-      const result = await reportNoShowAction(booking.id, booking.player.id);
+      const result = await reportParticipantNoShowAction(booking.id);
       if (result.ok) {
         setActionState("success");
         setActionMessage(labels.noShowReportedMessage);
@@ -227,7 +232,9 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
               {trustLabels[reliability]}
             </span>
           </div>
-          <p className="text-sm text-[var(--foreground-muted)]">{booking.court}</p>
+          <p className="text-sm text-[var(--foreground-muted)]">
+            {booking.court} · Place {booking.seatIndex}/4
+          </p>
         </div>
 
         {/* Payment & Status */}

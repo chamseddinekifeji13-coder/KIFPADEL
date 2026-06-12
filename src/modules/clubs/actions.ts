@@ -10,10 +10,62 @@ export type ActionResult =
   | { ok: false; error: string };
 
 /**
- * Marks a booking as completed (player arrived).
+ * Marque la présence d'un joueur (place individuelle).
  */
+export async function confirmParticipantArrivalAction(participantId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  const { data: row, error: loadError } = await supabase
+    .from("booking_participants")
+    .select("id, booking_id, status")
+    .eq("id", participantId)
+    .maybeSingle();
+
+  if (loadError || !row) {
+    return { ok: false, error: "Place introuvable." };
+  }
+
+  const { error } = await supabase
+    .from("booking_participants")
+    .update({ status: "completed" })
+    .eq("id", participantId);
+
+  if (error) {
+    return { ok: false, error: "Erreur lors de la mise à jour de la place." };
+  }
+
+  const bookingId = String((row as { booking_id: string }).booking_id);
+  const { data: siblings } = await supabase
+    .from("booking_participants")
+    .select("status")
+    .eq("booking_id", bookingId);
+
+  const allDone =
+    (siblings ?? []).length > 0 &&
+    (siblings ?? []).every((s) => String((s as { status?: string }).status ?? "") === "completed");
+
+  if (allDone) {
+    await supabase.from("bookings").update({ status: "completed" }).eq("id", bookingId);
+  }
+
+  return { ok: true };
+}
+
+/** Legacy : confirme toute la réservation (première place). */
 export async function confirmArrivalAction(bookingId: string): Promise<ActionResult> {
   const supabase = await createClient();
+
+  const { data: participant } = await supabase
+    .from("booking_participants")
+    .select("id")
+    .eq("booking_id", bookingId)
+    .order("seat_index", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (participant?.id) {
+    return confirmParticipantArrivalAction(String(participant.id));
+  }
 
   const { error } = await supabase.from("bookings").update({ status: "completed" }).eq("id", bookingId);
 
@@ -25,11 +77,89 @@ export async function confirmArrivalAction(bookingId: string): Promise<ActionRes
 }
 
 /**
- * Reports a no-show incident and applies trust penalty.
- * Also records a pending `club_debts` row for the player toward the club (best-effort).
+ * No-show sur un joueur uniquement (pas la session entière).
  */
+export async function reportParticipantNoShowAction(participantId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  const { data: participant, error: loadError } = await supabase
+    .from("booking_participants")
+    .select("id, booking_id, player_id, share_price, status")
+    .eq("id", participantId)
+    .maybeSingle();
+
+  if (loadError || !participant) {
+    return { ok: false, error: "Place introuvable." };
+  }
+
+  const playerId = String((participant as { player_id: string }).player_id);
+  const bookingId = String((participant as { booking_id: string }).booking_id);
+  const sharePrice = (participant as { share_price?: number | null }).share_price;
+
+  const { data: bookingRow } = await supabase
+    .from("bookings")
+    .select("club_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!bookingRow?.club_id) {
+    return { ok: false, error: "Réservation introuvable." };
+  }
+
+  const clubId = String(bookingRow.club_id);
+
+  const { error: participantError } = await supabase
+    .from("booking_participants")
+    .update({ status: "no_show" })
+    .eq("id", participantId);
+
+  if (participantError) {
+    return { ok: false, error: "Erreur lors de la mise à jour de la place." };
+  }
+
+  const impact = trustImpactFromEvent("no_show");
+
+  try {
+    await addTrustEvent({
+      player_id: playerId,
+      kind: "no_show",
+      delta: impact.delta,
+      booking_id: bookingId,
+    });
+  } catch {
+    return { ok: false, error: "Erreur lors de l'enregistrement de l'incident." };
+  }
+
+  const debt = await createClubDebt(supabase, {
+    clubId,
+    playerId,
+    bookingId,
+    participantId,
+    reason: "no_show",
+    amountCents: deriveNoShowDebtAmountCents(sharePrice),
+  });
+
+  if (!debt.ok) {
+    console.warn("[reportParticipantNoShowAction] club_debt insert failed (non-blocking):", debt.error);
+  }
+
+  return { ok: true };
+}
+
+/** Legacy : résout la place du joueur si possible. */
 export async function reportNoShowAction(bookingId: string, playerId: string): Promise<ActionResult> {
   const supabase = await createClient();
+
+  const { data: participant } = await supabase
+    .from("booking_participants")
+    .select("id")
+    .eq("booking_id", bookingId)
+    .eq("player_id", playerId)
+    .maybeSingle();
+
+  if (participant?.id) {
+    return reportParticipantNoShowAction(String(participant.id));
+  }
 
   const { data: bookingRow, error: bookingLoadError } = await supabase
     .from("bookings")
@@ -81,9 +211,6 @@ export async function reportNoShowAction(bookingId: string, playerId: string): P
   return { ok: true };
 }
 
-/**
- * Confirms an incident and applies trust penalty.
- */
 export async function confirmIncidentAction(
   playerId: string,
   incidentType: "no_show" | "late_cancel" | "bad_behavior",
@@ -105,9 +232,6 @@ export async function confirmIncidentAction(
   return { ok: true };
 }
 
-/**
- * Records good behavior and gives trust boost.
- */
 export async function recordGoodBehaviorAction(playerId: string): Promise<ActionResult> {
   const impact = trustImpactFromEvent("good_behavior");
 

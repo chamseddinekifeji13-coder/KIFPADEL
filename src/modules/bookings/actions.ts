@@ -72,8 +72,15 @@ function mapBookingRpcFailure(row: BookingRpcRow | null): BookingResult {
   if (code === "SLOT_TAKEN") {
     return {
       ok: false,
-      error: "Ce créneau est déjà réservé. Veuillez en choisir un autre.",
+      error: "Ce créneau est complet (4 joueurs). Choisissez un autre horaire ou terrain.",
       code: "SLOT_TAKEN",
+    };
+  }
+  if (code === "ALREADY_JOINED") {
+    return {
+      ok: false,
+      error: "Vous avez déjà une place sur ce créneau.",
+      code: "SERVER_ERROR",
     };
   }
   if (code === "INVALID_RANGE") {
