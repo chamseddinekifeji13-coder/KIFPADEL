@@ -3,6 +3,7 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Star, ShieldCheck } from "lucide-react";
 import { InvitePlayerButton } from "@/components/features/players/player-invite-button";
+import { playerCategoryBadgeVariant } from "@/domain/rules/player-category";
 
 interface PlayerCardProps {
   locale: string;
@@ -10,7 +11,8 @@ interface PlayerCardProps {
     id: string;
     display_name: string;
     avatar_url: string | null;
-    league: "Bronze" | "Silver" | "Gold" | "Platinum";
+    league: string;
+    leagueCategory?: string;
     sport_rating: number;
     trust_score: number;
     gender?: "male" | "female" | null;
@@ -33,8 +35,12 @@ export function PlayerCard({ locale, player }: PlayerCardProps) {
           <h3 className="font-bold text-white truncate tracking-tight">
             {player.display_name || "Joueur"}
           </h3>
-          <Badge variant={(player.league || "Bronze").toLowerCase() as BadgeProps["variant"]}>
-            {player.league || "Bronze"}
+          <Badge
+            variant={
+              playerCategoryBadgeVariant(player.leagueCategory ?? player.league) as BadgeProps["variant"]
+            }
+          >
+            {player.league || "P25"}
           </Badge>
           <Badge variant="success" className="text-[9px] px-1.5 py-0">
             Vérifié

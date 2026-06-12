@@ -1,5 +1,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { leagueFromRating } from "@/domain/rules/rating";
+import {
+  categoryFromRating,
+  normalizePlayerCategoryId,
+  playerCategoryLabel,
+  type PlayerCategoryId,
+} from "@/domain/rules/player-category";
 import type { Gender } from "@/domain/types/core";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 
@@ -8,7 +13,9 @@ export interface Player {
   display_name: string;
   email: string;
   avatar_url: string | null;
-  league: "Bronze" | "Silver" | "Gold" | "Platinum";
+  /** Affichage ex. P100 */
+  league: string;
+  leagueCategory: PlayerCategoryId;
   sport_rating: number;
   trust_score: number;
   /** null = profil incomplet pour matchmaking genré */
@@ -40,15 +47,9 @@ type ProfileRow = {
   created_at?: string;
 };
 
-function displayLeagueFromSport(sportRating: number): Player["league"] {
-  const key = leagueFromRating(sportRating);
-  const labels: Record<string, Player["league"]> = {
-    bronze: "Bronze",
-    silver: "Silver",
-    gold: "Gold",
-    platinum: "Platinum",
-  };
-  return labels[key] ?? "Bronze";
+function resolvePlayerCategory(row: ProfileRow, sportRating: number): PlayerCategoryId {
+  if (row.league) return normalizePlayerCategoryId(row.league);
+  return categoryFromRating(sportRating);
 }
 
 function normalizePlayer(row: ProfileRow): Player {
@@ -62,7 +63,8 @@ function normalizePlayer(row: ProfileRow): Player {
     display_name: row.display_name ?? "Player",
     email: row.email ?? "",
     avatar_url: row.avatar_url ?? null,
-    league: displayLeagueFromSport(sportRating),
+    leagueCategory: resolvePlayerCategory(row, sportRating),
+    league: playerCategoryLabel(resolvePlayerCategory(row, sportRating)),
     sport_rating: sportRating,
     trust_score: trustScore,
     gender,

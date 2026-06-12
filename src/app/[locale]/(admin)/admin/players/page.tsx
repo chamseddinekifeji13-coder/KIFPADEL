@@ -16,6 +16,7 @@ import {
   adminReactivatePlayerAction,
   adminSuspendPlayerAction,
 } from "@/modules/admin/actions/moderation";
+import { playerCategoryFullLabel } from "@/domain/rules/player-category";
 import { fetchAdminPlayersList } from "@/modules/admin/repository";
 
 type AdminPlayersPageProps = {
@@ -102,9 +103,9 @@ export default async function AdminPlayersPage({ params, searchParams }: AdminPl
                       <dd className="text-slate-800">{p.main_club_name ?? "—"}</dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ligue / ELO</dt>
+                      <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Catégorie / ELO</dt>
                       <dd className="text-slate-800">
-                        {p.league ?? "—"} · ELO {p.sport_rating ?? "—"}
+                        {playerCategoryFullLabel(p.league)} · ELO {p.sport_rating ?? "—"}
                       </dd>
                     </div>
                     <div>

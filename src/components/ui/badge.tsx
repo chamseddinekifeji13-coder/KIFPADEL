@@ -11,11 +11,18 @@ const badgeVariants = cva(
         destructive: "border-danger/20 bg-danger/10 text-danger",
         outline: "border-border text-foreground-muted",
         success: "border-success/20 bg-success/10 text-success",
-        // Padel Specific Leagues - Premium Styles
-        bronze: "bg-[#cd7f32]/10 border-[#cd7f32]/30 text-[#cd7f32] shadow-[0_0_10px_-3px_rgba(205,127,50,0.3)]",
-        silver: "bg-slate-400/10 border-slate-400/30 text-slate-300 shadow-[0_0_10px_-3px_rgba(148,163,184,0.3)]",
+        // Catégories P (Tunisie)
+        p25: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+        p50: "bg-teal-500/10 border-teal-500/30 text-teal-300",
+        p100: "bg-sky-500/10 border-sky-500/30 text-sky-300",
+        p250: "bg-violet-500/10 border-violet-500/30 text-violet-300",
+        p500: "bg-gold/10 border-gold/30 text-gold shadow-gold",
+        p1000: "bg-rose-500/10 border-rose-400/30 text-rose-300",
+        // Legacy (affichage rétrocompat.)
+        bronze: "bg-[#cd7f32]/10 border-[#cd7f32]/30 text-[#cd7f32]",
+        silver: "bg-slate-400/10 border-slate-400/30 text-slate-300",
         gold: "bg-gold/10 border-gold/30 text-gold shadow-gold",
-        platinum: "bg-sky-400/10 border-sky-400/30 text-sky-300 shadow-[0_0_10px_-3px_rgba(56,189,248,0.3)]",
+        platinum: "bg-sky-400/10 border-sky-400/30 text-sky-300",
       },
     },
     defaultVariants: {

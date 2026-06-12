@@ -6,6 +6,7 @@ import { PlayersDirectory } from "./players-directory";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
 import { fetchBookingsForClubDateRange } from "@/modules/bookings/repository";
+import { normalizePlayerCategoryId } from "@/domain/rules/player-category";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ClubPlayersPageProps = {
@@ -69,7 +70,7 @@ export default async function ClubPlayersPage({ params }: ClubPlayersPageProps) 
       id: profile.id,
       name: profile.display_name ?? labels.genericPlayerName,
       trustScore: profile.trust_score ?? 70,
-      league: (profile.league ?? "bronze").toLowerCase(),
+      league: normalizePlayerCategoryId(profile.league),
       bookingsCount: playerBookings.length,
       lastVisit: latestBooking?.starts_at ?? today.toISOString(),
       phone: profile.phone ?? labels.unknownPhone,

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         email: user.email,
         display_name: displayName,
         avatar_url: user.raw_user_meta_data?.avatar_url ?? null,
-        league: "bronze",
+        league: "p25",
         trust_score: 70,
         reliability_status: "healthy",
         sport_rating: 1200,

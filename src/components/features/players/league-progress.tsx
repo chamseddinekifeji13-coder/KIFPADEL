@@ -1,4 +1,4 @@
-import { sportLeagueProgress } from "@/domain/rules/rating";
+import { sportCategoryProgress, playerCategoryBadgeVariant } from "@/domain/rules/player-category";
 import { cn } from "@/lib/utils/cn";
 
 interface LeagueProgressProps {
@@ -7,20 +7,29 @@ interface LeagueProgressProps {
   currentLeague: string;
 }
 
+const BAR_COLORS: Record<string, string> = {
+  p25: "bg-emerald-500",
+  p50: "bg-teal-500",
+  p100: "bg-sky-500",
+  p250: "bg-violet-500",
+  p500: "bg-gold-gradient",
+  p1000: "bg-rose-400",
+};
+
 export function LeagueProgress({ sportRating, currentLeague }: LeagueProgressProps) {
-  const progress = sportLeagueProgress(sportRating);
+  const progress = sportCategoryProgress(sportRating);
   const barWidth = `${Math.min(100, Math.max(1, Math.round(progress.progressPercent)))}%`;
 
   const pointsToNext =
     progress.isMaxTier ? 0 : Math.max(0, Math.ceil(progress.nextFloor - sportRating));
 
-  const leagueKey = currentLeague.toLowerCase();
+  const categoryKey = playerCategoryBadgeVariant(currentLeague);
 
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-end">
         <span className="text-[10px] font-black text-foreground-muted uppercase tracking-widest">
-          {progress.isMaxTier ? "Platine" : `Vers ${progress.nextTierLabel ?? "suivante"}`}
+          {progress.isMaxTier ? "P1000" : `Vers ${progress.nextTierLabel ?? "suivante"}`}
         </span>
         <span className="text-sm font-bold text-white">
           {sportRating} <span className="text-gold font-black">ELO sport</span>
@@ -30,13 +39,7 @@ export function LeagueProgress({ sportRating, currentLeague }: LeagueProgressPro
         <div
           className={cn(
             "h-full rounded-full transition-all duration-1000 ease-out shadow-gold",
-            leagueKey === "platinum"
-              ? "bg-gold-gradient"
-              : leagueKey === "gold"
-                ? "bg-gold-gradient"
-                : leagueKey === "silver"
-                  ? "bg-slate-400"
-                  : "bg-orange-500",
+            BAR_COLORS[categoryKey] ?? "bg-orange-500",
           )}
           style={{ width: barWidth }}
         />
@@ -45,12 +48,12 @@ export function LeagueProgress({ sportRating, currentLeague }: LeagueProgressPro
       {!progress.isMaxTier && pointsToNext > 0 && progress.nextTierLabel ? (
         <p className="text-[10px] text-foreground-muted font-medium italic">
           Encore environ{" "}
-          <span className="text-gold font-bold">{pointsToNext}</span> points jusqu&apos;à la ligue{" "}
+          <span className="text-gold font-bold">{pointsToNext}</span> points jusqu&apos;à la catégorie{" "}
           {progress.nextTierLabel}.
         </p>
       ) : (
         <p className="text-[10px] text-foreground-muted font-medium italic">
-          Tu es dans la division la plus élevée reconnue sur ce barème sport.
+          Tu es dans la catégorie la plus élevée sur ce barème sport.
         </p>
       )}
     </div>

@@ -61,7 +61,7 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
   const stats = [
     { label: "ELO sport", value: String(profile.sport_rating) },
     { label: "Confiance", value: `${profile.trust_score}/100` },
-    { label: "Ligue", value: profile.league },
+    { label: "Catégorie", value: profile.league },
   ];
 
   const displayName = profile.display_name.includes("@")

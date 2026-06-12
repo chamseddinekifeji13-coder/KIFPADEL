@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { playerService } from "@/modules/players/service";
 import { Player } from "@/modules/players/repository";
 import { PlayerCard } from "@/components/features/players/player-card";
+import { playerCategoryBadgeVariant } from "@/domain/rules/player-category";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 
@@ -121,7 +122,14 @@ export default async function FindPlayersPage({
                   <Avatar src={player.avatar_url} alt={player.display_name || labels.genericPlayerName} size="lg" className="ring-4 ring-sky-50" />
                   <div className="text-center space-y-1">
                     <p className="text-xs font-bold text-slate-900 truncate w-24">{(player.display_name || labels.genericPlayerName).split(" ")[0]}</p>
-                    <Badge variant={(player.league || labels.defaultLeagueLabel).toLowerCase() as BadgeProps["variant"]} className="text-[8px] px-2">{player.league || labels.defaultLeagueLabel}</Badge>
+                    <Badge
+                      variant={
+                        playerCategoryBadgeVariant(player.leagueCategory ?? player.league) as BadgeProps["variant"]
+                      }
+                      className="text-[8px] px-2"
+                    >
+                      {player.league || labels.defaultLeagueLabel}
+                    </Badge>
                   </div>
                 </div>
              ))}

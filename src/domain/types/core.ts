@@ -1,6 +1,14 @@
 export type UUID = string;
 
-export type League = "bronze" | "silver" | "gold" | "platinum";
+import type { PlayerCategoryId } from "@/domain/rules/player-category";
+
+/** Catégorie joueur (barème P Tunisie) + valeurs legacy en base. */
+export type League =
+  | PlayerCategoryId
+  | "bronze"
+  | "silver"
+  | "gold"
+  | "platinum";
 export type Gender = "male" | "female";
 /** Open match restriction / composition mode */
 export type MatchGenderType = "all" | "men_only" | "women_only" | "mixed";

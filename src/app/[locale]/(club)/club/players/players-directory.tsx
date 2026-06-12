@@ -12,6 +12,7 @@ import {
   Star,
   Filter,
 } from "lucide-react";
+import { playerCategoryLabel } from "@/domain/rules/player-category";
 import { cn } from "@/lib/utils/cn";
 import { reliabilityFromTrustScore } from "@/domain/rules/trust";
 
@@ -153,6 +154,12 @@ function PlayerRow({
   };
 
   const leagueColors: Record<string, string> = {
+    p25: "text-emerald-400",
+    p50: "text-teal-400",
+    p100: "text-sky-400",
+    p250: "text-violet-400",
+    p500: "text-[var(--gold)]",
+    p1000: "text-rose-400",
     bronze: "text-amber-600",
     silver: "text-slate-400",
     gold: "text-[var(--gold)]",
@@ -176,7 +183,7 @@ function PlayerRow({
             <p className="font-bold text-white truncate">{player.name}</p>
             <span className={cn("flex items-center gap-1", leagueColors[player.league])}>
               <Crown className="h-3 w-3" />
-              <span className="text-[10px] uppercase font-bold">{player.league}</span>
+              <span className="text-[10px] uppercase font-bold">{playerCategoryLabel(player.league)}</span>
             </span>
           </div>
           <p className="text-sm text-[var(--foreground-muted)]">

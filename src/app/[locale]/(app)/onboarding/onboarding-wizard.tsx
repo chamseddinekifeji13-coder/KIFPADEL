@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { completeOnboardingAction } from "@/modules/onboarding/actions";
+import { PLAYER_CATEGORIES } from "@/domain/rules/player-category";
 import {
   sendPhoneOtpAction,
   verifyPhoneOtpAction,
@@ -34,12 +35,11 @@ type OnboardingWizardProps = {
 
 type Step = "profile" | "phone" | "level" | "trust";
 
-const LEVELS = [
-  { id: "beginner", label: "Débutant", description: "Je découvre le padel" },
-  { id: "intermediate", label: "Intermédiaire", description: "Je joue régulièrement (1-2 ans)" },
-  { id: "advanced", label: "Avancé", description: "Je participe à des tournois" },
-  { id: "expert", label: "Expert", description: "Niveau compétition national" },
-];
+const LEVELS = PLAYER_CATEGORIES.map((c) => ({
+  id: c.id,
+  label: c.label,
+  description: c.description,
+}));
 
 const CITIES = [
   "Tunis", "La Marsa", "Carthage", "Sidi Bou Said", "Sousse", "Sfax", "Hammamet", "Nabeul"
@@ -509,8 +509,8 @@ function LevelStep({
           <Trophy className="h-5 w-5 text-[var(--gold)]" />
         </div>
         <div>
-          <h2 className="font-bold text-white">Ton niveau</h2>
-          <p className="text-xs text-[var(--foreground-muted)]">Pour de meilleurs matchs</p>
+          <h2 className="font-bold text-white">Ta catégorie</h2>
+          <p className="text-xs text-[var(--foreground-muted)]">Barème P Tunisie — pour des matchs équilibrés</p>
         </div>
       </div>
 
@@ -540,10 +540,12 @@ function LevelStep({
 // Trust Step
 function TrustStep({ phoneVerified, level }: { phoneVerified: boolean; level: string }) {
   const levelBonuses: Record<string, number> = {
-    beginner: 5,
-    intermediate: 10,
-    advanced: 15,
-    expert: 20,
+    p25: 5,
+    p50: 8,
+    p100: 10,
+    p250: 15,
+    p500: 18,
+    p1000: 20,
   };
   
   const baseScore = 50;

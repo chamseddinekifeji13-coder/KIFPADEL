@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { normalizePlayerCategoryId } from "@/domain/rules/player-category";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function completeOnboardingAction(formData: FormData) {
@@ -9,7 +10,7 @@ export async function completeOnboardingAction(formData: FormData) {
   const city = String(formData.get("city") ?? "Tunis").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   const phoneVerifiedFlag = String(formData.get("phoneVerified") ?? "") === "1";
-  const rawLevel = String(formData.get("level") ?? "beginner");
+  const rawLevel = String(formData.get("level") ?? "p25");
   const rawGender = String(formData.get("gender") ?? "").trim();
   const gender =
     rawGender === "male" || rawGender === "female" ? rawGender : null;
@@ -38,21 +39,17 @@ export async function completeOnboardingAction(formData: FormData) {
   if (phoneVerified) trustScore += 20;
   
   const levelBonuses: Record<string, number> = {
-    beginner: 5,
-    intermediate: 10,
-    advanced: 15,
-    expert: 20,
+    p25: 5,
+    p50: 8,
+    p100: 10,
+    p250: 15,
+    p500: 18,
+    p1000: 20,
   };
-  trustScore += levelBonuses[rawLevel] || 0;
+  const normalizedLevel = rawLevel.trim().toLowerCase();
+  trustScore += levelBonuses[normalizedLevel] || 0;
 
-  // Map UI level IDs to database league names
-  const levelMap: Record<string, string> = {
-    beginner: "bronze",
-    intermediate: "silver",
-    advanced: "gold",
-    expert: "platinum",
-  };
-  const league = levelMap[rawLevel] || "bronze";
+  const league = normalizePlayerCategoryId(normalizedLevel);
 
   if (!displayName) {
     redirect(`/${locale}/onboarding?error=missing_name`);

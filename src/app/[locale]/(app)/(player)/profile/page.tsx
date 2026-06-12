@@ -11,6 +11,7 @@ import { fetchBookingsForPlayer } from "@/modules/bookings/repository";
 import { fetchRecentTournamentSummariesForPlayer } from "@/modules/tournaments/repository";
 import { Player } from "@/modules/players/repository";
 import { LeagueProgress } from "@/components/features/players/league-progress";
+import { playerCategoryBadgeVariant } from "@/domain/rules/player-category";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { 
@@ -95,7 +96,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               <h2 className="text-xl font-bold">{profile.display_name}</h2>
             </div>
           </div>
-          <Badge variant={profile.league.toLowerCase() as BadgeProps["variant"]} className="border-white/20 backdrop-blur-sm px-4 py-1.5 uppercase tracking-wider">
+          <Badge
+            variant={
+              playerCategoryBadgeVariant(profile.leagueCategory ?? profile.league) as BadgeProps["variant"]
+            }
+            className="border-white/20 backdrop-blur-sm px-4 py-1.5 uppercase tracking-wider"
+          >
             {profile.league}
           </Badge>
         </div>
