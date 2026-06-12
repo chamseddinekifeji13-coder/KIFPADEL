@@ -7,20 +7,13 @@ import {
   formatBookingSchedule,
   formatPaymentMethodLabel,
 } from "@/modules/notifications/booking-format";
+import { getNotificationChannels, getWhatsAppTemplateLanguage } from "@/modules/notifications/shared";
 import { sendWhatsAppTemplate } from "@/modules/notifications/whatsapp";
 
 type NotifyBookingCreatedInput = {
   bookingId: string;
   playerId: string;
 };
-
-function notificationsEnabled(): { whatsapp: boolean; email: boolean } {
-  const wa =
-    process.env.NOTIFICATION_WHATSAPP_ENABLED !== "false" && process.env.NOTIFICATION_WHATSAPP_ENABLED !== "0";
-  const em =
-    process.env.NOTIFICATION_EMAIL_ENABLED !== "false" && process.env.NOTIFICATION_EMAIL_ENABLED !== "0";
-  return { whatsapp: wa, email: em };
-}
 
 function playerWhatsAppTemplate(): string {
   return process.env.WHATSAPP_BOOKING_PLAYER_TEMPLATE?.trim() ?? "kifpadel_booking_player";
@@ -30,16 +23,12 @@ function clubWhatsAppTemplate(): string {
   return process.env.WHATSAPP_BOOKING_CLUB_TEMPLATE?.trim() ?? "kifpadel_booking_club";
 }
 
-function templateLanguage(): string {
-  return process.env.WHATSAPP_BOOKING_TEMPLATE_LANGUAGE?.trim() ?? "fr";
-}
-
 /**
  * Notifications après réservation (non bloquant — erreurs loggées).
  * WhatsApp : joueur + contact club. E-mail : joueur + contact club si configuré.
  */
 export async function notifyBookingCreated(input: NotifyBookingCreatedInput): Promise<void> {
-  const channels = notificationsEnabled();
+  const channels = getNotificationChannels();
   if (!channels.whatsapp && !channels.email) {
     return;
   }
@@ -121,7 +110,7 @@ export async function notifyBookingCreated(input: NotifyBookingCreatedInput): Pr
       const wa = await sendWhatsAppTemplate(
         playerPhone,
         playerWhatsAppTemplate(),
-        templateLanguage(),
+        getWhatsAppTemplateLanguage(),
         [clubName, dateLine, timeRange, courtLabel, amount, paymentLabel],
       );
       if (!wa.ok) {
@@ -133,7 +122,7 @@ export async function notifyBookingCreated(input: NotifyBookingCreatedInput): Pr
       const wa = await sendWhatsAppTemplate(
         clubPhoneE164,
         clubWhatsAppTemplate(),
-        templateLanguage(),
+        getWhatsAppTemplateLanguage(),
         [playerName, dateLine, timeRange, seat, amount, paymentLabel],
       );
       if (!wa.ok) {

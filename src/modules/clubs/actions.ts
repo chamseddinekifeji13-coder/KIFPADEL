@@ -7,6 +7,10 @@ import { trustImpactFromEvent } from "@/domain/rules/trust";
 import { addTrustEvent } from "@/modules/players/repository";
 import { createClubDebt, deriveNoShowDebtAmountCents } from "@/modules/club-debts/service";
 import { assertClubStaffCanManage } from "@/modules/clubs/actions/club-staff-guard";
+import {
+  notifyParticipantNoShow,
+  notifyParticipantPaymentConfirmed,
+} from "@/modules/notifications/participant-staff-events";
 
 export type ActionResult =
   | { ok: true }
@@ -94,6 +98,10 @@ export async function confirmParticipantPaymentAction(participantId: string): Pr
   if (error) {
     return { ok: false, error: "Erreur lors de la confirmation de l'encaissement." };
   }
+
+  void notifyParticipantPaymentConfirmed(participantId).catch((err) =>
+    console.error("[confirmParticipantPaymentAction] notify failed", err),
+  );
 
   return { ok: true };
 }
@@ -245,6 +253,10 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
   if (!debt.ok) {
     console.warn("[reportParticipantNoShowAction] club_debt insert failed (non-blocking):", debt.error);
   }
+
+  void notifyParticipantNoShow(participantId).catch((err) =>
+    console.error("[reportParticipantNoShowAction] notify failed", err),
+  );
 
   return { ok: true };
 }

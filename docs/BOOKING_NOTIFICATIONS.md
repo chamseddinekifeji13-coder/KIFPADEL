@@ -77,6 +77,34 @@ Le domaine d’envoi doit être vérifié dans Resend.
 
 Sans credentials, les notifications sont **loggées** en console (`[notifications:dev]`) et la réservation continue.
 
+## Encaissement confirmé (staff club → joueur)
+
+Template `kifpadel_payment_confirmed` (5 variables) :
+
+```text
+{{1}} a confirmé votre paiement : {{2}} {{3}}, terrain {{4}}, {{5}} DT.
+```
+
+```env
+WHATSAPP_PAYMENT_CONFIRMED_TEMPLATE=kifpadel_payment_confirmed
+```
+
+WhatsApp + e-mail au **joueur** après « Confirmer encaissement ».
+
+## No-show (staff club → joueur)
+
+Template `kifpadel_no_show_player` (5 variables) :
+
+```text
+No-show enregistré à {{1}} : {{2}} {{3}}, terrain {{4}}, {{5}} DT. Contactez le club en cas d'erreur.
+```
+
+```env
+WHATSAPP_NO_SHOW_PLAYER_TEMPLATE=kifpadel_no_show_player
+```
+
+WhatsApp + e-mail au **joueur** après « Signaler no-show ».
+
 ## Désactiver un canal
 
 ```env
