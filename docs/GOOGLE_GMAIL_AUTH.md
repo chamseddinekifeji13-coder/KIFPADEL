@@ -13,10 +13,15 @@ Kifpadel **recommande** la création de compte via **Google OAuth**, mais accept
 
 1. Dashboard → **Authentication** → **Providers** → activer **Google**.
 2. Créer des identifiants OAuth dans [Google Cloud Console](https://console.cloud.google.com/).
-3. **URL Configuration** → redirect URLs :
+3. **URL Configuration** → redirect URLs (ajouter toutes les variantes) :
    - `https://www.kifpadel.tn/fr/auth/callback`
    - `https://www.kifpadel.tn/en/auth/callback`
-4. Variable `NEXT_PUBLIC_SITE_URL` alignée avec le domaine de production.
+   - `https://kifpadel.tn/fr/auth/callback` (redirigé vers www)
+   - `https://kifpadel.tn/en/auth/callback`
+4. **Site URL** Supabase : `https://www.kifpadel.tn`
+5. Vercel : `NEXT_PUBLIC_SITE_URL=https://www.kifpadel.tn`
+6. Google Cloud Console → **Authorized redirect URIs** : l’URL callback Supabase
+   (`https://<project-ref>.supabase.co/auth/v1/callback`).
 
 ## Combinaison avec WhatsApp OTP
 

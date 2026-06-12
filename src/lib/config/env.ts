@@ -143,6 +143,15 @@ export const publicEnv: PublicEnv = {
     if (!url.startsWith("http")) {
       url = `https://${url}`;
     }
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === "kifpadel.tn") {
+        parsed.hostname = "www.kifpadel.tn";
+        return parsed.origin;
+      }
+    } catch {
+      // keep url as-is
+    }
     return url;
   })(),
 };

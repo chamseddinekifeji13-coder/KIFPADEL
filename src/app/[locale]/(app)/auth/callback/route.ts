@@ -1,42 +1,45 @@
 import { NextResponse } from "next/server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { sanitizeAuthNextPath } from "@/lib/booking-paths";
+import { createSupabaseOAuthRouteHandlerClient } from "@/lib/supabase/route-handler";
 
 type CallbackRouteContext = {
   params: Promise<{ locale: string }>;
 };
 
 function getSafeNextPath(rawNext: string | null, locale: string) {
-  const fallback = `/${locale}/onboarding`;
-  const next = String(rawNext ?? "").trim();
-
-  if (!next.startsWith("/")) return fallback;
-  if (next.startsWith("//")) return fallback;
-
-  return next;
+  return sanitizeAuthNextPath(rawNext, locale, `/${locale}/onboarding`);
 }
 
 export async function GET(request: Request, context: CallbackRouteContext) {
   const { locale } = await context.params;
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const oauthError = requestUrl.searchParams.get("error");
   const next = getSafeNextPath(requestUrl.searchParams.get("next"), locale);
+  const signInErrorUrl = new URL(`/${locale}/auth/sign-in?error=callback_failed`, request.url);
 
-  if (!code) {
-    return NextResponse.redirect(
-      new URL(`/${locale}/auth/sign-in?error=callback_failed`, request.url),
+  if (oauthError) {
+    console.error(
+      "[auth/callback] OAuth provider error:",
+      oauthError,
+      requestUrl.searchParams.get("error_description"),
     );
+    return NextResponse.redirect(signInErrorUrl);
   }
 
-  const supabase = await createSupabaseServerClient();
+  if (!code) {
+    return NextResponse.redirect(signInErrorUrl);
+  }
+
+  const successUrl = new URL(next, request.url);
+  const { supabase, response } = await createSupabaseOAuthRouteHandlerClient(successUrl);
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    console.error("Auth callback error:", error);
-    return NextResponse.redirect(
-      new URL(`/${locale}/auth/sign-in?error=callback_failed`, request.url),
-    );
+    console.error("[auth/callback] exchangeCodeForSession:", error.message);
+    return NextResponse.redirect(signInErrorUrl);
   }
 
-  return NextResponse.redirect(new URL(next, request.url));
+  return response;
 }

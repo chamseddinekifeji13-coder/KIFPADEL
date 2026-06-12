@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { signInWithGoogleAction } from "@/modules/auth/actions/sign-in-with-google";
 
 type GoogleSignInButtonProps = {
@@ -5,7 +10,6 @@ type GoogleSignInButtonProps = {
   next?: string;
   label: string;
   className?: string;
-  /** Bouton principal (inscription) ou secondaire (connexion email existante). */
   variant?: "primary" | "secondary";
 };
 
@@ -39,22 +43,47 @@ export function GoogleSignInButton({
   className = "",
   variant = "primary",
 }: GoogleSignInButtonProps) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+
   const base =
     variant === "primary"
       ? "h-14 rounded-2xl bg-white text-slate-900 font-black uppercase tracking-widest hover:bg-slate-100 border border-slate-200 shadow-sm"
       : "h-12 rounded-xl bg-surface-elevated text-white font-bold border border-border hover:border-gold/40";
 
+  const handleClick = async () => {
+    if (pending) return;
+
+    setPending(true);
+
+    const formData = new FormData();
+    formData.set("locale", locale);
+    if (next) {
+      formData.set("next", next);
+    }
+
+    const result = await signInWithGoogleAction(formData);
+
+    if (!result.ok) {
+      setPending(false);
+      router.push(`/${locale}/auth/sign-in?error=${result.error}`);
+      return;
+    }
+
+    window.location.href = result.url;
+  };
+
   return (
-    <form action={signInWithGoogleAction} className={className}>
-      <input type="hidden" name="locale" value={locale} />
-      {next ? <input type="hidden" name="next" value={next} /> : null}
+    <div className={className}>
       <button
-        type="submit"
-        className={`w-full flex items-center justify-center gap-3 text-sm transition-colors ${base}`}
+        type="button"
+        onClick={handleClick}
+        disabled={pending}
+        className={`w-full flex items-center justify-center gap-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${base}`}
       >
         <GoogleIcon />
-        {label}
+        {pending ? "…" : label}
       </button>
-    </form>
+    </div>
   );
 }

@@ -64,6 +64,20 @@ export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   /* ------------------------------------------------------------------ */
+  /* 1b — Canonique www (cookies OAuth PKCE sur un seul host)           */
+  /* ------------------------------------------------------------------ */
+  const hostname = request.nextUrl.hostname;
+  if (hostname === "kifpadel.tn") {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.hostname = "www.kifpadel.tn";
+    const redirectResponse = NextResponse.redirect(canonicalUrl, 308);
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return redirectResponse;
+  }
+
+  /* ------------------------------------------------------------------ */
   /* 2 — i18n redirect: bare "/" → "/fr"                                */
   /* ------------------------------------------------------------------ */
   if (pathname === "/") {

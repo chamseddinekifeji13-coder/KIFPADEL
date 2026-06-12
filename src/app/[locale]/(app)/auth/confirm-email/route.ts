@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { sanitizeAuthNextPath } from "@/lib/booking-paths";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseOAuthRouteHandlerClient } from "@/lib/supabase/route-handler";
 
 type ConfirmEmailRouteContext = {
   params: Promise<{ locale: string }>;
@@ -13,29 +13,28 @@ function getSafeNextPath(rawNext: string | null, locale: string) {
 
 /**
  * Cible dédiée au lien « confirmez votre email » après inscription (`signUp` → emailRedirectTo).
- * On échange le code contre une session (validation du jeton avec Supabase), puis on déconnecte
- * immédiatement : l'utilisateur doit se connecter avec email + mot de passe avant d'accéder au parcours.
  */
 export async function GET(request: Request, context: ConfirmEmailRouteContext) {
   const { locale } = await context.params;
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = getSafeNextPath(requestUrl.searchParams.get("next"), locale);
+  const signInErrorUrl = new URL(`/${locale}/auth/sign-in?error=callback_failed`, request.url);
 
   if (!code) {
-    return NextResponse.redirect(
-      new URL(`/${locale}/auth/sign-in?error=callback_failed`, request.url),
-    );
+    return NextResponse.redirect(signInErrorUrl);
   }
 
-  const supabase = await createSupabaseServerClient();
+  const signInUrl = new URL(`/${locale}/auth/sign-in`, request.url);
+  signInUrl.searchParams.set("status", "email_confirmed");
+  signInUrl.searchParams.set("next", next);
+
+  const { supabase, response } = await createSupabaseOAuthRouteHandlerClient(signInUrl);
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
     console.error("[confirm-email] exchangeCodeForSession:", error.message);
-    return NextResponse.redirect(
-      new URL(`/${locale}/auth/sign-in?error=callback_failed`, request.url),
-    );
+    return NextResponse.redirect(signInErrorUrl);
   }
 
   const { error: signOutError } = await supabase.auth.signOut();
@@ -43,8 +42,5 @@ export async function GET(request: Request, context: ConfirmEmailRouteContext) {
     console.error("[confirm-email] signOut:", signOutError.message);
   }
 
-  const signInUrl = new URL(`/${locale}/auth/sign-in`, request.url);
-  signInUrl.searchParams.set("status", "email_confirmed");
-  signInUrl.searchParams.set("next", next);
-  return NextResponse.redirect(signInUrl);
+  return response;
 }
