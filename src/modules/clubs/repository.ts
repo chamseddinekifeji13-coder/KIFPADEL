@@ -1,3 +1,4 @@
+import { resolveCourtPlayerPrice } from "@/domain/rules/court-pricing";
 import { resolveBookingDurationMinutes } from "@/modules/bookings/constants";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -39,6 +40,7 @@ type CourtRow = {
   is_indoor?: boolean | null;
   is_active?: boolean | null;
   price_per_slot?: number | null;
+  price_per_player?: number | null;
   created_at?: string | null;
 };
 
@@ -243,6 +245,7 @@ export type CourtBookingRow = {
   id: string;
   club_id: string;
   price_per_slot: number | null;
+  price_per_player: number | null;
   is_active: boolean | null;
 };
 
@@ -252,7 +255,7 @@ export async function fetchCourtForBooking(clubId: string, courtId: string): Pro
 
     const { data, error } = await supabase
       .from("courts")
-      .select("id, club_id, price_per_slot, is_active")
+      .select("id, club_id, price_per_slot, price_per_player, is_active")
       .eq("club_id", clubId)
       .eq("id", courtId)
       .maybeSingle();
@@ -435,7 +438,8 @@ export type ClubCourtSummary = {
   label: string;
   surface: string;
   isIndoor: boolean;
-  pricePerSlot: number;
+  /** Tarif par joueur pour un créneau (DT). */
+  pricePerPlayer: number;
 };
 
 export async function fetchCourtsByClubId(clubId: string): Promise<ClubCourtSummary[]> {
@@ -444,7 +448,7 @@ export async function fetchCourtsByClubId(clubId: string): Promise<ClubCourtSumm
   try {
     const { data, error } = await supabase
       .from("courts")
-      .select("id,label,surface,is_indoor,price_per_slot")
+      .select("id,label,surface,is_indoor,price_per_slot,price_per_player")
       .eq("club_id", clubId)
       .order("label", { ascending: true });
 
@@ -460,15 +464,15 @@ export async function fetchCourtsByClubId(clubId: string): Promise<ClubCourtSumm
         surface?: string | null;
         is_indoor?: boolean | null;
         price_per_slot?: number | null;
+        price_per_player?: number | null;
       };
       const rawLabel = typeof r.label === "string" ? r.label.trim() : "";
-      const rawPrice = Number(r.price_per_slot);
       return {
         id: String(r.id ?? ""),
         label: rawLabel.length > 0 ? rawLabel : "?",
         surface: (typeof r.surface === "string" && r.surface.trim().length > 0 ? r.surface.trim() : "standard"),
         isIndoor: Boolean(r.is_indoor),
-        pricePerSlot: Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : 40,
+        pricePerPlayer: resolveCourtPlayerPrice(r),
       };
     });
   } catch (err) {

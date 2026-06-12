@@ -7,6 +7,7 @@ interface PaymentMethodSelectorProps {
   onSelect: (method: "online" | "on_site") => void;
   isRestricted: boolean;
   price: number;
+  priceLabel?: string;
 }
 
 export function PaymentMethodSelector({
@@ -14,6 +15,7 @@ export function PaymentMethodSelector({
   onSelect,
   isRestricted,
   price,
+  priceLabel = "Total",
 }: PaymentMethodSelectorProps) {
   return (
     <div className="space-y-2">
@@ -46,7 +48,7 @@ export function PaymentMethodSelector({
               Payer en ligne
             </span>
             <span className="text-[10px] text-[var(--foreground-muted)]">
-              {price} DT maintenant
+              {priceLabel} · {price} DT
             </span>
           </div>
           {selected === "online" && (
@@ -73,7 +75,7 @@ export function PaymentMethodSelector({
               Payer sur place
             </span>
             <span className="text-[10px] text-[var(--foreground-muted)]">
-              {price} DT au club
+              {priceLabel} · {price} DT au club
             </span>
           </div>
           {selected === "on_site" && !isRestricted && (

@@ -137,7 +137,7 @@ export default async function ClubCourtsPage({ params }: ClubCourtsPageProps) {
                 clubId={managedClub.id}
                 courtId={court.id}
                 courtLabel={court.label}
-                initialPrice={court.pricePerSlot}
+                initialPrice={court.pricePerPlayer}
                 fieldLabel={labels.courtsPriceFieldLabel}
                 fieldHint={labels.courtsPriceFieldHint}
                 saveCta={labels.courtLabelEditorSave}

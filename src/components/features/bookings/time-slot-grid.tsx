@@ -36,6 +36,9 @@ export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProp
             <span className="text-[10px] opacity-60 font-medium uppercase tracking-tighter">
               {slot.courtLabel}
             </span>
+            {slot.isAvailable ? (
+              <span className="text-[10px] font-bold text-[var(--gold)]">{slot.price} DT/j</span>
+            ) : null}
           </button>
         ))}
       </div>

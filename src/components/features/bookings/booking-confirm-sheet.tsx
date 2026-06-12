@@ -196,7 +196,7 @@ export function BookingConfirmSheet({
                 {baseSlotPrice !== undefined ? (
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-bold text-foreground-muted uppercase tracking-widest text-[10px]">
-                      Terrain
+                      Votre part (créneau)
                     </span>
                     <span className="font-bold text-white">{baseSlotPrice} DT</span>
                   </div>
@@ -204,13 +204,13 @@ export function BookingConfirmSheet({
                 {racketQty > 0 && racketFee > 0 ? (
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-bold text-foreground-muted uppercase tracking-widest text-[10px]">
-                      Location raquettes ×{racketQty}
+                      Location raquette (1)
                     </span>
                     <span className="font-bold text-white">{racketFee} DT</span>
                   </div>
                 ) : null}
                 <div className="flex items-center justify-between pt-1 border-t border-white/10">
-                  <span className="text-sm font-bold text-foreground-muted uppercase tracking-widest">Total</span>
+                  <span className="text-sm font-bold text-foreground-muted uppercase tracking-widest">Votre total</span>
                   <span className="text-3xl font-black text-white">
                     {price} <span className="text-gold">DT</span>
                   </span>

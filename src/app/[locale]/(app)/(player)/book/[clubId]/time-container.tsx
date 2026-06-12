@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TimeSlotGrid } from "@/components/features/bookings/time-slot-grid";
 import { PaymentMethodSelector } from "@/components/features/bookings/payment-method-selector";
@@ -8,6 +8,7 @@ import { BookingConfirmSheet } from "@/components/features/bookings/booking-conf
 import { type TimeSlot } from "@/modules/bookings/availability-service";
 import { buildTunisSlotTimestamps } from "@/modules/bookings/timezone";
 import { createBookingAction } from "@/modules/bookings/actions";
+import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { ChevronRight, ShieldAlert } from "lucide-react";
 
@@ -16,16 +17,12 @@ interface TimeContainerProps {
   date: string;
   clubId: string;
   clubName: string;
-  /** Doit être identique au pas de la grille (`club.slot_duration_minutes`). */
   bookingDurationMinutes?: number;
-  /** Offre « location » valide (club activé + prix unitaire &gt; 0). */
   racketRentalOffered?: boolean;
   racketPricePerUnit?: number;
   playerTrustScore?: number;
   playerReliability?: string;
 }
-
-const MAX_RACKETS_UI = 8;
 
 export function TimeContainer({
   slots,
@@ -39,40 +36,41 @@ export function TimeContainer({
   playerReliability = "healthy",
 }: TimeContainerProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [racketQty, setRacketQty] = useState(0);
+  const [rentRacket, setRentRacket] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
   const [showConfirmSheet, setShowConfirmSheet] = useState(false);
   const [bookingState, setBookingState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const selectedSlotData = slots.find((s) => s.id === selectedSlot);
-  const slotBasePrice = selectedSlotData?.price ?? 40;
+  const playerSharePrice = selectedSlotData?.price ?? 10;
   const courtId = selectedSlotData?.courtId ?? "";
   const slotTime = selectedSlotData?.time ?? "";
 
   const racketUnit = racketRentalOffered && racketPricePerUnit > 0 ? racketPricePerUnit : 0;
-  const sanitizedRacketQty =
-    racketUnit > 0 ? Math.min(MAX_RACKETS_UI, Math.max(0, Math.floor(racketQty))) : 0;
+  const racketQty = racketUnit > 0 && rentRacket ? 1 : 0;
 
   useEffect(() => {
-    setRacketQty(0);
+    setRentRacket(false);
   }, [selectedSlot]);
 
-  const { basePrice, racketFee, totalPrice } = useMemo(() => {
-    const fee =
-      sanitizedRacketQty > 0 && racketUnit > 0
-        ? Math.round(sanitizedRacketQty * racketUnit * 100) / 100
-        : 0;
-    const base = slotBasePrice;
-    return {
-      basePrice: base,
-      racketFee: fee,
-      totalPrice: Math.round((base + fee) * 100) / 100,
-    };
-  }, [slotBasePrice, racketUnit, sanitizedRacketQty]);
+  const { basePrice, racketFee, totalPrice } = useMemo(
+    () =>
+      computeBookingTotals({
+        club: {
+          racket_rental_enabled: racketUnit > 0,
+          racket_rental_price_per_unit: racketUnit > 0 ? racketUnit : null,
+        },
+        court: { price_per_player: playerSharePrice },
+        startsAt: date,
+        endsAt: date,
+        racketRentalQtyRequested: racketQty,
+      }),
+    [playerSharePrice, racketUnit, racketQty, date],
+  );
 
   const isRestricted = playerReliability === "restricted" || playerTrustScore < 45;
   const isBlacklisted = playerReliability === "blacklisted" || playerTrustScore < 25;
@@ -92,6 +90,7 @@ export function TimeContainer({
 
     setBookingState("loading");
     setErrorMessage(null);
+    setIsPending(true);
 
     let startsAtIso: string;
     let endsAtIso: string;
@@ -102,6 +101,7 @@ export function TimeContainer({
     } catch {
       setBookingState("error");
       setErrorMessage("Date ou heure du créneau invalide. Rechargez la page et réessayez.");
+      setIsPending(false);
       return;
     }
 
@@ -112,28 +112,31 @@ export function TimeContainer({
         startsAt: startsAtIso,
         endsAt: endsAtIso,
         paymentMethod,
-        racketRentalQty: sanitizedRacketQty,
+        racketRentalQty: racketQty,
         clientTotalHint: totalPrice,
       });
 
       if (result.ok) {
         setBookingState("success");
+        setIsPending(false);
         setTimeout(() => {
           setShowConfirmSheet(false);
           setSelectedSlot(null);
           setPaymentMethod(null);
-          setRacketQty(0);
+          setRentRacket(false);
           setBookingState("idle");
           router.refresh();
         }, 2000);
       } else {
         setBookingState("error");
         setErrorMessage(result.error);
+        setIsPending(false);
       }
     } catch (err) {
       console.error("[TimeContainer] createBookingAction failed", err);
       setBookingState("error");
       setErrorMessage("Connexion interrompue. Vérifiez le réseau et réessayez.");
+      setIsPending(false);
     }
   };
 
@@ -144,10 +147,7 @@ export function TimeContainer({
       <TimeSlotGrid slots={slots} selectedSlot={selectedSlot} onSelect={setSelectedSlot} />
 
       {selectedSlot && !isBlacklisted ? (
-        <div
-          className="h-72 pb-[max(env(safe-area-inset-bottom),0px)] shrink-0"
-          aria-hidden
-        />
+        <div className="h-72 pb-[max(env(safe-area-inset-bottom),0px)] shrink-0" aria-hidden />
       ) : null}
 
       {isBlacklisted && (
@@ -168,35 +168,34 @@ export function TimeContainer({
         >
           <div className="max-w-lg mx-auto p-4 space-y-4">
             {showRacketRow ? (
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3">
-                <label
-                  htmlFor="racket-qty-select"
-                  className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-wider text-[var(--foreground-muted)] mb-2"
-                >
-                  <span>Location de raquettes</span>
-                  <span className="text-[var(--gold)]">{racketUnit} DT / unité</span>
-                </label>
-                <select
-                  id="racket-qty-select"
-                  value={sanitizedRacketQty}
-                  onChange={(e) => setRacketQty(Number.parseInt(e.target.value, 10))}
-                  className="w-full h-11 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-white"
-                >
-                  <option value={0}>0 — J&apos;apporte mes raquettes</option>
-                  {Array.from({ length: MAX_RACKETS_UI }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      {n} raquette{n > 1 ? "s" : ""}
-                    </option>
-                  ))}
-                </select>
-                {sanitizedRacketQty > 0 ? (
-                  <p className="mt-2 text-xs text-[var(--foreground-muted)]">
-                    Supplément raquettes :{" "}
-                    <span className="font-bold text-[var(--gold)]">{racketFee} DT</span> · Total estimé{" "}
-                    <span className="font-bold text-white">{totalPrice} DT</span> (confirmé au paiement après
-                    validation serveur)
-                  </p>
-                ) : null}
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--foreground-muted)]">
+                  Raquette · {racketUnit} DT
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRentRacket(false)}
+                    className={`min-h-[44px] rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                      !rentRacket
+                        ? "border-[var(--gold)] bg-[var(--gold)]/10 text-[var(--gold)]"
+                        : "border-[var(--border)] text-[var(--foreground-muted)]"
+                    }`}
+                  >
+                    J&apos;ai ma raquette
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRentRacket(true)}
+                    className={`min-h-[44px] rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                      rentRacket
+                        ? "border-[var(--gold)] bg-[var(--gold)]/10 text-[var(--gold)]"
+                        : "border-[var(--border)] text-[var(--foreground-muted)]"
+                    }`}
+                  >
+                    Je loue une raquette
+                  </button>
+                </div>
               </div>
             ) : null}
 
@@ -205,16 +204,21 @@ export function TimeContainer({
               onSelect={setPaymentMethod}
               isRestricted={isRestricted}
               price={totalPrice}
+              priceLabel="Votre part"
             />
 
             <div className="flex items-center justify-between gap-4">
               <div className="flex flex-col min-w-0">
                 <span className="text-[10px] uppercase font-bold text-[var(--foreground-muted)]">
-                  Résumé
+                  Votre part
                 </span>
                 <span className="text-sm font-bold text-white truncate">
                   {slotTime} • {selectedSlotData?.courtLabel} •{" "}
                   {new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                </span>
+                <span className="text-xs text-[var(--foreground-muted)]">
+                  {basePrice} DT créneau
+                  {racketFee > 0 ? ` + ${racketFee} DT raquette` : ""}
                 </span>
               </div>
 
@@ -251,7 +255,7 @@ export function TimeContainer({
         paymentMethod={paymentMethod}
         price={totalPrice}
         baseSlotPrice={basePrice}
-        racketQty={sanitizedRacketQty}
+        racketQty={racketQty}
         racketFee={racketFee}
         state={bookingState}
         errorMessage={errorMessage}

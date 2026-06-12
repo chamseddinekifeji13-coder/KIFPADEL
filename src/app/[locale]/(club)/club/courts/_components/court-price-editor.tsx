@@ -60,7 +60,7 @@ export function CourtPriceEditor({
     formData.set("locale", locale);
     formData.set("club_id", clubId);
     formData.set("court_id", courtId);
-    formData.set("price_per_slot", trimmed);
+    formData.set("price_per_player", trimmed);
 
     const result = await updateCourtPriceAction(formData);
 
@@ -88,7 +88,7 @@ export function CourtPriceEditor({
         </label>
         <input
           id={`court-price-${courtId}`}
-          name="price_per_slot"
+          name="price_per_player"
           type="text"
           inputMode="decimal"
           value={value}

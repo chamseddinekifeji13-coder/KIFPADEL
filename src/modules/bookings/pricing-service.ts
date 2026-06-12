@@ -1,14 +1,17 @@
+import {
+  resolveCourtPlayerPrice,
+  type CourtPriceRow,
+} from "@/domain/rules/court-pricing";
+
 /** Données club nécessaires au calcul prix (réutilisable hors repository). */
 export type ClubPricingInput = {
   racket_rental_enabled: boolean;
   racket_rental_price_per_unit: number | null;
 };
 
-export type CourtPricingInput = {
-  price_per_slot: number | null;
-};
+export type CourtPricingInput = CourtPriceRow;
 
-const MAX_RACKET_QTY = 8;
+const MAX_RACKET_QTY_PER_PLAYER = 1;
 
 /** Arrondit un montant en DT à 2 décimales (évite flottants bruyants). */
 function roundDt(n: number): number {
@@ -26,16 +29,18 @@ export type BookingTotalsInput = {
 };
 
 export type BookingTotals = {
+  /** Part joueur (créneau). */
   basePrice: number;
   racketFee: number;
+  /** Montant payé par le joueur qui réserve (sa part + sa raquette). */
   totalPrice: number;
   racketRentalQty: number;
 };
 
 /**
- * Source de vérité pour total_price + frais raquettes.
- * - Base = tarif officiel du terrain (`price_per_slot`) pour la durée métier standard (pas de prorata minute en V1).
- * - Durée peut servir ultérieurement : pour l’instant identique au modèle grille (un créneau = un prix).
+ * Source de vérité pour total_price + frais raquettes (phase 1 : par joueur).
+ * - Base = tarif par joueur (`price_per_player` ou `price_per_slot / 4`).
+ * - Raquette : 0 ou 1 pour le joueur qui réserve.
  */
 export function computeBookingTotals({
   club,
@@ -45,15 +50,11 @@ export function computeBookingTotals({
   racketRentalQtyRequested,
   clientTotalHint,
 }: BookingTotalsInput): BookingTotals {
-  const rawBase = Number(court.price_per_slot ?? 40);
-  if (!Number.isFinite(rawBase) || rawBase < 0) {
-    throw new Error("INVALID_COURT_PRICE");
-  }
-  const basePrice = roundDt(rawBase);
+  const basePrice = resolveCourtPlayerPrice(court);
 
   let qty = Math.floor(Number(racketRentalQtyRequested) || 0);
   if (qty < 0) qty = 0;
-  if (qty > MAX_RACKET_QTY) qty = MAX_RACKET_QTY;
+  if (qty > MAX_RACKET_QTY_PER_PLAYER) qty = MAX_RACKET_QTY_PER_PLAYER;
 
   const enabled = Boolean(club.racket_rental_enabled);
   const unitRaw = club.racket_rental_price_per_unit;

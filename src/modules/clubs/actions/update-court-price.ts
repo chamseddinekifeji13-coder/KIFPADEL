@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { PADEL_PLAYERS_PER_COURT } from "@/domain/rules/court-pricing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { parsePositiveMoneyOrNull } from "@/lib/utils/club-form-parse";
@@ -22,7 +23,7 @@ function t(
     case "invalid":
       return en ? "Invalid request." : "Requête invalide.";
     case "price":
-      return en ? "Enter a valid price in DT (e.g. 40)." : "Indiquez un prix valide en DT (ex. 40).";
+      return en ? "Enter a valid price per player in DT (e.g. 10)." : "Indiquez un prix valide par joueur en DT (ex. 10).";
     case "notFound":
       return en ? "Court not found for this club." : "Terrain introuvable pour ce club.";
     case "fail":
@@ -35,7 +36,7 @@ export async function updateCourtPriceAction(formData: FormData): Promise<Action
   const locale = String(formData.get("locale") ?? "fr").trim() || "fr";
   const clubId = String(formData.get("club_id") ?? "").trim();
   const courtId = String(formData.get("court_id") ?? "").trim();
-  const priceParsed = parsePositiveMoneyOrNull(formData.get("price_per_slot"));
+  const priceParsed = parsePositiveMoneyOrNull(formData.get("price_per_player"));
 
   if (!clubId || !courtId) {
     return { ok: false, error: t(locale, "invalid") };
@@ -60,6 +61,7 @@ export async function updateCourtPriceAction(formData: FormData): Promise<Action
   }
 
   const adminClient = createSupabaseAdminClient();
+  const slotReference = Math.round(priceParsed * PADEL_PLAYERS_PER_COURT * 100) / 100;
 
   const { data: courtRow, error: courtSelErr } = await adminClient
     .from("courts")
@@ -74,7 +76,10 @@ export async function updateCourtPriceAction(formData: FormData): Promise<Action
 
   const { error: updateErr } = await adminClient
     .from("courts")
-    .update({ price_per_slot: priceParsed })
+    .update({
+      price_per_player: priceParsed,
+      price_per_slot: slotReference,
+    })
     .eq("id", courtId)
     .eq("club_id", clubId);
 

@@ -245,7 +245,7 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
 
   const { data: courtRow, error: courtErr } = await supabase
     .from("courts")
-    .select("id, club_id, price_per_slot, is_active")
+    .select("id, club_id, price_per_slot, price_per_player, is_active")
     .eq("club_id", input.clubId)
     .eq("id", input.courtId)
     .maybeSingle();
@@ -258,6 +258,7 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     id: string;
     club_id: string;
     price_per_slot: number | null;
+    price_per_player: number | null;
     is_active: boolean | null;
   } | null;
 
@@ -292,6 +293,7 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
       },
       court: {
         price_per_slot: court.price_per_slot == null ? null : Number(court.price_per_slot),
+        price_per_player: court.price_per_player == null ? null : Number(court.price_per_player),
       },
       startsAt: input.startsAt,
       endsAt: input.endsAt,

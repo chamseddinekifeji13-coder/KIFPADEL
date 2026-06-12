@@ -1,3 +1,4 @@
+import { resolveCourtPlayerPrice } from "@/domain/rules/court-pricing";
 import { fetchBookingsByClubAndDate } from "./repository";
 import { fetchCourtsByClub, fetchClubById } from "@/modules/clubs/repository";
 import { resolveBookingDurationMinutes } from "@/modules/bookings/constants";
@@ -11,7 +12,8 @@ export interface TimeSlot {
   isAvailable: boolean;
   courtId: string;     // Specific court for this slot
   courtLabel: string;  // Name of the court
-  price: number;       // Price in DT
+  /** Part joueur en DT (phase 1). */
+  price: number;
 }
 
 /**
@@ -63,7 +65,7 @@ export async function getClubAvailability(clubId: string, date: string): Promise
         isAvailable: !isOccupied,
         courtId: court.id,
         courtLabel: court.label,
-        price: court.price_per_slot ?? 40,
+        price: resolveCourtPlayerPrice(court),
       });
     }
 
