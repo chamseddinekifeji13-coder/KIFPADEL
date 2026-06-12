@@ -22,7 +22,13 @@
 
 ## `audit_log`
 
-Écrit pour : `SUPER_ADMIN_GRANTED`, mutations sponsors, suspension/réactivation club & joueur (voir modules listés dans le dernier changelog / PR).
+Écrit pour : `SUPER_ADMIN_GRANTED`, mutations sponsors, suspension/réactivation club & joueur, **`PLAYER_DELETE` / `CLUB_DELETE`** (suppression définitive avec raison + phrase `SUPPRIMER`).
+
+## Suppression de comptes (super_admin)
+
+- **Joueurs** (`/admin/players`) : suppression `auth.users` + profil (cascade). Tournois créés par le joueur supprimés avant. Comptes `super_admin` et auto-suppression interdits.
+- **Clubs** (`/admin/clubs`) : suppression du club + courts, réservations, memberships (cascade). Tournois du club supprimés avant.
+- Nécessite `SUPABASE_SERVICE_ROLE_KEY` côté serveur (actions admin).
 
 ## Hors périmètre V1
 

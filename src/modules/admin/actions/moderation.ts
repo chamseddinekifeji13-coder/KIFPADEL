@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import {
+  adminDeleteClubAccount,
+  adminDeletePlayerAccount,
+  isAdminDeleteConfirmPhrase,
+} from "@/modules/admin/account-deletion";
 import { insertAuditRow } from "@/modules/admin/audit-log";
 import { getSuperAdminActor } from "@/modules/admin/actor";
 
@@ -185,4 +190,95 @@ export async function adminReactivatePlayerAction(formData: FormData): Promise<v
 
   revalidatePath(`/${locale}/admin/players`);
   revalidatePath(`/${locale}/admin`);
+}
+
+export async function adminDeletePlayerAction(formData: FormData): Promise<void> {
+  const locale = String(formData.get("locale") ?? "fr").trim() || "fr";
+  const playerId = String(formData.get("player_id") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  const confirmPhrase = String(formData.get("confirm_phrase") ?? "");
+
+  if (!playerId || !reason || !isAdminDeleteConfirmPhrase(confirmPhrase)) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerActionClient();
+  const actor = await getSuperAdminActor(supabase);
+  if (!actor) return;
+
+  if (actor.userId === playerId) {
+    console.warn("[adminDeletePlayerAction] self-delete blocked");
+    return;
+  }
+
+  const { data: snapshot } = await supabase
+    .from("profiles")
+    .select("display_name, email, phone, global_role, trust_score")
+    .eq("id", playerId)
+    .maybeSingle();
+
+  const result = await adminDeletePlayerAccount(playerId);
+  if (!result.ok) {
+    console.warn("[adminDeletePlayerAction]", result.code, result.error);
+    return;
+  }
+
+  await insertAuditRow(supabase, {
+    actor_profile_id: actor.userId,
+    actor_global_role: actor.globalRole,
+    action: "PLAYER_DELETE",
+    target_table: "profiles",
+    target_id: playerId,
+    metadata: {
+      reason,
+      snapshot: snapshot ?? null,
+    },
+  });
+
+  revalidatePath(`/${locale}/admin/players`);
+  revalidatePath(`/${locale}/admin`);
+  revalidatePath(`/${locale}/admin/audit-log`);
+}
+
+export async function adminDeleteClubAction(formData: FormData): Promise<void> {
+  const locale = String(formData.get("locale") ?? "fr").trim() || "fr";
+  const clubId = String(formData.get("club_id") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  const confirmPhrase = String(formData.get("confirm_phrase") ?? "");
+
+  if (!clubId || !reason || !isAdminDeleteConfirmPhrase(confirmPhrase)) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerActionClient();
+  const actor = await getSuperAdminActor(supabase);
+  if (!actor) return;
+
+  const { data: snapshot } = await supabase
+    .from("clubs")
+    .select("name, city, is_active, suspended_at")
+    .eq("id", clubId)
+    .maybeSingle();
+
+  const result = await adminDeleteClubAccount(clubId);
+  if (!result.ok) {
+    console.warn("[adminDeleteClubAction]", result.code, result.error);
+    return;
+  }
+
+  await insertAuditRow(supabase, {
+    actor_profile_id: actor.userId,
+    actor_global_role: actor.globalRole,
+    action: "CLUB_DELETE",
+    target_table: "clubs",
+    target_id: clubId,
+    metadata: {
+      reason,
+      snapshot: snapshot ?? null,
+    },
+  });
+
+  revalidatePath(`/${locale}/admin/clubs`);
+  revalidatePath(`/${locale}/admin`);
+  revalidatePath(`/${locale}/admin/audit-log`);
 }

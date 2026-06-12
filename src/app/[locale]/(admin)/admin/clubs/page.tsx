@@ -8,7 +8,12 @@ import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Badge } from "@/components/ui/badge";
 import { fetchAdminClubDirectory } from "@/modules/admin/repository";
-import { adminReactivateClubAction, adminSuspendClubAction } from "@/modules/admin/actions/moderation";
+import { AdminDeleteAccountForm } from "@/components/features/admin/admin-delete-account-form";
+import {
+  adminDeleteClubAction,
+  adminReactivateClubAction,
+  adminSuspendClubAction,
+} from "@/modules/admin/actions/moderation";
 
 type AdminClubsPageProps = {
   params: Promise<{ locale: string }>;
@@ -109,6 +114,15 @@ export default async function AdminClubsPage({ params }: AdminClubsPageProps) {
                       </button>
                     </form>
                   )}
+
+                  <AdminDeleteAccountForm
+                    locale={locale}
+                    entityId={club.id}
+                    entityLabel={club.name}
+                    idFieldName="club_id"
+                    action={adminDeleteClubAction}
+                    buttonLabel="Supprimer le club (définitif)"
+                  />
                 </div>
               </div>
             </Card>

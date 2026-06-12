@@ -13,6 +13,8 @@ const PRESET_ACTIONS = [
   { action: "SPONSOR_CREATE", label: "SPONSOR_CREATE" },
   { action: "SPONSOR_UPDATE", label: "SPONSOR_UPDATE" },
   { action: "SUPER_ADMIN_GRANTED", label: "SUPER_ADMIN_GRANTED" },
+  { action: "PLAYER_DELETE", label: "PLAYER_DELETE" },
+  { action: "CLUB_DELETE", label: "CLUB_DELETE" },
 ] as const;
 
 function buildQuery(locale: string, entries: Record<string, string | undefined>) {

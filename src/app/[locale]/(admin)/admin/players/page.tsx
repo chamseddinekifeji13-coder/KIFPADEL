@@ -7,7 +7,12 @@ import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Badge } from "@/components/ui/badge";
 import { fetchAdminPlayersList } from "@/modules/admin/repository";
-import { adminReactivatePlayerAction, adminSuspendPlayerAction } from "@/modules/admin/actions/moderation";
+import { AdminDeleteAccountForm } from "@/components/features/admin/admin-delete-account-form";
+import {
+  adminDeletePlayerAction,
+  adminReactivatePlayerAction,
+  adminSuspendPlayerAction,
+} from "@/modules/admin/actions/moderation";
 
 type AdminPlayersPageProps = {
   params: Promise<{ locale: string }>;
@@ -71,6 +76,7 @@ export default async function AdminPlayersPage({ params, searchParams }: AdminPl
             <tbody className="divide-y divide-slate-100">
               {players.map((p) => {
                 const suspended = Boolean(p.suspended_at);
+                const isSuperAdmin = String(p.global_role ?? "").toLowerCase() === "super_admin";
                 return (
                   <tr key={p.id} className="align-top hover:bg-slate-50/50">
                     <td className="px-4 py-3">
@@ -132,6 +138,18 @@ export default async function AdminPlayersPage({ params, searchParams }: AdminPl
                               Réactiver
                             </button>
                           </form>
+                        )}
+                        {!isSuperAdmin ? (
+                          <AdminDeleteAccountForm
+                            locale={locale}
+                            entityId={p.id}
+                            entityLabel={p.display_name ?? p.email ?? p.id}
+                            idFieldName="player_id"
+                            action={adminDeletePlayerAction}
+                            buttonLabel="Supprimer le compte joueur"
+                          />
+                        ) : (
+                          <p className="text-[10px] text-slate-400 text-center">Compte super_admin protégé</p>
                         )}
                       </div>
                     </td>

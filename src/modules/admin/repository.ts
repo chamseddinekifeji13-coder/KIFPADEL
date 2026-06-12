@@ -112,6 +112,7 @@ export type AdminPlayerRow = {
   reliability_status: string | null;
   suspended_at: string | null;
   suspension_reason: string | null;
+  global_role: string | null;
   created_at: string | null;
 };
 
@@ -128,7 +129,7 @@ export async function fetchAdminPlayersList(params: {
     let qb = supabase
       .from("profiles")
       .select(
-        "id,display_name,email,phone,main_club_id,league,sport_rating,trust_score,reliability_status,suspended_at,suspension_reason,created_at",
+        "id,display_name,email,phone,main_club_id,league,sport_rating,trust_score,reliability_status,suspended_at,suspension_reason,global_role,created_at",
       )
       .order("created_at", { ascending: false })
       .limit(limit);
