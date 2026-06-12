@@ -1,16 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { sanitizeAuthNextPath } from "@/lib/booking-paths";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
 function getSafeNextPath(rawNext: FormDataEntryValue | null, locale: string) {
-  const fallback = `/${locale}/profile`;
-  const next = String(rawNext ?? "").trim();
-
-  if (!next.startsWith("/")) return fallback;
-  if (next.startsWith("//")) return fallback;
-
-  return next;
+  return sanitizeAuthNextPath(String(rawNext ?? ""), locale);
 }
 
 export async function signInAction(formData: FormData) {

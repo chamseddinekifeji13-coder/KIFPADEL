@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { reliabilityFromTrustScore } from "@/domain/rules/trust";
 import { confirmArrivalAction, reportNoShowAction } from "@/modules/clubs/actions";
+import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 
 type Booking = {
   id: string;
@@ -34,15 +35,22 @@ type Booking = {
   amount: number;
 };
 
+type WeekDayStripItem = {
+  ymd: string;
+  weekdayShort: string;
+  dayOfMonth: number;
+};
+
 type SlotsManagerProps = {
   bookings: Booking[];
   courts: string[];
-  locale: string;
   labels: Record<string, string>;
+  /** Pré-calculé côté serveur (UTC) — évite #418 hydration sur toLocaleDateString + new Date() client. */
+  weekDays: WeekDayStripItem[];
 };
 
-export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerProps) {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+export function SlotsManager({ bookings, courts, labels, weekDays }: SlotsManagerProps) {
+  const [selectedYmd, setSelectedYmd] = useState(() => weekDays[0]?.ymd ?? "");
   const [filterCourt, setFilterCourt] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
@@ -56,24 +64,23 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
     confirmed: bookings.filter((booking) => booking.status === "confirmed").length,
     pending: bookings.filter((booking) => booking.status === "pending").length,
     blocked: bookings.filter((booking) => booking.status === "no_show").length,
-    available: Math.max(courts.length * 12 - bookings.length, 0),
+    available: Math.max(
+      courts.length * Math.round((12 * 60) / DEFAULT_BOOKING_DURATION_MINUTES) - bookings.length,
+      0
+    ),
   };
 
   return (
     <div className="space-y-6">
       {/* Date Selector */}
       <div className="flex items-center gap-4 overflow-x-auto pb-2">
-        {Array.from({ length: 7 }).map((_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() + i);
-          const isSelected = date.toDateString() === selectedDate.toDateString();
-          const dayName = date.toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", { weekday: "short" });
-          const dayNum = date.getDate();
-
+        {weekDays.map((day) => {
+          const isSelected = day.ymd === selectedYmd;
           return (
             <button
-              key={i}
-              onClick={() => setSelectedDate(date)}
+              key={day.ymd}
+              type="button"
+              onClick={() => setSelectedYmd(day.ymd)}
               className={cn(
                 "flex flex-col items-center px-4 py-3 rounded-xl transition-all min-w-[60px]",
                 isSelected
@@ -81,8 +88,8 @@ export function SlotsManager({ bookings, courts, locale, labels }: SlotsManagerP
                   : "bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--gold)]/30"
               )}
             >
-              <span className="text-[10px] uppercase font-bold tracking-wider">{dayName}</span>
-              <span className="text-xl font-bold">{dayNum}</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider">{day.weekdayShort}</span>
+              <span className="text-xl font-bold">{day.dayOfMonth}</span>
             </button>
           );
         })}

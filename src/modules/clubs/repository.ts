@@ -1,3 +1,4 @@
+import { resolveBookingDurationMinutes } from "@/modules/bookings/constants";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
@@ -26,6 +27,8 @@ export interface Club {
   opening_time: string;
   closing_time: string;
   created_at: string;
+  racket_rental_enabled: boolean;
+  racket_rental_price_per_unit: number | null;
 }
 
 type CourtRow = {
@@ -103,10 +106,18 @@ function normalizeClub(row: ClubRow): Club {
     type: normalizedType as Club["type"],
     logo_url: row.logo_url ?? null,
     is_active: row.is_active ?? true,
-    slot_duration_minutes: row.slot_duration_minutes ?? 60,
+    slot_duration_minutes: resolveBookingDurationMinutes(row.slot_duration_minutes),
     opening_time: row.opening_time ?? "08:00:00",
     closing_time: row.closing_time ?? "23:00:00",
     created_at: row.created_at ?? new Date().toISOString(),
+    racket_rental_enabled: Boolean(row.racket_rental_enabled),
+    racket_rental_price_per_unit:
+      row.racket_rental_price_per_unit == null
+        ? null
+        : (() => {
+            const n = Number(row.racket_rental_price_per_unit);
+            return Number.isFinite(n) ? n : null;
+          })(),
   };
 }
 
@@ -224,6 +235,41 @@ export async function fetchClubById(id: string): Promise<Club | null> {
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[clubs.fetchClubById] unexpected error", err);
+    return null;
+  }
+}
+
+export type CourtBookingRow = {
+  id: string;
+  club_id: string;
+  price_per_slot: number | null;
+  is_active: boolean | null;
+};
+
+export async function fetchCourtForBooking(clubId: string, courtId: string): Promise<CourtBookingRow | null> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { data, error } = await supabase
+      .from("courts")
+      .select("id, club_id, price_per_slot, is_active")
+      .eq("club_id", clubId)
+      .eq("id", courtId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[clubs.fetchCourtForBooking] supabase error", error.message);
+      return null;
+    }
+
+    if (!data || typeof data !== "object" || !("id" in data)) {
+      return null;
+    }
+
+    return data as CourtBookingRow;
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[clubs.fetchCourtForBooking] unexpected error", err);
     return null;
   }
 }

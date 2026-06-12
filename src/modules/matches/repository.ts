@@ -87,6 +87,18 @@ function typesFilterForViewer(viewerGender: Gender | null) {
  * Repository for Match related database operations.
  * Single source of truth: public.match_participants (not legacy match_players).
  */
+function mergeMatchesById(lists: MatchWithDetails[][]): MatchWithDetails[] {
+  const byId = new Map<string, MatchWithDetails>();
+  for (const list of lists) {
+    for (const m of list) {
+      byId.set(m.id, m);
+    }
+  }
+  return [...byId.values()].sort(
+    (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+  );
+}
+
 export async function fetchOpenMatches(viewerGender: Gender | null = null): Promise<MatchWithDetails[]> {
   try {
     const supabase = await createSupabaseServerClient();
@@ -110,6 +122,69 @@ export async function fetchOpenMatches(viewerGender: Gender | null = null): Prom
     console.warn("[matches.fetchOpenMatches] unexpected error", err);
     return [];
   }
+}
+
+/** Matchs ouverts créés par le joueur ou où il est inscrit (toujours visibles pour lui). */
+export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDetails[]> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { data: createdRows, error: createdError } = await supabase
+      .from("matches")
+      .select(MATCH_SELECT)
+      .eq("status", "open")
+      .eq("created_by", userId);
+
+    if (createdError) {
+      console.warn("[matches.fetchUserOpenMatches] created error", createdError.message);
+    }
+
+    const { data: participations, error: partError } = await supabase
+      .from("match_participants")
+      .select("match_id")
+      .eq("player_id", userId);
+
+    if (partError) {
+      console.warn("[matches.fetchUserOpenMatches] participations error", partError.message);
+    }
+
+    const participantIds = [...new Set((participations ?? []).map((p) => p.match_id as string))];
+
+    let participantRows: unknown[] = [];
+    if (participantIds.length > 0) {
+      const { data, error } = await supabase
+        .from("matches")
+        .select(MATCH_SELECT)
+        .eq("status", "open")
+        .in("id", participantIds);
+
+      if (error) {
+        console.warn("[matches.fetchUserOpenMatches] participant matches error", error.message);
+      } else {
+        participantRows = data ?? [];
+      }
+    }
+
+    return normalizeMatches([...(createdRows ?? []), ...participantRows]);
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[matches.fetchUserOpenMatches] unexpected error", err);
+    return [];
+  }
+}
+
+/**
+ * Liste publique (filtre genre) + matchs du joueur connecté (créateur ou participant).
+ */
+export async function fetchOpenMatchesForViewer(
+  viewerGender: Gender | null,
+  viewerId: string | null,
+): Promise<MatchWithDetails[]> {
+  const publicMatches = await fetchOpenMatches(viewerGender);
+  if (!viewerId) return publicMatches;
+
+  const ownMatches = await fetchUserOpenMatches(viewerId);
+  return mergeMatchesById([publicMatches, ownMatches]);
 }
 
 export async function fetchOpenMatchesByClub(

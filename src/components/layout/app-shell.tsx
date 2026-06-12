@@ -36,7 +36,7 @@ export function AppShell({
           Main Content Area 
           We use a larger bottom padding to accommodate the floating nav 
       */}
-      <main className="flex-1 flex flex-col p-4 pb-48 animate-in fade-in duration-700">
+      <main className="flex-1 flex flex-col p-4 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))]">
         {children}
       </main>
 

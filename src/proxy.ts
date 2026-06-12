@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 
 import { LOCALES, DEFAULT_LOCALE } from "@/i18n/config";
 import { publicEnv } from "@/lib/config/env";
+import { isUuidString } from "@/lib/uuid-utils";
 
 /**
  * Middleware.
@@ -102,6 +103,24 @@ export default async function proxy(request: NextRequest) {
       redirectResponse.cookies.set(cookie.name, cookie.value);
     });
     return redirectResponse;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 4 — Lien réservation : /fr/book/<clubId> doit être un UUID valide   */
+  /* ------------------------------------------------------------------ */
+  const section = segments[2];
+  const clubSegment = segments[3];
+  if (section === "book" && clubSegment) {
+    const clubId = decodeURIComponent(clubSegment);
+    if (!isUuidString(clubId)) {
+      const url = new URL(`/${candidateLocale}/book`, request.url);
+      url.searchParams.set("invalidClubLink", "1");
+      const redirectResponse = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value);
+      });
+      return redirectResponse;
+    }
   }
 
   return response;

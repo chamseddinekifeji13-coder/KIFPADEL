@@ -2,8 +2,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Star, ShieldCheck } from "lucide-react";
+import { InvitePlayerButton } from "@/components/features/players/player-invite-button";
 
 interface PlayerCardProps {
+  locale: string;
   player: {
     id: string;
     display_name: string;
@@ -16,9 +18,9 @@ interface PlayerCardProps {
   };
 }
 
-export function PlayerCard({ player }: PlayerCardProps) {
+export function PlayerCard({ locale, player }: PlayerCardProps) {
   return (
-    <Card className="p-4 flex items-center gap-4 border-white/5 bg-surface-elevated hover:shadow-gold-strong transition-all duration-500 cursor-pointer">
+    <Card className="p-4 flex items-center gap-4 border-white/5 bg-surface-elevated hover:shadow-gold-strong transition-all duration-500 touch-manipulation">
       <Avatar
         src={player.avatar_url}
         alt={player.display_name}
@@ -51,9 +53,11 @@ export function PlayerCard({ player }: PlayerCardProps) {
         </div>
       </div>
 
-      <button className="text-[10px] font-black uppercase tracking-widest text-black px-4 py-2 rounded-xl bg-gold hover:bg-gold-light active:scale-95 transition-all shadow-gold">
-        Inviter
-      </button>
+      <InvitePlayerButton
+        locale={locale}
+        playerId={player.id}
+        playerDisplayName={player.display_name || "Joueur"}
+      />
     </Card>
   );
 }

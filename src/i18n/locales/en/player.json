@@ -172,6 +172,8 @@
   "playNowEmptyFilterTryAll": "Show all matches",
   "playNowGenderIncompleteHint": "Complete your profile to access men's, women's, and mixed matches.",
   "createMatchCta": "Create match",
+  "matchCreatedSuccess": "Your match is live. Share this page or wait for other players to join.",
+  "playNowMyMatchesSectionTitle": "My open matches",
   "genericPlayerName": "Player",
   "defaultLeagueLabel": "Bronze"
 }

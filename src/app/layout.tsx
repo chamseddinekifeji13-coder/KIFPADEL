@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { RegisterServiceWorker } from "@/modules/pwa/register-sw";
@@ -16,6 +16,13 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_URL = "https://www.kifpadel.tn";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#000000",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

@@ -1,3 +1,5 @@
+import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
+
 const TUNIS_TIME_ZONE = "Africa/Tunis";
 const TUNIS_OFFSET_MINUTES = 60; // UTC+1 for Tunisia.
 
@@ -48,4 +50,24 @@ export function formatTunisHm(date: Date) {
     minute: "2-digit",
     hour12: false,
   }).format(date);
+}
+
+/** Créneau réservation aligné sur la grille (heure Tunis → ISO UTC). */
+export function buildTunisSlotTimestamps(
+  dateYmd: string,
+  timeHm: string,
+  durationMinutes: number,
+): { startsAtIso: string; endsAtIso: string } {
+  const startsAt = tunisLocalDateTimeToUtc(dateYmd, timeHm);
+  const duration =
+    Number.isFinite(durationMinutes) && durationMinutes > 0
+      ? durationMinutes
+      : DEFAULT_BOOKING_DURATION_MINUTES;
+  const endsAt = addMinutes(startsAt, duration);
+
+  if (endsAt.getTime() <= startsAt.getTime()) {
+    throw new Error("INVALID_SLOT_RANGE");
+  }
+
+  return { startsAtIso: startsAt.toISOString(), endsAtIso: endsAt.toISOString() };
 }

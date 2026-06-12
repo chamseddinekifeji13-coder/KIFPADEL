@@ -1,11 +1,12 @@
 import { isLocale, type Locale } from "@/i18n/config";
+import { isUuidString } from "@/lib/uuid-utils";
 import { notFound, redirect } from "next/navigation";
 import { clubService } from "@/modules/clubs/service";
 import { playerService } from "@/modules/players/service";
 import { getClubAvailability } from "@/modules/bookings/availability-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
-import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
+import { resolveBookingDurationMinutes } from "@/modules/bookings/constants";
 import { MapPin, ArrowLeft, Calendar as CalendarIcon, InfoIcon, Clock } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
@@ -14,6 +15,7 @@ import { ClubDirectionsButton } from "@/components/features/clubs/club-direction
 import type { Metadata } from "next";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { formatClubCourtsSummary } from "@/lib/utils/club-display";
+import { isRacketRentalShownInBookingFlow } from "@/modules/bookings/racket-rental-pipeline";
 import { Mail, Phone, Building2, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -38,10 +40,14 @@ export default async function ClubDetailPage({
   params,
   searchParams,
 }: ClubDetailPageProps) {
-  const { locale, clubId } = await params;
+  const { locale, clubId: rawClubId } = await params;
   if (!isLocale(locale)) notFound();
 
-  // Get current user
+  const clubId = decodeURIComponent(rawClubId).trim();
+  if (!isUuidString(clubId)) {
+    redirect(`/${locale}/book?invalidClubLink=1`);
+  }
+
   let userId: string | null = null;
   let playerProfile: Awaited<ReturnType<typeof playerService.getPlayerProfile>> | null = null;
   
@@ -67,7 +73,11 @@ export default async function ClubDetailPage({
 
   // Fetch club data and availability
   const club = await clubService.getClubDetails(clubId).catch(() => null);
-  if (!club) notFound();
+  if (!club) {
+    redirect(`/${locale}/book?clubMissing=1`);
+  }
+
+  const bookingDurationMinutes = resolveBookingDurationMinutes(club.slot_duration_minutes);
 
   const availability = await getClubAvailability(clubId, selectedDate);
 
@@ -93,6 +103,9 @@ export default async function ClubDetailPage({
   // Get player trust info
   const playerTrustScore = playerProfile?.trust_score ?? 70;
   const playerReliability = playerProfile?.reliability_status ?? "healthy";
+
+  const racketOffered = isRacketRentalShownInBookingFlow(club);
+  const racketUnitPrice = racketOffered ? Number(club.racket_rental_price_per_unit) : 0;
 
   return (
     <div className="flex-1 pb-24">
@@ -193,7 +206,7 @@ export default async function ClubDetailPage({
                   key={day}
                   href={`?date=${day}`}
                   className={cn(
-                    "flex flex-col items-center justify-center min-w-[70px] py-3 rounded-xl border-2 transition-all",
+                    "flex flex-col items-center justify-center min-w-[70px] min-h-[64px] py-3 rounded-xl border-2 transition-all touch-manipulation select-none",
                     isSelected
                       ? "bg-[var(--gold)]/10 border-[var(--gold)] text-[var(--gold)]"
                       : "bg-[var(--surface)] border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--foreground-muted)]"
@@ -223,7 +236,7 @@ export default async function ClubDetailPage({
           
           <div className="bg-[var(--surface)] rounded-xl p-4 flex gap-3 text-[var(--foreground-muted)] text-sm border border-[var(--border)]">
             <InfoIcon className="h-5 w-5 shrink-0 text-[var(--gold)]" />
-            <p>Toutes les réservations sont pour une durée de <span className="text-white font-bold">{DEFAULT_BOOKING_DURATION_MINUTES} minutes</span>.</p>
+            <p>Toutes les réservations sont pour une durée de <span className="text-white font-bold">{bookingDurationMinutes} minutes</span>.</p>
           </div>
           
           <TimeContainer 
@@ -231,6 +244,9 @@ export default async function ClubDetailPage({
             date={selectedDate}
             clubId={clubId}
             clubName={club.name}
+            bookingDurationMinutes={bookingDurationMinutes}
+            racketRentalOffered={racketOffered}
+            racketPricePerUnit={racketUnitPrice}
             playerTrustScore={playerTrustScore}
             playerReliability={playerReliability}
           />

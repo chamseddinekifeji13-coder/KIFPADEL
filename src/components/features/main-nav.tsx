@@ -22,9 +22,20 @@ type MainNavProps = Readonly<{
   };
 }>;
 
+function isImmersiveMobileFlow(pathname: string): boolean {
+  // Réservation terrain : barre fixe + sheet — la nav flottante intercepte les taps sur mobile.
+  if (/^\/(fr|en)\/book\/[^/]+/.test(pathname)) return true;
+  if (/^\/(fr|en)\/auth\//.test(pathname)) return true;
+  return false;
+}
+
 export function MainNav({ locale, labels }: MainNavProps) {
-  const pathname = usePathname();
-  
+  const pathname = usePathname().replace(/\/$/, "") || "/";
+
+  if (isImmersiveMobileFlow(pathname)) {
+    return null;
+  }
+
   const items = [
     { href: `/${locale}`, label: labels.home, icon: Home },
     { href: `/${locale}/play-now`, label: labels.play, icon: Trophy },
@@ -36,9 +47,9 @@ export function MainNav({ locale, labels }: MainNavProps) {
   return (
     <nav
       aria-label="Navigation principale"
-      className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-lg animate-fade-in"
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-lg animate-fade-in pb-[max(env(safe-area-inset-bottom),0px)]"
     >
-      <div className="glass-gold rounded-[2rem] p-2 flex justify-between items-center px-4 h-20 shadow-premium">
+      <div className="glass-gold rounded-[2rem] p-2 flex justify-between items-center px-4 h-20 shadow-premium touch-manipulation">
         {items.map((item) => {
           const active = pathname === item.href || (item.href !== `/${locale}` && pathname.startsWith(item.href + "/"));
           const Icon = item.icon;

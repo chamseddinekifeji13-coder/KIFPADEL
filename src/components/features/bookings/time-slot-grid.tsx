@@ -20,10 +20,11 @@ export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProp
         {groupSlots.map((slot) => (
           <button
             key={slot.id}
+            type="button"
             disabled={!slot.isAvailable}
             onClick={() => onSelect(slot.id)}
             className={cn(
-              "py-3 px-2 rounded-xl text-sm font-bold border-2 transition-all duration-200 flex flex-col items-center gap-0.5",
+              "min-h-[52px] py-3 px-2 rounded-xl text-sm font-bold border-2 transition-all duration-200 flex flex-col items-center gap-0.5 touch-manipulation cursor-pointer",
               slot.isAvailable 
                 ? selectedSlot === slot.id
                   ? "bg-[var(--gold)]/10 border-[var(--gold)] text-[var(--gold)]"

@@ -6,6 +6,7 @@ import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import {
   optionalTrimmedString,
   parseNonNegativeInt,
+  parsePositiveMoneyOrNull,
 } from "@/lib/utils/club-form-parse";
 
 import type { ActionResult } from "@/modules/clubs/actions";
@@ -44,6 +45,8 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
   const contactName = optionalTrimmedString(formData.get("contact_name"));
   const contactPhone = optionalTrimmedString(formData.get("contact_phone"));
   const contactEmail = optionalTrimmedString(formData.get("contact_email"));
+  const racketRentalEnabled = String(formData.get("racket_rental_enabled") ?? "") === "1";
+  const racketPriceParsed = parsePositiveMoneyOrNull(formData.get("racket_rental_price_per_unit"));
 
   if (!clubId || !name || !city) {
     return {
@@ -67,6 +70,13 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
     return { ok: false, error: "Vous n’avez pas le droit de modifier ce club." };
   }
 
+  if (racketRentalEnabled && racketPriceParsed == null) {
+    return {
+      ok: false,
+      error: "Indiquez un prix valide par raquette (DT) ou désactivez la location.",
+    };
+  }
+
   const { error: updateError } = await supabase
     .from("clubs")
     .update({
@@ -78,6 +88,8 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
       contact_name: contactName,
       contact_phone: contactPhone,
       contact_email: contactEmail,
+      racket_rental_enabled: racketRentalEnabled,
+      racket_rental_price_per_unit: racketRentalEnabled ? racketPriceParsed : null,
     })
     .eq("id", clubId);
 
@@ -88,6 +100,7 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
 
   revalidatePath(`/${locale}/club/settings`, "page");
   revalidatePath(`/${locale}/club/dashboard`, "page");
+  revalidatePath(`/${locale}/book/${clubId}`, "page");
 
   return { ok: true };
 }

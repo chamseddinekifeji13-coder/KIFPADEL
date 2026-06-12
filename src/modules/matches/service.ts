@@ -1,5 +1,5 @@
 import type { Gender } from "@/domain/types/core";
-import { fetchOpenMatches, fetchOpenMatchesByClub } from "./repository";
+import { fetchOpenMatches, fetchOpenMatchesByClub, fetchOpenMatchesForViewer } from "./repository";
 
 /**
  * Service to handle match business logic.
@@ -8,8 +8,8 @@ export const matchService = {
   /**
    * Retrieves currently open matches visible to this viewer (gender filters listing).
    */
-  async getOpenMatches(viewerGender: Gender | null = null) {
-    return fetchOpenMatches(viewerGender);
+  async getOpenMatches(viewerGender: Gender | null = null, viewerId: string | null = null) {
+    return fetchOpenMatchesForViewer(viewerGender, viewerId);
   },
 
   /**

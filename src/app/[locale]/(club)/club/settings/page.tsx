@@ -42,6 +42,11 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
     );
   }
 
+  const fullClub = await clubService.getClubDetails(managed.id);
+  if (!fullClub) {
+    notFound();
+  }
+
   const currentSettings = {
     clubId: managed.id,
     clubName: managed.name,
@@ -52,6 +57,11 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
     contactName: managed.contact_name ?? "",
     phone: managed.contact_phone ?? "",
     email: managed.contact_email ?? "",
+    racketRentalEnabled: fullClub.racket_rental_enabled,
+    racketRentalPriceRaw:
+      fullClub.racket_rental_price_per_unit != null
+        ? String(fullClub.racket_rental_price_per_unit)
+        : "",
 
     allowPayOnSite: true,
     minTrustForPayOnSite: 70,

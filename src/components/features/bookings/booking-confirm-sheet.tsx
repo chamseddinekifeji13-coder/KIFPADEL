@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { X, MapPin, Calendar, CreditCard, Banknote, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { ClientPortal } from "@/components/ui/client-portal";
 
 interface BookingConfirmSheetProps {
   isOpen: boolean;
@@ -11,7 +13,11 @@ interface BookingConfirmSheetProps {
   time: string;
   courtName?: string;
   paymentMethod: "online" | "on_site" | null;
+  /** Total à payer (après recalcul serveur). */
   price: number;
+  baseSlotPrice?: number;
+  racketQty?: number;
+  racketFee?: number;
   state?: "idle" | "loading" | "success" | "error";
   errorMessage?: string | null;
 }
@@ -26,10 +32,20 @@ export function BookingConfirmSheet({
   courtName,
   paymentMethod,
   price,
+  baseSlotPrice,
+  racketQty = 0,
+  racketFee = 0,
   state = "idle",
   errorMessage = null,
 }: BookingConfirmSheetProps) {
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen]);
 
   const isLoading = state === "loading";
   const isSuccess = state === "success";
@@ -45,17 +61,31 @@ export function BookingConfirmSheet({
     month: "long",
   });
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[100]">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={() => !isLoading && onClose()}
-      />
-      
-      {/* Sheet */}
-      <div className="absolute bottom-0 left-0 right-0 glass-gold rounded-t-[3rem] animate-slide-up shadow-premium">
-        <div className="max-w-lg mx-auto p-8 pb-24 space-y-8">
+    <ClientPortal>
+      <div
+        className="fixed inset-0 z-[200] touch-manipulation"
+        style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}
+      >
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="Fermer"
+          className="absolute inset-0 z-0 bg-black/70 max-md:backdrop-blur-none md:backdrop-blur-sm cursor-default touch-manipulation"
+          onClick={() => {
+            if (!isLoading) onClose();
+          }}
+        />
+
+        <div
+          className="absolute bottom-0 left-0 right-0 z-10 glass-gold rounded-t-[3rem] max-md:animate-none md:animate-slide-up shadow-premium pb-[max(env(safe-area-inset-bottom),12px)] max-h-[min(92dvh,100%)] overflow-y-auto overscroll-contain"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="booking-confirm-title"
+        >
+        <div className="max-w-lg mx-auto p-6 sm:p-8 space-y-6 sm:space-y-8">
           {/* Handle */}
           <div className="flex justify-center -mt-2">
             <div className="h-1.5 w-16 bg-white/10 rounded-full" />
@@ -63,7 +93,10 @@ export function BookingConfirmSheet({
 
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black text-white uppercase tracking-tight">
+            <h2
+              id="booking-confirm-title"
+              className="text-xl font-black text-white uppercase tracking-tight"
+            >
               {isSuccess ? "Succès" : isError ? "Erreur" : "Réservation"}
             </h2>
             {!isLoading && (
@@ -159,11 +192,29 @@ export function BookingConfirmSheet({
               </div>
 
               {/* Price Summary */}
-              <div className="flex items-center justify-between px-2">
-                <span className="text-sm font-bold text-foreground-muted uppercase tracking-widest">Total</span>
-                <span className="text-3xl font-black text-white">
-                  {price} <span className="text-gold">DT</span>
-                </span>
+              <div className="rounded-3xl border border-white/10 bg-black/10 px-4 py-4 space-y-3">
+                {baseSlotPrice !== undefined ? (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-bold text-foreground-muted uppercase tracking-widest text-[10px]">
+                      Terrain
+                    </span>
+                    <span className="font-bold text-white">{baseSlotPrice} DT</span>
+                  </div>
+                ) : null}
+                {racketQty > 0 && racketFee > 0 ? (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-bold text-foreground-muted uppercase tracking-widest text-[10px]">
+                      Location raquettes ×{racketQty}
+                    </span>
+                    <span className="font-bold text-white">{racketFee} DT</span>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between pt-1 border-t border-white/10">
+                  <span className="text-sm font-bold text-foreground-muted uppercase tracking-widest">Total</span>
+                  <span className="text-3xl font-black text-white">
+                    {price} <span className="text-gold">DT</span>
+                  </span>
+                </div>
               </div>
 
               {/* No-show Warning */}
@@ -175,9 +226,12 @@ export function BookingConfirmSheet({
 
               {/* Confirm Button */}
               <button
-                onClick={handleConfirm}
+                type="button"
+                onClick={() => {
+                  if (!isLoading) handleConfirm();
+                }}
                 disabled={isLoading}
-                className="w-full bg-gold hover:bg-gold-light disabled:opacity-50 text-black h-16 rounded-2xl text-sm font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-gold"
+                className="w-full min-h-[56px] bg-gold hover:bg-gold-light disabled:opacity-50 text-black h-16 rounded-2xl text-sm font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-gold touch-manipulation cursor-pointer select-none"
               >
                 {isLoading ? (
                   <>
@@ -193,7 +247,8 @@ export function BookingConfirmSheet({
             </>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </ClientPortal>
   );
 }

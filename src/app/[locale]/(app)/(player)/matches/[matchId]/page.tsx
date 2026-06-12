@@ -9,10 +9,13 @@ import { MatchJoinActions } from "@/components/features/matches/match-join-actio
 
 type MatchDetailsPageProps = {
   params: Promise<{ locale: string; matchId: string }>;
+  searchParams: Promise<{ created?: string }>;
 };
 
-export default async function MatchDetailsPage({ params }: MatchDetailsPageProps) {
+export default async function MatchDetailsPage({ params, searchParams }: MatchDetailsPageProps) {
   const { locale, matchId } = await params;
+  const { created } = await searchParams;
+  const showCreatedBanner = created === "1" || created === "true";
   if (!isLocale(locale)) notFound();
 
   const dictionary = await getDictionary(locale as Locale);
@@ -47,6 +50,15 @@ export default async function MatchDetailsPage({ params }: MatchDetailsPageProps
       <Link href={`/${locale}/play-now`} className="text-sm text-sky-600 font-medium">
         ← {dictionary.player.playNowTitle}
       </Link>
+
+      {showCreatedBanner ? (
+        <div
+          role="status"
+          className="rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"
+        >
+          {dictionary.player.matchCreatedSuccess}
+        </div>
+      ) : null}
 
       <header className="space-y-1">
         <h1 className="text-2xl font-bold text-slate-900">

@@ -136,7 +136,7 @@ export default async function FindPlayersPage({
       ) : (
         <div className="grid gap-3">
           {players.map((player) => (
-            <PlayerCard key={player.id} player={player} />
+            <PlayerCard key={player.id} locale={locale} player={player} />
           ))}
         </div>
       )}

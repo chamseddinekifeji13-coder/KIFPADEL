@@ -34,7 +34,7 @@ export function PaymentMethodSelector({
         <button
           type="button"
           onClick={() => onSelect("online")}
-          className={`relative p-4 rounded-xl border-2 transition-all ${
+          className={`relative min-h-[72px] p-4 rounded-xl border-2 transition-all touch-manipulation cursor-pointer ${
             selected === "online"
               ? "border-[var(--gold)] bg-[var(--gold)]/10"
               : "border-[var(--border)] bg-[var(--background)] hover:border-[var(--foreground-muted)]"
@@ -59,7 +59,7 @@ export function PaymentMethodSelector({
           type="button"
           onClick={() => !isRestricted && onSelect("on_site")}
           disabled={isRestricted}
-          className={`relative p-4 rounded-xl border-2 transition-all ${
+          className={`relative min-h-[72px] p-4 rounded-xl border-2 transition-all touch-manipulation cursor-pointer ${
             isRestricted
               ? "border-[var(--border)] bg-[var(--background)] opacity-50 cursor-not-allowed"
               : selected === "on_site"

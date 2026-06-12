@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   Info,
   User,
+  Dumbbell,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { updateClubBasicsAction } from "@/modules/clubs/actions/update-club-basics";
@@ -28,6 +30,9 @@ type Settings = {
   contactName: string;
   phone: string;
   email: string;
+  racketRentalEnabled: boolean;
+  /** Champ libre prix unitaire DT (parsé côté serveur). */
+  racketRentalPriceRaw: string;
   allowPayOnSite: boolean;
   minTrustForPayOnSite: number;
   requirePhoneVerification: boolean;
@@ -66,6 +71,8 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
     fd.set("contact_name", settings.contactName);
     fd.set("contact_phone", settings.phone);
     fd.set("contact_email", settings.email);
+    fd.set("racket_rental_enabled", settings.racketRentalEnabled ? "1" : "0");
+    fd.set("racket_rental_price_per_unit", settings.racketRentalPriceRaw.trim());
 
     const result = await updateClubBasicsAction(fd);
 
@@ -163,11 +170,44 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
         </div>
       </section>
 
+      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-[var(--border)] flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-[var(--gold)]/10 flex items-center justify-center">
+            <Dumbbell className="h-4 w-4 text-[var(--gold)]" />
+          </div>
+          <div>
+            <h2 className="font-bold text-white">Location de raquettes</h2>
+            <p className="text-[10px] text-[var(--foreground-muted)]">
+              Enregistrée en base — option proposée aux joueurs à la réservation
+            </p>
+          </div>
+        </div>
+        <div className="p-4 space-y-4">
+          <ToggleField
+            label="Proposer la location de raquettes"
+            description="Les joueurs pourront ajouter des raquettes en plus du créneau terrain"
+            checked={settings.racketRentalEnabled}
+            onChange={(v) => updateSetting("racketRentalEnabled", v)}
+          />
+          {settings.racketRentalEnabled ? (
+            <InputField
+              label="Prix par raquette (DT)"
+              icon={Coins}
+              type="text"
+              inputMode="decimal"
+              value={settings.racketRentalPriceRaw}
+              onChange={(v) => updateSetting("racketRentalPriceRaw", v)}
+            />
+          ) : null}
+        </div>
+      </section>
+
       <p className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 px-4 py-3 text-xs text-[var(--foreground-muted)] flex gap-2">
         <Info className="h-4 w-4 shrink-0 text-[var(--gold)] mt-0.5" />
         <span>
-          Les sections politiques ci-dessous sont encore locales à cette page : elles ne sont pas enregistrées en base.
-          Seules les informations du club sont persistées lorsque vous enregistrez.
+          Les sections « Politique de réservation » ci-dessous sont encore locales à cette page : elles ne sont pas
+          enregistrées en base. Les informations du club et la location de raquettes sont persistées lorsque vous
+          enregistrez.
         </span>
       </p>
 

@@ -13,6 +13,13 @@ type ClubSlotsPageProps = {
   params: Promise<{ locale: string }>;
 };
 
+/** Jours calendaires en UTC (aligné sur `todayDate`) pour éviter mismatch d’hydratation Node vs navigateur. */
+function addCalendarDaysYmd(ymd: string, deltaDays: number): string {
+  const [y, mo, d] = ymd.split("-").map((p) => parseInt(p, 10));
+  const ms = Date.UTC(y, mo - 1, d) + deltaDays * 86_400_000;
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
 export async function generateMetadata({ params }: ClubSlotsPageProps): Promise<Metadata> {
   const { locale } = await params;
   const dictionary = await getDictionary(locale as Locale);
@@ -80,6 +87,17 @@ export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
 
   const courts = courtsRows.map((court) => court.label);
 
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const ymd = addCalendarDaysYmd(todayDate, i);
+    const [y, mo, d] = ymd.split("-").map((p) => parseInt(p, 10));
+    const midday = new Date(Date.UTC(y, mo - 1, d, 12, 0, 0));
+    return {
+      ymd,
+      weekdayShort: midday.toLocaleDateString(timeLocale, { weekday: "short", timeZone: "UTC" }),
+      dayOfMonth: midday.getUTCDate(),
+    };
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -92,7 +110,7 @@ export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
         </div>
       </div>
 
-      <SlotsManager bookings={bookings} courts={courts} locale={locale} labels={labels} />
+      <SlotsManager bookings={bookings} courts={courts} labels={labels} weekDays={weekDays} />
     </div>
   );
 }

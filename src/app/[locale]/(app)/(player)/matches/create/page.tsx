@@ -4,8 +4,10 @@ import { clubService } from "@/modules/clubs/service";
 import { type Club } from "@/modules/clubs/repository";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { CreateMatchForm } from "@/app/[locale]/(app)/(player)/matches/create/create-match-form";
+import { InviteMatchBanner } from "@/app/[locale]/(app)/(player)/matches/create/invite-match-banner";
 
 type CreateMatchPageProps = {
   params: Promise<{ locale: string }>;
@@ -60,8 +62,12 @@ export default async function CreateMatchPage({ params }: CreateMatchPageProps) 
       </section>
 
       <section className="space-y-6">
-        <CreateMatchForm clubs={clubs as Club[]} locale={locale} copy={createMatchCopy} />
-
+        <Suspense fallback={null}>
+          <InviteMatchBanner locale={locale} />
+        </Suspense>
+        <Suspense fallback={<p className="text-sm text-slate-500">Chargement du formulaire…</p>}>
+          <CreateMatchForm clubs={clubs as Club[]} locale={locale} copy={createMatchCopy} />
+        </Suspense>
       </section>
     </div>
   );

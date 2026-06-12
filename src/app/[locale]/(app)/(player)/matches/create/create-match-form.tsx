@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { MapPin, Calendar, Trophy, ChevronRight } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { shareMatchInviteLink } from "@/lib/matches/share-invite";
 import { type Club } from "@/modules/clubs/repository";
 import { createOpenMatchAction } from "@/modules/matches/actions";
 import type { MatchGenderType } from "@/domain/types/core";
@@ -49,12 +50,21 @@ function defaultTimeValue() {
 
 export function CreateMatchForm({ clubs, locale, copy }: CreateMatchFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteName = searchParams.get("inviteName")?.trim() ?? "";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClub, setSelectedClub] = useState("");
-  const [date, setDate] = useState(() => toLocalDateInputValue());
-  const [time, setTime] = useState(() => defaultTimeValue());
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [scheduleReady, setScheduleReady] = useState(false);
   const [formError, setFormError] = useState("");
   const [matchGenderType, setMatchGenderType] = useState<MatchGenderType>("all");
+
+  useEffect(() => {
+    setDate(toLocalDateInputValue());
+    setTime(defaultTimeValue());
+    setScheduleReady(true);
+  }, []);
 
   const matchTypeOptions: { id: MatchGenderType; desc?: string }[] = [
     { id: "all", desc: copy.optionDescAll },
@@ -64,7 +74,7 @@ export function CreateMatchForm({ clubs, locale, copy }: CreateMatchFormProps) {
   ];
 
   const quickTimes = ["09:00", "12:00", "16:00", "18:00", "20:00", "21:30"];
-  const minDate = toLocalDateInputValue();
+  const minDate = scheduleReady ? date : toLocalDateInputValue();
   const selectedClubEntity = clubs.find((c) => c.id === selectedClub);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,14 +126,12 @@ export function CreateMatchForm({ clubs, locale, copy }: CreateMatchFormProps) {
         /* navigation privée / quota */
       }
 
-      const query = new URLSearchParams({
-        created: "1",
-        matchId: result.matchId,
-        clubId: payload.clubId,
-        date: payload.date,
-        time: payload.time,
-      });
-      router.push(`/${locale}/play-now?${query.toString()}`);
+      if (inviteName) {
+        await shareMatchInviteLink(locale, result.matchId, inviteName);
+      }
+
+      router.push(`/${locale}/matches/${result.matchId}?created=1`);
+      router.refresh();
     } finally {
       setIsSubmitting(false);
     }
@@ -216,26 +224,28 @@ export function CreateMatchForm({ clubs, locale, copy }: CreateMatchFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label htmlFor="match-date" className="text-[10px] font-bold text-slate-500 uppercase px-1">Date</label>
-            <input 
+            <input
               id="match-date"
-              type="date" 
+              type="date"
               required
               min={minDate}
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
+              disabled={!scheduleReady}
+              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none disabled:opacity-60"
             />
           </div>
           <div className="space-y-2">
             <label htmlFor="match-time" className="text-[10px] font-bold text-slate-500 uppercase px-1">Heure</label>
-            <input 
+            <input
               id="match-time"
-              type="time" 
+              type="time"
               required
               step={900}
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
+              disabled={!scheduleReady}
+              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none disabled:opacity-60"
             />
           </div>
         </div>

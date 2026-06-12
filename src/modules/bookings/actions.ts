@@ -1,11 +1,32 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import {
+  isBookingRpcSuccess,
+  parseBookingRpcRow,
+  type BookingRpcRow,
+} from "@/lib/bookings/rpc-result";
 import { reliabilityFromTrustScore } from "@/domain/rules/trust";
 import {
   assertPlayerCanBook,
   isPlayerAccessError,
 } from "@/modules/compliance/player-access";
+import { createBookingDirect } from "@/modules/bookings/create-booking-direct";
+import { computeBookingTotals } from "@/modules/bookings/pricing-service";
+import { isRacketRentalBookingPipelineReady } from "@/modules/bookings/racket-rental-pipeline";
+
+/** Erreur PostgREST / PG quand la RPC attendue (10 args + raquettes) n’est pas déployée. */
+function isLikelyRpcSignatureMismatch(err: { message?: string; code?: string; details?: string; hint?: string } | null): boolean {
+  if (!err?.message) return false;
+  const blob = `${err.message} ${err.code ?? ""} ${err.details ?? ""} ${err.hint ?? ""}`.toLowerCase();
+  return (
+    blob.includes("could not find the function") ||
+    blob.includes("does not exist") ||
+    blob.includes("42883") ||
+    blob.includes("pgrst202") ||
+    (blob.includes("function") && blob.includes("create_booking_atomic") && blob.includes("no matches"))
+  );
+}
 
 export type BookingResult =
   | { ok: true; bookingId: string }
@@ -25,10 +46,13 @@ export type BookingResult =
 export type CreateBookingInput = {
   clubId: string;
   courtId: string;
-  startsAt: string; // ISO string
-  endsAt: string;   // ISO string
-  totalPrice: number;
+  startsAt: string;
+  endsAt: string;
   paymentMethod: "online" | "on_site";
+  /** Quantité demandée ; le serveur peut la ramener à 0 si l’offre n’est pas valide. */
+  racketRentalQty?: number;
+  /** Pour diagnostic uniquement — jamais utilisé comme montant facturé. */
+  clientTotalHint?: number;
 };
 
 /**
@@ -36,15 +60,101 @@ export type CreateBookingInput = {
  * - Blacklisted players are blocked entirely.
  * - Restricted players can only book with online payment.
  * - Checks for double-booking on the same court/time.
+ * - Prix total recalculé côté serveur (terrain + location raquettes).
  */
-export async function createBookingAction(input: CreateBookingInput): Promise<BookingResult> {
-  const supabase = await createClient();
+function mapBookingRpcFailure(row: BookingRpcRow | null): BookingResult {
+  const code = row?.error_code?.toUpperCase() ?? "";
 
-  // 1. Get the current user
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return { ok: false, error: "Vous devez être connecté pour réserver.", code: "UNAUTHORIZED" };
+  if (code === "SLOT_TAKEN") {
+    return {
+      ok: false,
+      error: "Ce créneau est déjà réservé. Veuillez en choisir un autre.",
+      code: "SLOT_TAKEN",
+    };
   }
+  if (code === "INVALID_RANGE") {
+    return {
+      ok: false,
+      error: "Le créneau sélectionné est invalide.",
+      code: "SERVER_ERROR",
+    };
+  }
+  if (code === "SCHEMA_ERROR") {
+    console.error("Booking RPC schema error:", row?.error_message);
+    return {
+      ok: false,
+      error:
+        "Schéma base de données incompatible (réservation). L’administrateur doit appliquer les migrations Supabase récentes.",
+      code: "SERVER_ERROR",
+    };
+  }
+  if (code === "UNAUTHORIZED") {
+    return {
+      ok: false,
+      error: "Vous devez être connecté pour réserver.",
+      code: "UNAUTHORIZED",
+    };
+  }
+  if (code === "INSERT_FAILED") {
+    console.error("Booking RPC insert failed:", row?.error_message);
+    return {
+      ok: false,
+      error:
+        "Impossible d'enregistrer la réservation (contrainte base de données). Réessayez ou choisissez un autre créneau.",
+      code: "SERVER_ERROR",
+    };
+  }
+
+  if (row?.error_message?.trim()) {
+    console.error("Booking RPC business error:", row.error_code, row.error_message);
+    return { ok: false, error: row.error_message.trim(), code: "SERVER_ERROR" };
+  }
+
+  console.error("Booking RPC unknown failure:", row);
+  if (code) {
+    return {
+      ok: false,
+      error: `Réservation impossible (${code}). Réessayez ou contactez le support.`,
+      code: "SERVER_ERROR",
+    };
+  }
+  return { ok: false, error: "Erreur lors de la création de la réservation.", code: "SERVER_ERROR" };
+}
+
+function shouldTryDirectBookingFallback(
+  rpcError: { message?: string; code?: string } | null,
+  bookingResult: BookingRpcRow | null,
+): boolean {
+  if (rpcError) return true;
+  if (!bookingResult) return true;
+  if (!isBookingRpcSuccess(bookingResult)) {
+    const code = bookingResult.error_code?.toUpperCase() ?? "";
+    return code !== "SLOT_TAKEN" && code !== "UNAUTHORIZED";
+  }
+  if (!bookingResult.booking_id) return true;
+  return false;
+}
+
+export async function createBookingAction(input: CreateBookingInput): Promise<BookingResult> {
+  const supabase = await createSupabaseServerActionClient();
+
+  const {
+    data: { session: initialSession },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  const { data: refreshData } = await supabase.auth.refreshSession();
+  const session = refreshData.session ?? initialSession;
+
+  if (sessionError || !session?.user) {
+    return {
+      ok: false,
+      error: "Session expirée. Déconnectez-vous puis reconnectez-vous.",
+      code: "UNAUTHORIZED",
+    };
+  }
+
+  const user = session.user;
 
   try {
     await assertPlayerCanBook(supabase, { playerId: user.id, clubId: input.clubId });
@@ -60,7 +170,6 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     };
   }
 
-  // 2. Fetch the player's profile to check trust score
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("trust_score, reliability_status")
@@ -71,92 +180,217 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     return { ok: false, error: "Profil joueur introuvable.", code: "SERVER_ERROR" };
   }
 
-  // 3. Server-side trust enforcement
   const reliability = reliabilityFromTrustScore(profile.trust_score ?? 70);
 
-  // Block blacklisted players entirely
   if (reliability === "blacklisted") {
-    return { 
-      ok: false, 
-      error: "Votre compte est suspendu. Vous ne pouvez pas effectuer de réservations.", 
-      code: "BLACKLISTED" 
+    return {
+      ok: false,
+      error: "Votre compte est suspendu. Vous ne pouvez pas effectuer de réservations.",
+      code: "BLACKLISTED",
     };
   }
 
-  // Restricted players must pay online
   if (reliability === "restricted" && input.paymentMethod === "on_site") {
-    return { 
-      ok: false, 
-      error: "Votre score de confiance ne permet pas le paiement sur place. Veuillez payer en ligne.", 
-      code: "RESTRICTED_REQUIRES_ONLINE" 
+    return {
+      ok: false,
+      error: "Votre score de confiance ne permet pas le paiement sur place. Veuillez payer en ligne.",
+      code: "RESTRICTED_REQUIRES_ONLINE",
     };
   }
 
-  // 4. Fetch club policy for additional enforcement
-  const { data: club } = await supabase
+  const { data: clubPolicy, error: clubErr } = await supabase
     .from("clubs")
-    .select("min_trust_for_on_site, require_payment_for_restricted")
+    .select("*")
     .eq("id", input.clubId)
-    .single();
+    .maybeSingle();
 
-  if (club && input.paymentMethod === "on_site") {
-    const minTrust = club.min_trust_for_on_site ?? 70;
-    if ((profile.trust_score ?? 70) < minTrust) {
+  if (clubErr || !clubPolicy) {
+    console.error("[createBookingAction] club read failed", clubErr?.message, clubErr);
+    return { ok: false, error: "Club introuvable ou inaccessible.", code: "SERVER_ERROR" };
+  }
+
+  if (input.paymentMethod === "on_site") {
+    const minTrustRaw = (clubPolicy as { min_trust_for_on_site?: number | null }).min_trust_for_on_site;
+    const minTrust = minTrustRaw !== null && minTrustRaw !== undefined ? Number(minTrustRaw) : 70;
+    if (Number.isFinite(minTrust) && (profile.trust_score ?? 70) < minTrust) {
       return {
         ok: false,
         error: `Ce club exige un score de confiance minimum de ${minTrust} pour le paiement sur place.`,
-        code: "RESTRICTED_REQUIRES_ONLINE"
+        code: "RESTRICTED_REQUIRES_ONLINE",
       };
     }
   }
 
-  // 5. Atomic DB booking — online stays pending until club / future Stripe flow.
-  // TODO(stripe): déclencher Checkout + e-mail de lien quand l'intégration sera prête.
+  const { data: courtRow, error: courtErr } = await supabase
+    .from("courts")
+    .select("id, club_id, price_per_slot, is_active")
+    .eq("club_id", input.clubId)
+    .eq("id", input.courtId)
+    .maybeSingle();
+
+  if (courtErr) {
+    console.error("[createBookingAction] court read failed", courtErr.message);
+  }
+
+  const court = courtRow as {
+    id: string;
+    club_id: string;
+    price_per_slot: number | null;
+    is_active: boolean | null;
+  } | null;
+
+  if (!court || court.is_active === false) {
+    return {
+      ok: false,
+      error: "Terrain introuvable ou indisponible.",
+      code: "SERVER_ERROR",
+    };
+  }
+
+  const cp = clubPolicy as {
+    racket_rental_enabled?: boolean | null;
+    racket_rental_price_per_unit?: number | string | null;
+  };
+
+  const pipelineReady = isRacketRentalBookingPipelineReady();
+  const racketQtySafe = pipelineReady ? (input.racketRentalQty ?? 0) : 0;
+
+  let totals;
+  try {
+    totals = computeBookingTotals({
+      club: {
+        racket_rental_enabled: Boolean(cp.racket_rental_enabled),
+        racket_rental_price_per_unit:
+          cp.racket_rental_price_per_unit == null
+            ? null
+            : (() => {
+                const n = Number(cp.racket_rental_price_per_unit);
+                return Number.isFinite(n) ? n : null;
+              })(),
+      },
+      court: {
+        price_per_slot: court.price_per_slot == null ? null : Number(court.price_per_slot),
+      },
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      racketRentalQtyRequested: racketQtySafe,
+      clientTotalHint: input.clientTotalHint,
+    });
+  } catch (e) {
+    console.error("[createBookingAction] pricing failed", e);
+    return { ok: false, error: "Impossible de calculer le montant de la réservation.", code: "SERVER_ERROR" };
+  }
+
   const bookingStatus = input.paymentMethod === "online" ? "pending" : "confirmed";
-  const { data: bookingRows, error: rpcError } = await supabase.rpc("create_booking_atomic", {
+
+  const rpcWithRackets = {
     p_club_id: input.clubId,
     p_court_id: input.courtId,
     p_player_id: user.id,
     p_starts_at: input.startsAt,
     p_ends_at: input.endsAt,
-    p_total_price: input.totalPrice,
+    p_total_price: totals.totalPrice,
     p_payment_method: input.paymentMethod,
     p_status: bookingStatus,
-  });
+    p_racket_rental_qty: totals.racketRentalQty,
+    p_racket_rental_fee: totals.racketFee,
+  };
 
-  if (rpcError) {
-    console.error("Booking RPC error:", rpcError);
-    return { ok: false, error: "Erreur lors de la création de la réservation.", code: "SERVER_ERROR" };
+  const rpcLegacy = {
+    p_club_id: input.clubId,
+    p_court_id: input.courtId,
+    p_player_id: user.id,
+    p_starts_at: input.startsAt,
+    p_ends_at: input.endsAt,
+    p_total_price: totals.totalPrice,
+    p_payment_method: input.paymentMethod,
+    p_status: bookingStatus,
+  };
+
+  const useRacketRpc = pipelineReady && totals.racketRentalQty > 0;
+
+  let { data: bookingRows, error: rpcError } = useRacketRpc
+    ? await supabase.rpc("create_booking_atomic", rpcWithRackets)
+    : await supabase.rpc("create_booking_atomic", rpcLegacy);
+
+  if (useRacketRpc && rpcError && isLikelyRpcSignatureMismatch(rpcError)) {
+    console.warn("[createBookingAction] repli RPC sans raquettes", rpcError.message);
+    const second = await supabase.rpc("create_booking_atomic", rpcLegacy);
+    bookingRows = second.data;
+    rpcError = second.error;
   }
 
-  const bookingResult = Array.isArray(bookingRows) ? bookingRows[0] : null;
-  if (!bookingResult?.ok) {
-    if (bookingResult?.error_code === "SLOT_TAKEN") {
-      return {
-        ok: false,
-        error: "Ce créneau est déjà réservé. Veuillez en choisir un autre.",
-        code: "SLOT_TAKEN",
-      };
+  const bookingResult = parseBookingRpcRow(bookingRows);
+
+  if (rpcError) {
+    console.error("Booking RPC error:", rpcError.message, rpcError.code, rpcError.details, rpcError);
+  }
+
+  let directFailure: BookingResult | null = null;
+  if (shouldTryDirectBookingFallback(rpcError, bookingResult)) {
+    console.warn("[createBookingAction] repli insertion directe", {
+      rpcError: rpcError?.message,
+      bookingResult,
+    });
+    const direct = await createBookingDirect(supabase, {
+      clubId: input.clubId,
+      courtId: input.courtId,
+      playerId: user.id,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      paymentMethod: input.paymentMethod,
+      bookingStatus,
+      totals,
+      includeRacketColumns: pipelineReady,
+    });
+    if (direct.ok) {
+      return direct;
     }
-    if (bookingResult?.error_code === "INVALID_RANGE") {
+    directFailure = direct;
+    if (direct.code === "SLOT_TAKEN" || direct.code === "UNAUTHORIZED") {
+      return direct;
+    }
+  }
+
+  if (directFailure) {
+    return directFailure;
+  }
+
+  if (rpcError) {
+    return {
+      ok: false,
+      error:
+        process.env.NODE_ENV === "development"
+          ? `Réservation impossible (RPC). ${rpcError.message ?? ""}`.trim()
+          : directFallbackPublicMessage(rpcError),
+      code: "SERVER_ERROR",
+    };
+  }
+
+  if (!isBookingRpcSuccess(bookingResult)) {
+    if (!bookingResult) {
+      console.error("Booking RPC empty or invalid payload:", bookingRows);
       return {
         ok: false,
-        error: "Le créneau sélectionné est invalide.",
+        error: "Réponse serveur inattendue. Réessayez ou rechargez la page.",
         code: "SERVER_ERROR",
       };
     }
-    if (bookingResult?.error_code === "UNAUTHORIZED") {
-      return {
-        ok: false,
-        error: "Vous devez être connecté pour réserver.",
-        code: "UNAUTHORIZED",
-      };
-    }
-    console.error("Booking RPC business error:", bookingResult?.error_message);
+    return mapBookingRpcFailure(bookingResult);
+  }
+
+  const bookingId = bookingResult?.booking_id;
+  if (!bookingId) {
+    console.error("Booking RPC ok without booking_id:", bookingResult);
     return { ok: false, error: "Erreur lors de la création de la réservation.", code: "SERVER_ERROR" };
   }
 
-  return { ok: true, bookingId: bookingResult.booking_id as string };
+  return { ok: true, bookingId };
+}
+
+function directFallbackPublicMessage(rpcError: { message?: string; code?: string }): string {
+  const hint = rpcError.code ? ` (${rpcError.code})` : "";
+  return `Réservation impossible${hint}. Réessayez ou contactez le support.`;
 }
 
 /**
@@ -166,16 +400,14 @@ export async function getPlayerTrustInfo(): Promise<{
   trustScore: number;
   reliability: "healthy" | "warning" | "restricted" | "blacklisted";
 } | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("trust_score")
-    .eq("id", user.id)
-    .single();
+  const { data: profile } = await supabase.from("profiles").select("trust_score").eq("id", user.id).single();
 
   if (!profile) return null;
 

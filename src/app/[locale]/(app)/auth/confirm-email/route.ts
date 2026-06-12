@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { sanitizeAuthNextPath } from "@/lib/booking-paths";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ConfirmEmailRouteContext = {
@@ -7,13 +8,7 @@ type ConfirmEmailRouteContext = {
 };
 
 function getSafeNextPath(rawNext: string | null, locale: string) {
-  const fallback = `/${locale}/onboarding`;
-  const next = String(rawNext ?? "").trim();
-
-  if (!next.startsWith("/")) return fallback;
-  if (next.startsWith("//")) return fallback;
-
-  return next;
+  return sanitizeAuthNextPath(rawNext, locale, `/${locale}/onboarding`);
 }
 
 /**

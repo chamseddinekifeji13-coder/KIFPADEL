@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { matchService } from "@/modules/matches/service";
-import { MatchWithDetails } from "@/modules/matches/repository";
+import { fetchUserOpenMatches, MatchWithDetails } from "@/modules/matches/repository";
 import { MatchCard, type MatchCardMatchTypeUi } from "@/components/features/matches/match-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Trophy } from "lucide-react";
@@ -52,7 +52,9 @@ export default async function PlayNowPage({ params, searchParams }: PlayNowPageP
   const pageTitle = labels.playNowTitle;
 
   let matches: MatchWithDetails[] = [];
+  let myMatches: MatchWithDetails[] = [];
   let viewerGender: Gender | null = null;
+  let viewerId: string | null = null;
   let isSignedIn = false;
   try {
     const supabase = await createSupabaseServerClient();
@@ -61,19 +63,32 @@ export default async function PlayNowPage({ params, searchParams }: PlayNowPageP
     } = await supabase.auth.getUser();
     isSignedIn = Boolean(user);
     if (user) {
+      viewerId = user.id;
       const profile = await playerService.getPlayerProfile(user.id);
       viewerGender = profile?.gender ?? null;
     }
-    matches = await matchService.getOpenMatches(viewerGender);
+    matches = await matchService.getOpenMatches(viewerGender, viewerId);
+    if (viewerId) {
+      myMatches = await fetchUserOpenMatches(viewerId);
+    }
   } catch (err) {
     rethrowFrameworkError(err);
     console.error("Failed to fetch matches:", err);
   }
 
+  const myMatchIds = new Set(myMatches.map((m) => m.id));
+
   const displayedMatches =
     typeFilter != null
       ? matches.filter((m) => m.match_gender_type === typeFilter)
       : matches;
+
+  const displayedMyMatches =
+    typeFilter != null
+      ? myMatches.filter((m) => m.match_gender_type === typeFilter)
+      : myMatches;
+
+  const otherDisplayedMatches = displayedMatches.filter((m) => !myMatchIds.has(m.id));
 
   const totalOpenMatches = matches.length;
   const showGenderProfileHint =
@@ -184,7 +199,37 @@ export default async function PlayNowPage({ params, searchParams }: PlayNowPageP
         </nav>
       </div>
 
-      {displayedMatches.length === 0 ? (
+      {displayedMyMatches.length > 0 ? (
+        <section className="space-y-3" aria-labelledby="my-open-matches-heading">
+          <h2
+            id="my-open-matches-heading"
+            className="text-xs font-black uppercase tracking-widest text-gold"
+          >
+            {labels.playNowMyMatchesSectionTitle}
+          </h2>
+          <div className="grid gap-4">
+            {displayedMyMatches.map((match) => (
+              <MatchCard
+                key={match.id}
+                locale={locale}
+                matchTypeUi={matchTypeUi}
+                match={{
+                  id: match.id,
+                  starts_at: match.starts_at,
+                  clubName: match.clubName,
+                  clubCity: match.clubs?.city?.trim() || "Tunis",
+                  clubAddress: match.clubAddress,
+                  playerCount: match.playerCount,
+                  price_per_player: match.price_per_player ?? 0,
+                  match_gender_type: match.match_gender_type,
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {otherDisplayedMatches.length === 0 && displayedMyMatches.length === 0 ? (
         <div className="py-12 text-center space-y-3 max-w-md mx-auto">
           <p className="text-slate-500 italic font-medium">
             {primaryEmptyMessage}
@@ -203,37 +248,35 @@ export default async function PlayNowPage({ params, searchParams }: PlayNowPageP
               {labels.playNowEmptyFilterTryAll}
             </Link>
           ) : (
-            <Link href={`/${locale}/matches/create`}>
-              <button
-                type="button"
-                className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold shadow-xl shadow-slate-200 active:scale-95 transition-transform"
-              >
-                {labels.createMatchCta}
-              </button>
+            <Link
+              href={`/${locale}/matches/create`}
+              className="inline-flex px-8 py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold shadow-xl shadow-slate-200 active:scale-95 transition-transform touch-manipulation"
+            >
+              {labels.createMatchCta}
             </Link>
           )}
         </div>
-      ) : (
+      ) : otherDisplayedMatches.length > 0 ? (
         <div className="grid gap-4">
-          {displayedMatches.map((match) => (
-            <MatchCard
-              key={match.id}
-              locale={locale}
-              matchTypeUi={matchTypeUi}
-              match={{
-                id: match.id,
-                starts_at: match.starts_at,
-                clubName: match.clubName,
-                clubCity: match.clubs?.city?.trim() || "Tunis",
-                clubAddress: match.clubAddress,
-                playerCount: match.playerCount,
-                price_per_player: match.price_per_player ?? 0,
-                match_gender_type: match.match_gender_type,
-              }}
-            />
-          ))}
+          {otherDisplayedMatches.map((match) => (
+              <MatchCard
+                key={match.id}
+                locale={locale}
+                matchTypeUi={matchTypeUi}
+                match={{
+                  id: match.id,
+                  starts_at: match.starts_at,
+                  clubName: match.clubName,
+                  clubCity: match.clubs?.city?.trim() || "Tunis",
+                  clubAddress: match.clubAddress,
+                  playerCount: match.playerCount,
+                  price_per_player: match.price_per_player ?? 0,
+                  match_gender_type: match.match_gender_type,
+                }}
+              />
+            ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

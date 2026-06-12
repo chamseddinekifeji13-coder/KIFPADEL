@@ -12,3 +12,13 @@ export function optionalTrimmedString(raw: FormDataEntryValue | null | undefined
   const s = String(raw ?? "").trim();
   return s.length > 0 ? s : null;
 }
+
+/** Montant strictement positif (DT) ou null si vide / invalide. */
+export function parsePositiveMoneyOrNull(raw: FormDataEntryValue | null | undefined): number | null {
+  if (raw == null) return null;
+  const s = String(raw).trim().replace(",", ".");
+  if (s === "") return null;
+  const n = Number.parseFloat(s);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 100) / 100;
+}
