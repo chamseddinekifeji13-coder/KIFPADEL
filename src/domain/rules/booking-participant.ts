@@ -32,7 +32,20 @@ export type BookingParticipantRow = {
   created_at?: string | null;
   share_price?: number | null;
   payment_method?: string | null;
+  payment_confirmed_at?: string | null;
 };
+
+/** Encaissement pas encore validé par le club (sur place ou en ligne). */
+export function isParticipantPaymentPending(
+  status: string,
+  paymentConfirmedAt: string | null | undefined,
+): boolean {
+  const s = String(status ?? "").toLowerCase();
+  if (!s || s === "cancelled" || s === "expired" || s === "no_show" || s === "completed") {
+    return false;
+  }
+  return !paymentConfirmedAt;
+}
 
 export function countActiveBookingParticipants(participants: BookingParticipantRow[]): number {
   return participants.filter((p) =>

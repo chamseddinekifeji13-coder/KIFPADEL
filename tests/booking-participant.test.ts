@@ -4,6 +4,7 @@ import {
   BOOKING_SEATS_PER_COURT,
   countActiveBookingParticipants,
   isBookingParticipantActive,
+  isParticipantPaymentPending,
 } from "@/domain/rules/booking-participant";
 
 describe("isBookingParticipantActive", () => {
@@ -18,6 +19,20 @@ describe("isBookingParticipantActive", () => {
 
   it("rejects no_show", () => {
     expect(isBookingParticipantActive("no_show", new Date().toISOString())).toBe(false);
+  });
+});
+
+describe("isParticipantPaymentPending", () => {
+  it("pending on_site before club validation", () => {
+    expect(isParticipantPaymentPending("confirmed", null)).toBe(true);
+  });
+
+  it("not pending after validation", () => {
+    expect(isParticipantPaymentPending("confirmed", new Date().toISOString())).toBe(false);
+  });
+
+  it("online pending before validation", () => {
+    expect(isParticipantPaymentPending("pending", null)).toBe(true);
   });
 });
 

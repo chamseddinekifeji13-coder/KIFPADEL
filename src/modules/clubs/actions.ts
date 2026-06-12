@@ -1,19 +1,117 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { isParticipantPaymentPending } from "@/domain/rules/booking-participant";
 import { trustImpactFromEvent } from "@/domain/rules/trust";
 import { addTrustEvent } from "@/modules/players/repository";
 import { createClubDebt, deriveNoShowDebtAmountCents } from "@/modules/club-debts/service";
+import { assertClubStaffCanManage } from "@/modules/clubs/actions/club-staff-guard";
 
 export type ActionResult =
   | { ok: true }
   | { ok: false; error: string };
 
+type ParticipantStaffContext = {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerActionClient>>;
+  participantId: string;
+  status: string;
+  paymentConfirmedAt: string | null;
+  clubId: string;
+};
+
+async function loadParticipantForStaffAction(
+  participantId: string,
+): Promise<{ ok: true; ctx: ParticipantStaffContext } | { ok: false; error: string }> {
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, error: "Vous devez être connecté." };
+  }
+
+  const { data: row, error: loadError } = await supabase
+    .from("booking_participants")
+    .select("id, status, payment_confirmed_at, bookings!inner(club_id)")
+    .eq("id", participantId)
+    .maybeSingle();
+
+  if (loadError || !row) {
+    return { ok: false, error: "Place introuvable." };
+  }
+
+  const bookingRaw = (row as { bookings?: { club_id?: string } | { club_id?: string }[] | null }).bookings;
+  const booking = Array.isArray(bookingRaw) ? bookingRaw[0] : bookingRaw;
+  const clubId = String(booking?.club_id ?? "");
+
+  if (!clubId) {
+    return { ok: false, error: "Réservation introuvable." };
+  }
+
+  const guard = await assertClubStaffCanManage(supabase, clubId, user.id);
+  if (!guard.ok) {
+    return { ok: false, error: "Action non autorisée pour ce club." };
+  }
+
+  return {
+    ok: true,
+    ctx: {
+      supabase,
+      participantId,
+      status: String((row as { status?: string }).status ?? ""),
+      paymentConfirmedAt: (row as { payment_confirmed_at?: string | null }).payment_confirmed_at ?? null,
+      clubId,
+    },
+  };
+}
+
+/**
+ * Valide l'encaissement d'une place (sur place ou en ligne).
+ */
+export async function confirmParticipantPaymentAction(participantId: string): Promise<ActionResult> {
+  const loaded = await loadParticipantForStaffAction(participantId);
+  if (!loaded.ok) {
+    return loaded;
+  }
+
+  const { supabase, status, paymentConfirmedAt } = loaded.ctx;
+
+  if (!isParticipantPaymentPending(status, paymentConfirmedAt)) {
+    return { ok: false, error: "Encaissement déjà confirmé ou place non éligible." };
+  }
+
+  const updates: { payment_confirmed_at: string; status?: string } = {
+    payment_confirmed_at: new Date().toISOString(),
+  };
+  if (String(status).toLowerCase() === "pending") {
+    updates.status = "confirmed";
+  }
+
+  const { error } = await supabase.from("booking_participants").update(updates).eq("id", participantId);
+
+  if (error) {
+    return { ok: false, error: "Erreur lors de la confirmation de l'encaissement." };
+  }
+
+  return { ok: true };
+}
+
 /**
  * Marque la présence d'un joueur (place individuelle).
  */
 export async function confirmParticipantArrivalAction(participantId: string): Promise<ActionResult> {
-  const supabase = await createClient();
+  const loaded = await loadParticipantForStaffAction(participantId);
+  if (!loaded.ok) {
+    return loaded;
+  }
+
+  const { supabase, status, paymentConfirmedAt } = loaded.ctx;
+
+  if (isParticipantPaymentPending(status, paymentConfirmedAt)) {
+    return { ok: false, error: "Confirmez l'encaissement avant la présence." };
+  }
 
   const { data: row, error: loadError } = await supabase
     .from("booking_participants")
@@ -80,7 +178,12 @@ export async function confirmArrivalAction(bookingId: string): Promise<ActionRes
  * No-show sur un joueur uniquement (pas la session entière).
  */
 export async function reportParticipantNoShowAction(participantId: string): Promise<ActionResult> {
-  const supabase = await createClient();
+  const loaded = await loadParticipantForStaffAction(participantId);
+  if (!loaded.ok) {
+    return loaded;
+  }
+
+  const supabase = loaded.ctx.supabase;
 
   const { data: participant, error: loadError } = await supabase
     .from("booking_participants")

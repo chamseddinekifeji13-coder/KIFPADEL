@@ -157,6 +157,7 @@ export type ClubOperationsParticipantRow = {
   seat_index: number;
   share_price: number | null;
   payment_method?: string | null;
+  payment_confirmed_at?: string | null;
   status: string;
   created_at: string;
   bookings?: PlayerBookingRow | PlayerBookingRow[] | null;
@@ -169,7 +170,7 @@ export async function fetchBookingParticipantsForClubOperations(clubId: string, 
   const { data, error } = await supabase
     .from("booking_participants")
     .select(
-      "id, booking_id, player_id, seat_index, share_price, payment_method, status, created_at, bookings!inner(id, club_id, court_id, starts_at, ends_at, status)",
+      "id, booking_id, player_id, seat_index, share_price, payment_method, payment_confirmed_at, status, created_at, bookings!inner(id, club_id, court_id, starts_at, ends_at, status)",
     )
     .eq("bookings.club_id", clubId)
     .lt("bookings.starts_at", nextDayStart.toISOString())

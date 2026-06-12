@@ -92,6 +92,7 @@ export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
       },
       status: normalizedStatus(row.status),
       paymentMethod,
+      paymentConfirmedAt: row.payment_confirmed_at ?? null,
       amount: row.share_price ?? 0,
     };
   });

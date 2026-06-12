@@ -13,11 +13,14 @@ import {
   ChevronDown,
   Filter,
   Loader2,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { isParticipantPaymentPending } from "@/domain/rules/booking-participant";
 import { reliabilityFromTrustScore } from "@/domain/rules/trust";
 import {
   confirmParticipantArrivalAction,
+  confirmParticipantPaymentAction,
   reportParticipantNoShowAction,
 } from "@/modules/clubs/actions";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
@@ -37,6 +40,7 @@ type Booking = {
   };
   status: "confirmed" | "pending" | "cancelled" | "completed" | "no_show";
   paymentMethod: "online" | "on_site";
+  paymentConfirmedAt: string | null;
   amount: number;
 };
 
@@ -181,6 +185,22 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
     blacklisted: labels.playersRestricted,
   };
 
+  const paymentPending = isParticipantPaymentPending(booking.status, booking.paymentConfirmedAt);
+
+  const handleConfirmPayment = () => {
+    startTransition(async () => {
+      const result = await confirmParticipantPaymentAction(booking.id);
+      if (result.ok) {
+        setActionState("success");
+        setActionMessage(labels.paymentConfirmedMessage);
+        router.refresh();
+      } else {
+        setActionState("error");
+        setActionMessage(result.error);
+      }
+    });
+  };
+
   const handleConfirmArrival = () => {
     startTransition(async () => {
       const result = await confirmParticipantArrivalAction(booking.id);
@@ -209,7 +229,10 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
     });
   };
 
-  const isActionable = booking.status === "confirmed" || booking.status === "pending";
+  const canConfirmPayment = paymentPending;
+  const canConfirmArrival =
+    !paymentPending && (booking.status === "confirmed" || booking.status === "pending");
+  const canReportNoShow = booking.status === "confirmed" || booking.status === "pending";
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
@@ -283,6 +306,13 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
                 </p>
               </div>
             </div>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--background)] col-span-2">
+              <Banknote className="h-4 w-4 text-[var(--foreground-muted)]" />
+              <div>
+                <p className="text-[10px] text-[var(--foreground-muted)] uppercase tracking-wider">{labels.shareAmountLabel}</p>
+                <p className="text-sm font-bold text-white">{booking.amount} DT</p>
+              </div>
+            </div>
           </div>
 
           {/* Trust Warning */}
@@ -317,36 +347,56 @@ function BookingCard({ booking, labels }: { booking: Booking; labels: Record<str
           )}
 
           {/* Actions */}
-          {isActionable && actionState === "idle" && (
-            <div className="flex gap-3">
-              <button
-                onClick={handleConfirmArrival}
-                disabled={isPending}
-                className="flex-1 h-11 rounded-xl bg-[var(--success)]/10 text-[var(--success)] font-bold text-sm hover:bg-[var(--success)]/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    {labels.confirmArrivalCta}
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleReportNoShow}
-                disabled={isPending}
-                className="flex-1 h-11 rounded-xl bg-[var(--danger)]/10 text-[var(--danger)] font-bold text-sm hover:bg-[var(--danger)]/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <XCircle className="h-4 w-4" />
-                    {labels.reportNoShowCta}
-                  </>
-                )}
-              </button>
+          {actionState === "idle" && (canConfirmPayment || canConfirmArrival || canReportNoShow) && (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {canConfirmPayment && (
+                <button
+                  onClick={handleConfirmPayment}
+                  disabled={isPending}
+                  className="flex-1 h-11 rounded-xl bg-[var(--gold)]/15 text-[var(--gold)] font-bold text-sm hover:bg-[var(--gold)]/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Banknote className="h-4 w-4" />
+                      {labels.confirmPaymentCta}
+                    </>
+                  )}
+                </button>
+              )}
+              {canConfirmArrival && (
+                <button
+                  onClick={handleConfirmArrival}
+                  disabled={isPending}
+                  className="flex-1 h-11 rounded-xl bg-[var(--success)]/10 text-[var(--success)] font-bold text-sm hover:bg-[var(--success)]/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      {labels.confirmArrivalCta}
+                    </>
+                  )}
+                </button>
+              )}
+              {canReportNoShow && (
+                <button
+                  onClick={handleReportNoShow}
+                  disabled={isPending}
+                  className="flex-1 h-11 rounded-xl bg-[var(--danger)]/10 text-[var(--danger)] font-bold text-sm hover:bg-[var(--danger)]/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4" />
+                      {labels.reportNoShowCta}
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           )}
         </div>
