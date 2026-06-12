@@ -18,6 +18,7 @@ import {
 import { createBookingDirect } from "@/modules/bookings/create-booking-direct";
 import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { isRacketRentalBookingPipelineReady } from "@/modules/bookings/racket-rental-pipeline";
+import { notifyBookingCreated } from "@/modules/notifications/booking-created";
 
 /** Erreur PostgREST / PG quand la RPC attendue (10 args + raquettes) n’est pas déployée. */
 function isLikelyRpcSignatureMismatch(err: { message?: string; code?: string; details?: string; hint?: string } | null): boolean {
@@ -415,6 +416,10 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     console.error("Booking RPC ok without booking_id:", bookingResult);
     return { ok: false, error: "Erreur lors de la création de la réservation.", code: "SERVER_ERROR" };
   }
+
+  void notifyBookingCreated({ bookingId, playerId: user.id }).catch((err) =>
+    console.error("[createBookingAction] notifyBookingCreated failed", err),
+  );
 
   return { ok: true, bookingId };
 }
