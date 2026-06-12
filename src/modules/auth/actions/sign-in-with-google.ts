@@ -9,7 +9,7 @@ import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 export async function signInWithGoogleAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const defaultNext = `/${locale}/onboarding`;
-  const next = sanitizeAuthNextPath(formData.get("next"), locale, defaultNext);
+  const next = sanitizeAuthNextPath(String(formData.get("next") ?? ""), locale, defaultNext);
 
   const supabase = await createSupabaseServerActionClient();
   const callbackUrl = new URL(`${publicEnv.siteUrl}/${locale}/auth/callback`);
