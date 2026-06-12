@@ -9,6 +9,7 @@ import { SectionTitle } from "@/components/ui/section-title";
 import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { GoogleSignInButton } from "@/components/features/auth/google-sign-in-button";
 import { signInAction } from "@/modules/auth/actions/sign-in";
 
 type SignInPageProps = Readonly<{
@@ -63,7 +64,9 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
                   ? dictionary.auth.rateLimitedError
               : error === "auth_required"
                 ? dictionary.errors.authRequired
-                : dictionary.auth.invalidCredentialsError}
+                : error === "gmail_required"
+                  ? dictionary.auth.gmailRequiredError
+                  : dictionary.auth.invalidCredentialsError}
           </p>
         </Card>
       ) : null}
@@ -86,7 +89,23 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
         </Card>
       ) : null}
 
-      <Card className="w-full">
+      <Card className="w-full space-y-4">
+        <GoogleSignInButton
+          locale={locale}
+          next={next ?? `/${locale}/profile`}
+          label={dictionary.auth.signInWithGoogleCta}
+          variant="primary"
+        />
+        <div className="relative py-1">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
+            <span className="bg-surface px-3 text-foreground-muted font-bold">
+              {dictionary.auth.orEmailDivider}
+            </span>
+          </div>
+        </div>
         <form action={signInAction} className="space-y-4">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="next" value={next ?? `/${locale}/profile`} />

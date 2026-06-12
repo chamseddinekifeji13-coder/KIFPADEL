@@ -11,6 +11,10 @@ import {
   assertPlayerCanBook,
   isPlayerAccessError,
 } from "@/modules/compliance/player-access";
+import {
+  isPhoneVerified,
+  newAccountMustPayOnline,
+} from "@/modules/compliance/new-account-gates";
 import { createBookingDirect } from "@/modules/bookings/create-booking-direct";
 import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { isRacketRentalBookingPipelineReady } from "@/modules/bookings/racket-rental-pipeline";
@@ -172,12 +176,21 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("trust_score, reliability_status")
+    .select("trust_score, reliability_status, phone_verified_at, created_at")
     .eq("id", user.id)
     .single();
 
   if (profileError || !profile) {
     return { ok: false, error: "Profil joueur introuvable.", code: "SERVER_ERROR" };
+  }
+
+  if (!isPhoneVerified(profile)) {
+    return {
+      ok: false,
+      error:
+        "Vérifiez votre numéro WhatsApp dans l'onboarding ou votre profil avant de réserver.",
+      code: "SERVER_ERROR",
+    };
   }
 
   const reliability = reliabilityFromTrustScore(profile.trust_score ?? 70);
@@ -194,6 +207,15 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     return {
       ok: false,
       error: "Votre score de confiance ne permet pas le paiement sur place. Veuillez payer en ligne.",
+      code: "RESTRICTED_REQUIRES_ONLINE",
+    };
+  }
+
+  if (newAccountMustPayOnline(profile) && input.paymentMethod === "on_site") {
+    return {
+      ok: false,
+      error:
+        "Compte récent : le paiement sur place est disponible après quelques réservations honorées. Choisissez le paiement en ligne.",
       code: "RESTRICTED_REQUIRES_ONLINE",
     };
   }

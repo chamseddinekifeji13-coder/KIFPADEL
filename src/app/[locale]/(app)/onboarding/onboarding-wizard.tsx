@@ -17,7 +17,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { completeOnboardingAction } from "@/modules/onboarding/actions";
-import type { Dictionary } from "@/i18n/get-dictionary";
+import {
+  sendPhoneOtpAction,
+  verifyPhoneOtpAction,
+} from "@/modules/phone-verification/actions";
+
+const ONBOARDING_ERROR_MESSAGES: Record<string, string> = {
+  missing_name: "Indique un nom d'affichage (au moins 2 caractères).",
+  phone_not_verified:
+    "Vérifie ton numéro WhatsApp avant de terminer l'onboarding.",
+};
 
 type OnboardingWizardProps = {
   locale: string;
@@ -47,8 +56,14 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
   const searchParams = useSearchParams();
-  const urlError = searchParams.get("error");
+  const rawUrlError = searchParams.get("error");
+  const urlError =
+    rawUrlError
+      ? (ONBOARDING_ERROR_MESSAGES[rawUrlError] ?? decodeURIComponent(rawUrlError))
+      : null;
   const [level, setLevel] = useState("");
   const [gender, setGender] = useState<"" | "male" | "female">("");
 
@@ -59,7 +74,7 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
   const canContinue = () => {
     switch (step) {
       case "profile": return displayName.length >= 2 && city.length > 0 && (gender === "male" || gender === "female");
-      case "phone": return phoneVerified || phone.length === 0; // Phone is optional but must be verified if provided
+      case "phone": return phoneVerified;
       case "level": return level.length > 0;
       case "trust": return true;
       default: return false;
@@ -69,18 +84,37 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
   const handleSendCode = async () => {
     if (phone.length < 8) return;
     setLoading(true);
-    // TODO: Call API to send verification code
-    await new Promise((r) => setTimeout(r, 1500));
+    setPhoneError(null);
+    setDevOtpHint(null);
+
+    const result = await sendPhoneOtpAction(phone);
+    if (!result.ok) {
+      setPhoneError(result.error);
+      setLoading(false);
+      return;
+    }
+
     setCodeSent(true);
+    if (result.devHint) {
+      setDevOtpHint(result.devHint);
+    }
     setLoading(false);
   };
 
   const handleVerifyCode = async () => {
     if (verificationCode.length !== 6) return;
     setLoading(true);
-    // TODO: Call API to verify code
-    await new Promise((r) => setTimeout(r, 1000));
+    setPhoneError(null);
+
+    const result = await verifyPhoneOtpAction(phone, verificationCode);
+    if (!result.ok) {
+      setPhoneError(result.error);
+      setLoading(false);
+      return;
+    }
+
     setPhoneVerified(true);
+    setDevOtpHint(null);
     setLoading(false);
   };
 
@@ -106,6 +140,9 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
     formData.append("displayName", displayName);
     formData.append("city", city);
     formData.append("phone", phone);
+    if (phoneVerified) {
+      formData.append("phoneVerified", "1");
+    }
     formData.append("level", level);
     formData.append("gender", gender);
     
@@ -178,6 +215,8 @@ export function OnboardingWizard({ locale }: OnboardingWizardProps) {
             loading={loading}
             onSendCode={handleSendCode}
             onVerifyCode={handleVerifyCode}
+            phoneError={phoneError}
+            devOtpHint={devOtpHint}
           />
         )}
 
@@ -349,6 +388,8 @@ function PhoneStep({
   loading,
   onSendCode,
   onVerifyCode,
+  phoneError,
+  devOtpHint,
 }: {
   phone: string;
   setPhone: (v: string) => void;
@@ -359,6 +400,8 @@ function PhoneStep({
   loading: boolean;
   onSendCode: () => void;
   onVerifyCode: () => void;
+  phoneError: string | null;
+  devOtpHint: string | null;
 }) {
   return (
     <div className="space-y-6">
@@ -382,6 +425,13 @@ function PhoneStep({
         </div>
       ) : (
         <div className="space-y-4">
+          {phoneError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{phoneError}</span>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
               Numéro de téléphone
@@ -407,10 +457,15 @@ function PhoneStep({
               disabled={phone.length < 8 || loading}
               className="w-full h-12 rounded-xl bg-[var(--surface-elevated)] text-white font-bold text-sm hover:bg-[var(--border)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Envoi en cours..." : "Recevoir le code SMS"}
+              {loading ? "Envoi en cours..." : "Recevoir le code sur WhatsApp"}
             </button>
           ) : (
             <div className="space-y-3">
+              {devOtpHint && (
+                <p className="text-xs text-center text-[var(--gold)] bg-[var(--gold)]/10 rounded-lg py-2 px-3">
+                  Mode dev : code OTP <span className="font-mono font-bold">{devOtpHint}</span>
+                </p>
+              )}
               <input
                 type="text"
                 value={verificationCode}
@@ -429,7 +484,7 @@ function PhoneStep({
           )}
 
           <p className="text-xs text-[var(--foreground-muted)] text-center">
-            Tu peux ignorer cette étape, mais les clubs préfèrent les joueurs vérifiés.
+            Un numéro vérifié protège la communauté contre les faux profils.
           </p>
         </div>
       )}

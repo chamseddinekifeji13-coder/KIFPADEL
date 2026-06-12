@@ -85,6 +85,7 @@ export async function fetchPlayers(
     let request = supabase
       .from("profiles")
       .select("*")
+      .not("phone_verified_at", "is", null)
       .order("sport_rating", { ascending: false });
 
     if (options?.excludeUserId) {

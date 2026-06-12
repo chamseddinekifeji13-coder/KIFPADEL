@@ -3,13 +3,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { GoogleSignInButton } from "@/components/features/auth/google-sign-in-button";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
-import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
-import { signUpAction } from "@/modules/auth/actions/sign-up";
 
 type SignUpPageProps = Readonly<{
   params: Promise<{ locale: string }>;
@@ -21,8 +19,8 @@ export async function generateMetadata({ params }: SignUpPageProps): Promise<Met
   const isEn = locale === "en";
   const title = isEn ? "Create your account" : "Créer un compte";
   const description = isEn
-    ? "Create a free Kifpadel account to book padel courts and meet players in Tunisia."
-    : "Créez gratuitement votre compte Kifpadel pour réserver des terrains et rencontrer des joueurs en Tunisie.";
+    ? "Create a free Kifpadel account with your Gmail to book padel courts in Tunisia."
+    : "Créez votre compte Kifpadel avec Gmail pour réserver des terrains en Tunisie.";
   return {
     title,
     description,
@@ -32,61 +30,56 @@ export async function generateMetadata({ params }: SignUpPageProps): Promise<Met
   };
 }
 
+function resolveSignUpError(
+  error: string | undefined,
+  dictionary: Awaited<ReturnType<typeof getDictionary>>,
+) {
+  if (!error) return null;
+  const auth = dictionary.auth;
+  switch (error) {
+    case "gmail_required":
+      return auth.gmailRequiredError;
+    case "use_google":
+      return auth.useGoogleSignUpHint;
+    default:
+      return auth.signUpFailedError;
+  }
+}
+
 export default async function SignUpPage({ params, searchParams }: SignUpPageProps) {
   const { locale } = await params;
   const { error } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
+  const errorMessage = resolveSignUpError(error, dictionary);
+  const onboardingNext = `/${locale}/onboarding`;
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <Card>
         <SectionTitle
           as="h1"
           title={dictionary.auth.signUpTitle}
-          subtitle={dictionary.auth.signUpSubtitle}
+          subtitle={dictionary.auth.signUpGoogleSubtitle}
         />
       </Card>
 
-      {error ? (
+      {errorMessage ? (
         <Card className="bg-rose-50 ring-rose-100">
-          <p className="text-sm text-rose-700">
-            {error === "missing_fields"
-              ? dictionary.auth.missingFieldsError
-              : error === "user_exists"
-                ? dictionary.auth.userExistsError
-                : error === "invalid_redirect_url"
-                  ? dictionary.auth.invalidRedirectUrlError
-                : error === "profile_trigger_error"
-                  ? dictionary.auth.profileTriggerError
-                : error === "auth_config_error"
-                  ? dictionary.auth.authConfigError
-                  : error === "rate_limited"
-                    ? dictionary.auth.rateLimitedError
-              : dictionary.auth.signUpFailedError}
-          </p>
+          <p className="text-sm text-rose-700">{errorMessage}</p>
         </Card>
       ) : null}
 
-      <Card>
-        <form action={signUpAction} className="space-y-3">
-          <input type="hidden" name="locale" value={locale} />
-          <div className="space-y-1">
-            <label htmlFor="email" className="text-xs font-medium text-slate-700">
-              {dictionary.auth.emailLabel}
-            </label>
-            <TextInput id="email" name="email" type="email" placeholder="you@example.com" />
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="password" className="text-xs font-medium text-slate-700">
-              {dictionary.auth.passwordLabel}
-            </label>
-            <TextInput id="password" name="password" type="password" placeholder="••••••••" />
-          </div>
-          <Button type="submit" className="w-full">
-            {dictionary.auth.signUpCta}
-          </Button>
-        </form>
+      <Card className="space-y-4">
+        <GoogleSignInButton
+          locale={locale}
+          next={onboardingNext}
+          label={dictionary.auth.signUpWithGoogleCta}
+          variant="primary"
+        />
+        <p className="text-xs text-slate-500 text-center leading-relaxed">
+          {dictionary.auth.signUpGoogleSecurityNote}
+        </p>
       </Card>
 
       <Card className="text-center">

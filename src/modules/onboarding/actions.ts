@@ -8,14 +8,34 @@ export async function completeOnboardingAction(formData: FormData) {
   const displayName = String(formData.get("displayName") ?? "").trim();
   const city = String(formData.get("city") ?? "Tunis").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const phoneVerifiedFlag = String(formData.get("phoneVerified") ?? "") === "1";
   const rawLevel = String(formData.get("level") ?? "beginner");
   const rawGender = String(formData.get("gender") ?? "").trim();
   const gender =
     rawGender === "male" || rawGender === "female" ? rawGender : null;
 
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/${locale}/auth/sign-in`);
+  }
+
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("phone_verified_at")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!existingProfile?.phone_verified_at && !phoneVerifiedFlag) {
+    redirect(`/${locale}/onboarding?error=phone_not_verified`);
+  }
+
+  const phoneVerified = Boolean(existingProfile?.phone_verified_at || phoneVerifiedFlag);
+
   // Calculate trust score
   let trustScore = 50; // Base score
-  if (phone) trustScore += 20; // Phone bonus
+  if (phoneVerified) trustScore += 20;
   
   const levelBonuses: Record<string, number> = {
     beginner: 5,
@@ -38,20 +58,13 @@ export async function completeOnboardingAction(formData: FormData) {
     redirect(`/${locale}/onboarding?error=missing_name`);
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/auth/sign-in`);
-  }
-
   const profilePayload = {
     display_name: displayName,
     city,
     phone,
     league,
     trust_score: trustScore,
-    verification_level: phone ? 2 : 1,
+    verification_level: phoneVerified ? 2 : 1,
     gender,
   };
 

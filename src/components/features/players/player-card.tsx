@@ -36,6 +36,9 @@ export function PlayerCard({ locale, player }: PlayerCardProps) {
           <Badge variant={(player.league || "Bronze").toLowerCase() as BadgeProps["variant"]}>
             {player.league || "Bronze"}
           </Badge>
+          <Badge variant="success" className="text-[9px] px-1.5 py-0">
+            Vérifié
+          </Badge>
         </div>
 
         <div className="flex items-center gap-3 mt-1.5">
