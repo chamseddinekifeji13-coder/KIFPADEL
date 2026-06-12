@@ -4,27 +4,25 @@ import { revalidatePath } from "next/cache";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { parsePositiveMoneyOrNull } from "@/lib/utils/club-form-parse";
 import type { ActionResult } from "@/modules/clubs/actions";
 import {
   assertClubStaffCanManage,
   clubStaffForbiddenMessage,
 } from "@/modules/clubs/actions/club-staff-guard";
 
-const MAX_LABEL_LEN = 120;
-
-function t(locale: string, key: "auth" | "forbidden" | "invalid" | "empty" | "long" | "fail" | "notFound"): string {
+function t(
+  locale: string,
+  key: "auth" | "invalid" | "price" | "notFound" | "fail",
+): string {
   const en = locale === "en";
   switch (key) {
     case "auth":
       return en ? "You must be signed in to save." : "Vous devez être connecté pour enregistrer.";
-    case "forbidden":
-      return clubStaffForbiddenMessage(locale);
     case "invalid":
       return en ? "Invalid request." : "Requête invalide.";
-    case "empty":
-      return en ? "Enter a court name or number." : "Indiquez un nom ou un numéro de terrain.";
-    case "long":
-      return en ? `Use at most ${MAX_LABEL_LEN} characters.` : `Utilisez au plus ${MAX_LABEL_LEN} caractères.`;
+    case "price":
+      return en ? "Enter a valid price in DT (e.g. 40)." : "Indiquez un prix valide en DT (ex. 40).";
     case "notFound":
       return en ? "Court not found for this club." : "Terrain introuvable pour ce club.";
     case "fail":
@@ -33,20 +31,18 @@ function t(locale: string, key: "auth" | "forbidden" | "invalid" | "empty" | "lo
   }
 }
 
-export async function updateCourtLabelAction(formData: FormData): Promise<ActionResult> {
+export async function updateCourtPriceAction(formData: FormData): Promise<ActionResult> {
   const locale = String(formData.get("locale") ?? "fr").trim() || "fr";
   const clubId = String(formData.get("club_id") ?? "").trim();
   const courtId = String(formData.get("court_id") ?? "").trim();
-  const label = String(formData.get("label") ?? "").trim();
+  const priceParsed = parsePositiveMoneyOrNull(formData.get("price_per_slot"));
 
   if (!clubId || !courtId) {
     return { ok: false, error: t(locale, "invalid") };
   }
-  if (!label.length) {
-    return { ok: false, error: t(locale, "empty") };
-  }
-  if (label.length > MAX_LABEL_LEN) {
-    return { ok: false, error: t(locale, "long") };
+
+  if (priceParsed == null) {
+    return { ok: false, error: t(locale, "price") };
   }
 
   const supabase = await createSupabaseServerActionClient();
@@ -60,7 +56,7 @@ export async function updateCourtLabelAction(formData: FormData): Promise<Action
 
   const guard = await assertClubStaffCanManage(supabase, clubId, user.id);
   if (!guard.ok) {
-    return { ok: false, error: t(locale, "forbidden") };
+    return { ok: false, error: clubStaffForbiddenMessage(locale) };
   }
 
   const adminClient = createSupabaseAdminClient();
@@ -78,12 +74,12 @@ export async function updateCourtLabelAction(formData: FormData): Promise<Action
 
   const { error: updateErr } = await adminClient
     .from("courts")
-    .update({ label })
+    .update({ price_per_slot: priceParsed })
     .eq("id", courtId)
     .eq("club_id", clubId);
 
   if (updateErr) {
-    console.error("[updateCourtLabelAction]", updateErr);
+    console.error("[updateCourtPriceAction]", updateErr);
     return { ok: false, error: t(locale, "fail") };
   }
 

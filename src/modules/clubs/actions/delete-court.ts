@@ -10,43 +10,39 @@ import {
   clubStaffForbiddenMessage,
 } from "@/modules/clubs/actions/club-staff-guard";
 
-const MAX_LABEL_LEN = 120;
-
-function t(locale: string, key: "auth" | "forbidden" | "invalid" | "empty" | "long" | "fail" | "notFound"): string {
+function t(
+  locale: string,
+  key: "auth" | "invalid" | "notFound" | "lastCourt" | "hasBookings" | "fail",
+): string {
   const en = locale === "en";
   switch (key) {
     case "auth":
-      return en ? "You must be signed in to save." : "Vous devez être connecté pour enregistrer.";
-    case "forbidden":
-      return clubStaffForbiddenMessage(locale);
+      return en ? "You must be signed in." : "Vous devez être connecté.";
     case "invalid":
       return en ? "Invalid request." : "Requête invalide.";
-    case "empty":
-      return en ? "Enter a court name or number." : "Indiquez un nom ou un numéro de terrain.";
-    case "long":
-      return en ? `Use at most ${MAX_LABEL_LEN} characters.` : `Utilisez au plus ${MAX_LABEL_LEN} caractères.`;
     case "notFound":
       return en ? "Court not found for this club." : "Terrain introuvable pour ce club.";
+    case "lastCourt":
+      return en
+        ? "You must keep at least one court for bookings."
+        : "Il faut au moins un terrain pour les réservations.";
+    case "hasBookings":
+      return en
+        ? "This court has upcoming bookings. Cancel them first."
+        : "Ce terrain a des réservations à venir. Annulez-les avant suppression.";
     case "fail":
     default:
-      return en ? "Update failed. Try again later." : "La mise à jour a échoué. Réessayez plus tard.";
+      return en ? "Could not delete the court. Try again later." : "Impossible de supprimer le terrain. Réessayez plus tard.";
   }
 }
 
-export async function updateCourtLabelAction(formData: FormData): Promise<ActionResult> {
+export async function deleteCourtAction(formData: FormData): Promise<ActionResult> {
   const locale = String(formData.get("locale") ?? "fr").trim() || "fr";
   const clubId = String(formData.get("club_id") ?? "").trim();
   const courtId = String(formData.get("court_id") ?? "").trim();
-  const label = String(formData.get("label") ?? "").trim();
 
   if (!clubId || !courtId) {
     return { ok: false, error: t(locale, "invalid") };
-  }
-  if (!label.length) {
-    return { ok: false, error: t(locale, "empty") };
-  }
-  if (label.length > MAX_LABEL_LEN) {
-    return { ok: false, error: t(locale, "long") };
   }
 
   const supabase = await createSupabaseServerActionClient();
@@ -60,7 +56,7 @@ export async function updateCourtLabelAction(formData: FormData): Promise<Action
 
   const guard = await assertClubStaffCanManage(supabase, clubId, user.id);
   if (!guard.ok) {
-    return { ok: false, error: t(locale, "forbidden") };
+    return { ok: false, error: clubStaffForbiddenMessage(locale) };
   }
 
   const adminClient = createSupabaseAdminClient();
@@ -76,14 +72,41 @@ export async function updateCourtLabelAction(formData: FormData): Promise<Action
     return { ok: false, error: t(locale, "notFound") };
   }
 
-  const { error: updateErr } = await adminClient
+  const { count: courtCount, error: countError } = await adminClient
     .from("courts")
-    .update({ label })
-    .eq("id", courtId)
+    .select("id", { count: "exact", head: true })
     .eq("club_id", clubId);
 
-  if (updateErr) {
-    console.error("[updateCourtLabelAction]", updateErr);
+  if (countError) {
+    console.error("[deleteCourtAction] count failed", countError);
+    return { ok: false, error: t(locale, "fail") };
+  }
+
+  if ((courtCount ?? 0) <= 1) {
+    return { ok: false, error: t(locale, "lastCourt") };
+  }
+
+  const nowIso = new Date().toISOString();
+  const { count: upcomingCount, error: bookingError } = await adminClient
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("court_id", courtId)
+    .gte("ends_at", nowIso)
+    .neq("status", "cancelled");
+
+  if (bookingError) {
+    console.error("[deleteCourtAction] bookings lookup failed", bookingError);
+    return { ok: false, error: t(locale, "fail") };
+  }
+
+  if ((upcomingCount ?? 0) > 0) {
+    return { ok: false, error: t(locale, "hasBookings") };
+  }
+
+  const { error: deleteError } = await adminClient.from("courts").delete().eq("id", courtId).eq("club_id", clubId);
+
+  if (deleteError) {
+    console.error("[deleteCourtAction] delete failed", deleteError);
     return { ok: false, error: t(locale, "fail") };
   }
 

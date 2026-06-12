@@ -5,41 +5,45 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { Locale } from "@/i18n/config";
-import { updateCourtLabelAction } from "@/modules/clubs/actions/update-court-label";
+import { updateCourtPriceAction } from "@/modules/clubs/actions/update-court-price";
 
-type CourtLabelEditorProps = {
+type CourtPriceEditorProps = {
   locale: Locale;
   clubId: string;
   courtId: string;
-  initialLabel: string;
-  labelFieldAria: string;
+  courtLabel: string;
+  initialPrice: number;
+  fieldLabel: string;
+  fieldHint: string;
   saveCta: string;
   savingCta: string;
   savedCta: string;
 };
 
-export function CourtLabelEditor({
+export function CourtPriceEditor({
   locale,
   clubId,
   courtId,
-  initialLabel,
-  labelFieldAria,
+  courtLabel,
+  initialPrice,
+  fieldLabel,
+  fieldHint,
   saveCta,
   savingCta,
   savedCta,
-}: CourtLabelEditorProps) {
+}: CourtPriceEditorProps) {
   const router = useRouter();
-  const [value, setValue] = useState(initialLabel);
+  const [value, setValue] = useState(String(initialPrice));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setValue(initialLabel);
-  }, [initialLabel]);
+    setValue(String(initialPrice));
+  }, [initialPrice]);
 
   const trimmed = value.trim();
-  const unchanged = trimmed === initialLabel.trim();
+  const unchanged = trimmed === String(initialPrice);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,9 +60,9 @@ export function CourtLabelEditor({
     formData.set("locale", locale);
     formData.set("club_id", clubId);
     formData.set("court_id", courtId);
-    formData.set("label", trimmed);
+    formData.set("price_per_slot", trimmed);
 
-    const result = await updateCourtLabelAction(formData);
+    const result = await updateCourtPriceAction(formData);
 
     setPending(false);
 
@@ -73,33 +77,32 @@ export function CourtLabelEditor({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 p-3 sm:flex-row sm:items-end sm:gap-3"
+    >
       <div className="min-w-0 flex-1">
-        <label className="sr-only" htmlFor={`court-label-${courtId}`}>
-          {labelFieldAria}
+        <p className="text-xs font-semibold text-white">{courtLabel}</p>
+        <label className="mt-1 block text-[11px] text-[var(--foreground-muted)]" htmlFor={`court-price-${courtId}`}>
+          {fieldLabel}
         </label>
         <input
-          id={`court-label-${courtId}`}
-          name="label"
+          id={`court-price-${courtId}`}
+          name="price_per_slot"
+          type="text"
+          inputMode="decimal"
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
             setSaved(false);
           }}
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm font-medium text-white outline-none ring-[var(--gold)] focus:ring-1"
-          placeholder={labelFieldAria}
-          maxLength={120}
-          autoComplete="off"
+          className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-white outline-none ring-[var(--gold)] focus:ring-1"
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `court-label-err-${courtId}` : undefined}
         />
-        {error ? (
-          <p id={`court-label-err-${courtId}`} className="mt-1.5 text-xs text-[var(--danger)]">
-            {error}
-          </p>
-        ) : null}
+        <p className="mt-1 text-[10px] text-[var(--foreground-muted)]">{fieldHint}</p>
+        {error ? <p className="mt-1 text-xs text-[var(--danger)]">{error}</p> : null}
         {saved ? (
-          <p className="mt-1.5 flex items-center gap-1 text-xs text-emerald-400">
+          <p className="mt-1 flex items-center gap-1 text-xs text-emerald-400">
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {savedCta}
           </p>
@@ -108,7 +111,7 @@ export function CourtLabelEditor({
       <button
         type="submit"
         disabled={pending || unchanged || trimmed.length === 0}
-        className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-[var(--gold)] px-4 text-xs font-bold text-black transition-colors hover:bg-[var(--gold-dark)] disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-[var(--gold)]/40 bg-[var(--gold)]/10 px-4 text-xs font-bold text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/20 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {pending ? (
           <>

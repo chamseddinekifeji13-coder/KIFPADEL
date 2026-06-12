@@ -5,8 +5,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
+import { AddCourtButton } from "./_components/add-court-button";
 import { CourtLabelEditor } from "./_components/court-label-editor";
-import { MapPin, Plus, Trash2, Sun, CloudSun } from "lucide-react";
+import { CourtPriceEditor } from "./_components/court-price-editor";
+import { DeleteCourtButton } from "./_components/delete-court-button";
+import { MapPin, Sun, CloudSun } from "lucide-react";
 
 type ClubCourtsPageProps = {
   params: Promise<{ locale: string }>;
@@ -59,15 +62,7 @@ export default async function ClubCourtsPage({ params }: ClubCourtsPageProps) {
           <p className="mt-1 text-sm text-[var(--foreground-muted)]">{labels.courtsSubtitle}</p>
           <p className="mt-2 max-w-xl text-xs text-[var(--foreground-muted)]">{labels.courtsLabelExplainer}</p>
         </div>
-        <button
-          type="button"
-          disabled
-          title={labels.courtsAddComingSoonTitle}
-          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-[var(--gold)]/40 px-4 text-sm font-bold text-black opacity-60"
-        >
-          <Plus className="h-4 w-4" />
-          {labels.courtsAddComingSoon}
-        </button>
+        <AddCourtButton locale={locale as Locale} clubId={managedClub.id} label={labels.courtsAddCta} />
       </div>
 
       <div className="grid gap-4">
@@ -108,19 +103,17 @@ export default async function ClubCourtsPage({ params }: ClubCourtsPageProps) {
                     labelFieldAria={labels.courtLabelEditorFieldAria}
                     saveCta={labels.courtLabelEditorSave}
                     savingCta={labels.courtLabelEditorSaving}
+                    savedCta={labels.courtLabelEditorSaved}
                   />
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled
-                title={labels.courtsDeleteComingSoonTitle}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground-muted)] opacity-50"
-                aria-disabled
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <DeleteCourtButton
+                locale={locale as Locale}
+                clubId={managedClub.id}
+                courtId={court.id}
+                deleteAria={labels.courtsDeleteAria}
+              />
             </div>
           </div>
         ))}
@@ -133,8 +126,29 @@ export default async function ClubCourtsPage({ params }: ClubCourtsPageProps) {
       ) : null}
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-        <h3 className="mb-2 font-bold text-white">{labels.courtsPricingComingSoonTitle}</h3>
-        <p className="text-sm text-[var(--foreground-muted)]">{labels.courtsPricingComingSoonBody}</p>
+        <h3 className="mb-1 font-bold text-white">{labels.courtsPricingTitle}</h3>
+        <p className="mb-4 text-sm text-[var(--foreground-muted)]">{labels.courtsPricingSubtitle}</p>
+        {courts.length > 0 ? (
+          <div className="grid gap-3">
+            {courts.map((court) => (
+              <CourtPriceEditor
+                key={`price-${court.id}`}
+                locale={locale as Locale}
+                clubId={managedClub.id}
+                courtId={court.id}
+                courtLabel={court.label}
+                initialPrice={court.pricePerSlot}
+                fieldLabel={labels.courtsPriceFieldLabel}
+                fieldHint={labels.courtsPriceFieldHint}
+                saveCta={labels.courtLabelEditorSave}
+                savingCta={labels.courtLabelEditorSaving}
+                savedCta={labels.courtLabelEditorSaved}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--foreground-muted)]">{labels.courtsListEmpty}</p>
+        )}
       </div>
     </div>
   );

@@ -435,6 +435,7 @@ export type ClubCourtSummary = {
   label: string;
   surface: string;
   isIndoor: boolean;
+  pricePerSlot: number;
 };
 
 export async function fetchCourtsByClubId(clubId: string): Promise<ClubCourtSummary[]> {
@@ -443,7 +444,7 @@ export async function fetchCourtsByClubId(clubId: string): Promise<ClubCourtSumm
   try {
     const { data, error } = await supabase
       .from("courts")
-      .select("id,label,surface,is_indoor")
+      .select("id,label,surface,is_indoor,price_per_slot")
       .eq("club_id", clubId)
       .order("label", { ascending: true });
 
@@ -453,13 +454,21 @@ export async function fetchCourtsByClubId(clubId: string): Promise<ClubCourtSumm
     }
 
     return (data ?? []).map((row) => {
-      const r = row as { id?: string; label?: string; surface?: string | null; is_indoor?: boolean | null };
+      const r = row as {
+        id?: string;
+        label?: string;
+        surface?: string | null;
+        is_indoor?: boolean | null;
+        price_per_slot?: number | null;
+      };
       const rawLabel = typeof r.label === "string" ? r.label.trim() : "";
+      const rawPrice = Number(r.price_per_slot);
       return {
         id: String(r.id ?? ""),
         label: rawLabel.length > 0 ? rawLabel : "?",
         surface: (typeof r.surface === "string" && r.surface.trim().length > 0 ? r.surface.trim() : "standard"),
         isIndoor: Boolean(r.is_indoor),
+        pricePerSlot: Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : 40,
       };
     });
   } catch (err) {
