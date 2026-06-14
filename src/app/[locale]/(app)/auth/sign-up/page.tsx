@@ -11,7 +11,6 @@ import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
 import { signUpAction } from "@/modules/auth/actions/sign-up";
 
 type SignUpPageProps = Readonly<{
