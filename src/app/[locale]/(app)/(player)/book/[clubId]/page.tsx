@@ -12,6 +12,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { TimeContainer } from "@/app/[locale]/(app)/(player)/book/[clubId]/time-container";
 import { ClubDirectionsButton } from "@/components/features/clubs/club-directions-button";
+import { ClubAlertSubscribe } from "@/components/features/clubs/club-alert-subscribe";
 import type { Metadata } from "next";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { formatClubCourtsSummary } from "@/lib/utils/club-display";
@@ -107,6 +108,27 @@ export default async function ClubDetailPage({
   const racketOffered = isRacketRentalShownInBookingFlow(club);
   const racketUnitPrice = racketOffered ? Number(club.racket_rental_price_per_unit) : 0;
 
+  let clubAlertSubscribed = false;
+  let clubAlertAllClubs = false;
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: prefs } = await supabase
+      .from("player_notification_preferences")
+      .select("all_clubs_alerts")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const { data: sub } = await supabase
+      .from("club_alert_subscriptions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("club_id", clubId)
+      .maybeSingle();
+    clubAlertSubscribed = Boolean(sub);
+    clubAlertAllClubs = Boolean(prefs?.all_clubs_alerts);
+  } catch (err) {
+    rethrowFrameworkError(err);
+  }
+
   return (
     <div className="flex-1 pb-24">
       {/* Hero Header - Dark Theme */}
@@ -142,6 +164,23 @@ export default async function ClubDetailPage({
       </div>
 
       <div className="p-4 space-y-6 mt-2">
+        <ClubAlertSubscribe
+          clubId={clubId}
+          locale={locale}
+          initialSubscribed={clubAlertSubscribed}
+          initialAllClubsAlerts={clubAlertAllClubs}
+          labels={{
+            title: clubLabels.bookPlayerAlertsTitle,
+            description: clubLabels.bookPlayerAlertsDescription,
+            subscribed: clubLabels.bookPlayerAlertsSubscribed,
+            allClubsHint: clubLabels.bookPlayerAlertsAllClubsHint,
+            subscribe: clubLabels.bookPlayerAlertsSubscribe,
+            unsubscribe: clubLabels.bookPlayerAlertsUnsubscribe,
+            manageLink: clubLabels.bookPlayerAlertsManageLink,
+            error: clubLabels.bookPlayerAlertsError,
+          }}
+        />
+
         {(courtsSummary || hasContact) && (
           <section className="grid gap-4 sm:grid-cols-2">
             {courtsSummary ? (

@@ -113,3 +113,31 @@ export async function subscribeClubAlertsAction(
 
   return { ok: true };
 }
+
+export async function getClubAlertSubscriptionAction(
+  clubId: string,
+): Promise<{ subscribed: boolean; allClubsAlerts: boolean } | null> {
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: prefs } = await supabase
+    .from("player_notification_preferences")
+    .select("all_clubs_alerts")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const { data: sub } = await supabase
+    .from("club_alert_subscriptions")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("club_id", clubId)
+    .maybeSingle();
+
+  return {
+    subscribed: Boolean(sub),
+    allClubsAlerts: Boolean(prefs?.all_clubs_alerts),
+  };
+}
