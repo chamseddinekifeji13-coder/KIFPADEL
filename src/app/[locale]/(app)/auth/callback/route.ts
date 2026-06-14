@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 import { sanitizeAuthNextPath } from "@/lib/booking-paths";
+import { AUTH_NEXT_COOKIE } from "@/lib/auth/auth-next-cookie";
 import { createSupabaseOAuthRouteHandlerClient } from "@/lib/supabase/route-handler";
-
 type CallbackRouteContext = {
   params: Promise<{ locale: string }>;
 };
@@ -16,7 +17,14 @@ export async function GET(request: Request, context: CallbackRouteContext) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const oauthError = requestUrl.searchParams.get("error");
-  const next = getSafeNextPath(requestUrl.searchParams.get("next"), locale);
+
+  const cookieStore = await cookies();
+  const nextFromCookie = cookieStore.get(AUTH_NEXT_COOKIE)?.value;
+  if (nextFromCookie) {
+    cookieStore.delete(AUTH_NEXT_COOKIE);
+  }
+
+  const next = getSafeNextPath(nextFromCookie ?? requestUrl.searchParams.get("next"), locale);
   const signInErrorUrl = new URL(`/${locale}/auth/sign-in?error=callback_failed`, request.url);
 
   if (oauthError) {
