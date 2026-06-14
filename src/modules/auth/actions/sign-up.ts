@@ -1,26 +1,47 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { formatTunisiaLocalDisplay } from "@/lib/phone/normalize-tunisia";
+import { normalizeTunisiaPhoneToE164 } from "@/lib/phone/normalize-tunisia";
 import { publicEnv } from "@/lib/config/env";
+import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+
+function digitsOnly(raw: string): string {
+  return raw.replace(/\D/g, "");
+}
 
 export async function signUpAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const phoneRaw = String(formData.get("phone") ?? "").trim();
 
-  if (!email || !password) {
+  if (!email || !password || !phoneRaw) {
     redirect(`/${locale}/auth/sign-up?error=missing_fields`);
   }
+
+  const phoneE164 = normalizeTunisiaPhoneToE164(phoneRaw);
+  if (!phoneE164) {
+    redirect(`/${locale}/auth/sign-up?error=invalid_phone`);
+  }
+
+  const phoneLocal = digitsOnly(phoneRaw).replace(/^216/, "").slice(-8);
+  const phoneDisplay = formatTunisiaLocalDisplay(phoneE164);
 
   const supabase = await createSupabaseServerActionClient();
   const onboardingPath = `/${locale}/onboarding`;
   const emailRedirectTo = `${publicEnv.siteUrl}/${locale}/auth/confirm-email?next=${encodeURIComponent(onboardingPath)}`;
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       emailRedirectTo,
+      data: {
+        phone_local: phoneLocal,
+        phone_e164: phoneE164,
+        phone_display: phoneDisplay,
+      },
     },
   });
 
@@ -53,6 +74,25 @@ export async function signUpAction(formData: FormData) {
       redirect(`/${locale}/auth/sign-up?error=rate_limited`);
     }
     redirect(`/${locale}/auth/sign-up?error=signup_failed`);
+  }
+
+  const userId = data.user?.id;
+  if (userId) {
+    try {
+      const admin = createSupabaseAdminClient();
+      await admin.from("profiles").update({ phone: phoneDisplay }).eq("id", userId);
+      await admin.from("player_notification_preferences").upsert({
+        user_id: userId,
+        tournaments_enabled: true,
+        club_events_enabled: true,
+        whatsapp_enabled: true,
+        email_enabled: true,
+        all_clubs_alerts: false,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (initErr) {
+      console.warn("[signUpAction] profile phone / notification prefs init failed", initErr);
+    }
   }
 
   redirect(`/${locale}/auth/sign-in?status=check_email`);

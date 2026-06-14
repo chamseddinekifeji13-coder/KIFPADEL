@@ -31,6 +31,7 @@ const ONBOARDING_ERROR_MESSAGES: Record<string, string> = {
 
 type OnboardingWizardProps = {
   locale: string;
+  initialPhone?: string;
 };
 
 type Step = "profile" | "phone" | "level" | "trust";
@@ -45,14 +46,16 @@ const CITIES = [
   "Tunis", "La Marsa", "Carthage", "Sidi Bou Said", "Sousse", "Sfax", "Hammamet", "Nabeul"
 ];
 
-export function OnboardingWizard({ locale }: OnboardingWizardProps) {
+export function OnboardingWizard({ locale, initialPhone = "" }: OnboardingWizardProps) {
   const [step, setStep] = useState<Step>("profile");
   const [loading, setLoading] = useState(false);
   
   // Form state
   const [displayName, setDisplayName] = useState("");
   const [city, setCity] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(() =>
+    initialPhone.replace(/\D/g, "").replace(/^216/, "").slice(-8),
+  );
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);

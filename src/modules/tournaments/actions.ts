@@ -18,6 +18,7 @@ import {
   listEntriesForTournament,
   playerAlreadyInTournament,
 } from "@/modules/tournaments/repository";
+import { enqueueTournamentAlerts } from "@/modules/notifications/alert-outbox";
 
 export type ActionResult<T = void> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -85,6 +86,9 @@ export async function createTournamentAction(input: {
   }
 
   const tournamentId = String((row as { id: string }).id);
+  if (input.initialStatus === "registration_open") {
+    void enqueueTournamentAlerts(tournamentId);
+  }
   revalidatePath(`/${loc}/club/tournaments`);
   revalidatePath(`/${loc}/club/tournaments/${tournamentId}`);
   return { ok: true, data: { tournamentId } };
@@ -114,6 +118,10 @@ export async function updateTournamentStatusAction(input: {
     .eq("id", input.tournamentId);
 
   if (error) return { ok: false, error: error.message };
+
+  if (input.status === "registration_open") {
+    void enqueueTournamentAlerts(input.tournamentId);
+  }
 
   revalidatePath(`/${loc}/club/tournaments`);
   revalidatePath(`/${loc}/club/tournaments/${input.tournamentId}`);

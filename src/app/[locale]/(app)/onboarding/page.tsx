@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getAuthenticatedUser } from "@/modules/auth/service";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { OnboardingWizard } from "./onboarding-wizard";
 
 type OnboardingPageProps = Readonly<{
@@ -17,6 +18,20 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
   if (!user) {
     redirect(`/${locale}/auth/sign-in?next=/${locale}/onboarding`);
   }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("phone")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const meta = user.user_metadata as { phone_local?: string; phone_display?: string } | undefined;
+  const initialPhone =
+    profile?.phone?.replace(/\s/g, "") ??
+    meta?.phone_local ??
+    meta?.phone_display?.replace(/\s/g, "") ??
+    "";
 
   return (
     <div className="min-h-screen bg-[var(--background)] py-8">
@@ -43,7 +58,7 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
           </p>
         </div>
 
-        <OnboardingWizard locale={locale} />
+        <OnboardingWizard locale={locale} initialPhone={initialPhone} />
       </div>
     </div>
   );

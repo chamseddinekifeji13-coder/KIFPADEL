@@ -48,6 +48,8 @@ function resolveSignUpError(
       return auth.userExistsError;
     case "invalid_redirect_url":
       return auth.invalidRedirectUrlError;
+    case "invalid_phone":
+      return auth.invalidPhoneError;
     case "profile_trigger_error":
       return auth.profileTriggerError;
     case "auth_config_error":
@@ -115,6 +117,22 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
 
         <form action={signUpAction} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />
+          <div className="space-y-1">
+            <label htmlFor="phone" className="text-xs font-medium text-slate-700">
+              {dictionary.auth.phoneLabel}
+            </label>
+            <TextInput
+              id="phone"
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              placeholder="22 123 456"
+              required
+              minLength={8}
+              maxLength={14}
+            />
+            <p className="text-[11px] text-slate-500">{dictionary.auth.phoneSignupHint}</p>
+          </div>
           <div className="space-y-1">
             <label htmlFor="email" className="text-xs font-medium text-slate-700">
               {dictionary.auth.emailLabel}
