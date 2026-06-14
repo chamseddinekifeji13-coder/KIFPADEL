@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getDictionary } from "@/i18n/get-dictionary";
+import { isGoogleAuthEnabled } from "@/lib/auth/google-auth-enabled";
 import { GoogleSignInButton } from "@/components/features/auth/google-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -64,6 +66,7 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
   const dictionary = await getDictionary(locale as Locale);
   const errorMessage = resolveSignUpError(error, dictionary);
   const onboardingNext = `/${locale}/onboarding`;
+  const googleAuthEnabled = isGoogleAuthEnabled();
 
   return (
     <section className="space-y-4">
@@ -82,29 +85,33 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
       ) : null}
 
       <Card className="space-y-4">
-        <p className="text-[10px] font-black text-gold uppercase tracking-widest text-center">
-          {dictionary.auth.signUpGoogleRecommended}
-        </p>
-        <GoogleSignInButton
-          locale={locale}
-          next={onboardingNext}
-          label={dictionary.auth.signUpWithGoogleCta}
-          variant="primary"
-        />
-        <p className="text-xs text-slate-500 text-center leading-relaxed">
-          {dictionary.auth.signUpGoogleSecurityNote}
-        </p>
+        {googleAuthEnabled ? (
+          <>
+            <p className="text-[10px] font-black text-gold uppercase tracking-widest text-center">
+              {dictionary.auth.signUpGoogleRecommended}
+            </p>
+            <GoogleSignInButton
+              locale={locale}
+              next={onboardingNext}
+              label={dictionary.auth.signUpWithGoogleCta}
+              variant="primary"
+            />
+            <p className="text-xs text-slate-500 text-center leading-relaxed">
+              {dictionary.auth.signUpGoogleSecurityNote}
+            </p>
 
-        <div className="relative py-1">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-slate-200" />
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
-            <span className="bg-white px-3 text-slate-500 font-bold">
-              {dictionary.auth.orEmailSignUpDivider}
-            </span>
-          </div>
-        </div>
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
+                <span className="bg-white px-3 text-slate-500 font-bold">
+                  {dictionary.auth.orEmailSignUpDivider}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : null}
 
         <form action={signUpAction} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />

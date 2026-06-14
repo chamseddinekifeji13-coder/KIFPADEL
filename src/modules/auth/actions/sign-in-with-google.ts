@@ -6,6 +6,7 @@ import {
   AUTH_NEXT_COOKIE_MAX_AGE_SEC,
   buildAuthCallbackPath,
 } from "@/lib/auth/auth-next-cookie";
+import { isGoogleAuthEnabled } from "@/lib/auth/google-auth-enabled";
 import { resolveSiteOrigin } from "@/lib/auth/site-origin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { cookies } from "next/headers";
@@ -15,6 +16,10 @@ export type GoogleSignInResult =
   | { ok: false; error: "auth_config_error" };
 
 export async function signInWithGoogleAction(formData: FormData): Promise<GoogleSignInResult> {
+  if (!isGoogleAuthEnabled()) {
+    return { ok: false, error: "auth_config_error" };
+  }
+
   const locale = String(formData.get("locale") ?? "fr");
   const defaultNext = `/${locale}/onboarding`;
   const next = sanitizeAuthNextPath(String(formData.get("next") ?? ""), locale, defaultNext);

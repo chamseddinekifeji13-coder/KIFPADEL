@@ -9,6 +9,7 @@ import { SectionTitle } from "@/components/ui/section-title";
 import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { isGoogleAuthEnabled } from "@/lib/auth/google-auth-enabled";
 import { GoogleSignInButton } from "@/components/features/auth/google-sign-in-button";
 import { signInAction } from "@/modules/auth/actions/sign-in";
 
@@ -38,6 +39,7 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
   const { error, status, next } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
+  const googleAuthEnabled = isGoogleAuthEnabled();
 
   return (
     <section className="space-y-6 flex flex-col items-center">
@@ -90,22 +92,26 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
       ) : null}
 
       <Card className="w-full space-y-4">
-        <GoogleSignInButton
-          locale={locale}
-          next={next ?? `/${locale}/profile`}
-          label={dictionary.auth.signInWithGoogleCta}
-          variant="primary"
-        />
-        <div className="relative py-1">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
-            <span className="bg-surface px-3 text-foreground-muted font-bold">
-              {dictionary.auth.orEmailDivider}
-            </span>
-          </div>
-        </div>
+        {googleAuthEnabled ? (
+          <>
+            <GoogleSignInButton
+              locale={locale}
+              next={next ?? `/${locale}/profile`}
+              label={dictionary.auth.signInWithGoogleCta}
+              variant="primary"
+            />
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
+                <span className="bg-surface px-3 text-foreground-muted font-bold">
+                  {dictionary.auth.orEmailDivider}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : null}
         <form action={signInAction} className="space-y-4">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="next" value={next ?? `/${locale}/profile`} />

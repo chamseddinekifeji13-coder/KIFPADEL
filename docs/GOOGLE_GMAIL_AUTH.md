@@ -2,6 +2,14 @@
 
 Kifpadel **recommande** la création de compte via **Google OAuth**, mais accepte aussi l’inscription **email / mot de passe**.
 
+## Désactiver Google (temporaire)
+
+1. Supabase → **Providers → Google** : désactiver le toggle.
+2. Vercel : `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false` (ou ne pas définir la variable).
+3. Les pages connexion / inscription n’affichent plus le bouton Google — **e-mail + mot de passe** uniquement.
+
+Pour réactiver plus tard : configurer Client ID/Secret, activer le provider Supabase, puis `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true`.
+
 ## Côté produit
 
 - Page **Créer un compte** : bouton Google en premier (badge « Recommandé »), puis formulaire email.
