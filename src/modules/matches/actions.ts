@@ -13,6 +13,8 @@ import {
   assertNotSuspended,
   isPlayerAccessError,
 } from "@/modules/compliance/player-access";
+import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type CreateOpenMatchResult =
   | { ok: true; matchId: string }
@@ -23,6 +25,24 @@ export type JoinOpenMatchResult = { ok: true } | { ok: false; error: string };
 const DEFAULT_PRICE_PER_PLAYER = 0;
 /** Durée padel classique, pour colonne ends_at si présente. */
 const MATCH_DURATION_MS = 90 * 60 * 1000;
+
+async function getActionUser(
+  supabase: SupabaseClient,
+): Promise<{ user: User } | { error: string }> {
+  const {
+    data: { session: initialSession },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  const { data: refreshData } = await supabase.auth.refreshSession();
+  const session = refreshData.session ?? initialSession;
+
+  if (sessionError || !session?.user) {
+    return { error: "Connexion requise." };
+  }
+
+  return { user: session.user };
+}
 
 function parseMatchGenderType(raw: string | null | undefined): MatchGenderType {
   if (raw === "men_only" || raw === "women_only" || raw === "mixed" || raw === "all") {
@@ -49,13 +69,13 @@ export async function createOpenMatchAction(input: {
   }
 
   const supabase = await createSupabaseServerActionClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await getActionUser(supabase);
 
-  if (!user) {
-    return { ok: false, error: "Connexion requise." };
+  if ("error" in auth) {
+    return { ok: false, error: auth.error };
   }
+
+  const user = auth.user;
 
   try {
     await assertNotSuspended(supabase, user.id);
@@ -201,13 +221,13 @@ export async function joinOpenMatchAction(input: {
   }
 
   const supabase = await createSupabaseServerActionClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await getActionUser(supabase);
 
-  if (!user) {
-    return { ok: false, error: "Connexion requise." };
+  if ("error" in auth) {
+    return { ok: false, error: auth.error };
   }
+
+  const user = auth.user;
 
   try {
     await assertNotSuspended(supabase, user.id);

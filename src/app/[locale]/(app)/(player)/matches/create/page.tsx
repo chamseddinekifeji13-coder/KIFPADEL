@@ -6,6 +6,7 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { requireUser } from "@/modules/auth/guards/require-user";
 import { CreateMatchForm } from "@/app/[locale]/(app)/(player)/matches/create/create-match-form";
 import { InviteMatchBanner } from "@/app/[locale]/(app)/(player)/matches/create/invite-match-banner";
 
@@ -19,6 +20,7 @@ export default async function CreateMatchPage({ params }: CreateMatchPageProps) 
 
   const dictionary = await getDictionary(locale as Locale);
   const p = dictionary.player;
+  await requireUser({ locale, redirectPath: "matches/create" });
   const clubs = await clubService.getClubs();
 
   const createMatchCopy = {

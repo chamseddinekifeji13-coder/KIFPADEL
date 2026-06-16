@@ -116,7 +116,11 @@ export function CreateMatchForm({ clubs, locale, copy }: CreateMatchFormProps) {
       });
 
       if (!result.ok) {
-        setFormError(result.error);
+        setFormError(
+          result.error === "Connexion requise."
+            ? "Connexion requise. Connecte-toi puis réessaie."
+            : result.error,
+        );
         return;
       }
 
