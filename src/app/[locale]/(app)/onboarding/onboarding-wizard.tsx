@@ -18,20 +18,21 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { completeOnboardingAction } from "@/modules/onboarding/actions";
 import { PLAYER_CATEGORIES } from "@/domain/rules/player-category";
-import {
-  sendPhoneOtpAction,
-  verifyPhoneOtpAction,
-} from "@/modules/phone-verification/actions";
+import { PhoneVerificationForm } from "@/components/features/phone/phone-verification-form";
+import type { PhoneVerificationChannel } from "@/lib/phone/verification-channel";
 
 const ONBOARDING_ERROR_MESSAGES: Record<string, string> = {
   missing_name: "Indique un nom d'affichage (au moins 2 caractères).",
   phone_not_verified:
-    "Vérifie ton numéro WhatsApp avant de terminer l'onboarding.",
+    "Confirme ton numéro de téléphone avant de terminer l'onboarding.",
 };
 
 type OnboardingWizardProps = {
   locale: string;
   initialPhone?: string;
+  initialStep?: Step;
+  initialPhoneVerified?: boolean;
+  verificationChannel?: PhoneVerificationChannel;
 };
 
 type Step = "profile" | "phone" | "level" | "trust";
@@ -46,8 +47,14 @@ const CITIES = [
   "Tunis", "La Marsa", "Carthage", "Sidi Bou Said", "Sousse", "Sfax", "Hammamet", "Nabeul"
 ];
 
-export function OnboardingWizard({ locale, initialPhone = "" }: OnboardingWizardProps) {
-  const [step, setStep] = useState<Step>("profile");
+export function OnboardingWizard({
+  locale,
+  initialPhone = "",
+  initialStep = "profile",
+  initialPhoneVerified = false,
+  verificationChannel = "instant",
+}: OnboardingWizardProps) {
+  const [step, setStep] = useState<Step>(initialStep);
   const [loading, setLoading] = useState(false);
   
   // Form state
@@ -56,11 +63,7 @@ export function OnboardingWizard({ locale, initialPhone = "" }: OnboardingWizard
   const [phone, setPhone] = useState(() =>
     initialPhone.replace(/\D/g, "").replace(/^216/, "").slice(-8),
   );
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
+  const [phoneVerified, setPhoneVerified] = useState(initialPhoneVerified);
   const searchParams = useSearchParams();
   const rawUrlError = searchParams.get("error");
   const urlError =
@@ -82,43 +85,6 @@ export function OnboardingWizard({ locale, initialPhone = "" }: OnboardingWizard
       case "trust": return true;
       default: return false;
     }
-  };
-
-  const handleSendCode = async () => {
-    if (phone.length < 8) return;
-    setLoading(true);
-    setPhoneError(null);
-    setDevOtpHint(null);
-
-    const result = await sendPhoneOtpAction(phone);
-    if (!result.ok) {
-      setPhoneError(result.error);
-      setLoading(false);
-      return;
-    }
-
-    setCodeSent(true);
-    if (result.devHint) {
-      setDevOtpHint(result.devHint);
-    }
-    setLoading(false);
-  };
-
-  const handleVerifyCode = async () => {
-    if (verificationCode.length !== 6) return;
-    setLoading(true);
-    setPhoneError(null);
-
-    const result = await verifyPhoneOtpAction(phone, verificationCode);
-    if (!result.ok) {
-      setPhoneError(result.error);
-      setLoading(false);
-      return;
-    }
-
-    setPhoneVerified(true);
-    setDevOtpHint(null);
-    setLoading(false);
   };
 
   const handleNext = () => {
@@ -208,18 +174,18 @@ export function OnboardingWizard({ locale, initialPhone = "" }: OnboardingWizard
         )}
 
         {step === "phone" && (
-          <PhoneStep
-            phone={phone}
-            setPhone={setPhone}
-            verificationCode={verificationCode}
-            setVerificationCode={setVerificationCode}
-            codeSent={codeSent}
-            phoneVerified={phoneVerified}
-            loading={loading}
-            onSendCode={handleSendCode}
-            onVerifyCode={handleVerifyCode}
-            phoneError={phoneError}
-            devOtpHint={devOtpHint}
+          <PhoneVerificationForm
+            channel={verificationChannel}
+            initialPhone={phone}
+            initialVerified={phoneVerified}
+            onVerified={(verifiedPhone) => {
+              setPhone(verifiedPhone);
+              setPhoneVerified(true);
+            }}
+            labels={{
+              title: "Numéro de téléphone",
+              subtitle: "Étape obligatoire pour réserver un terrain",
+            }}
           />
         )}
 
@@ -376,121 +342,6 @@ function ProfileStep({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// Phone Step
-function PhoneStep({
-  phone,
-  setPhone,
-  verificationCode,
-  setVerificationCode,
-  codeSent,
-  phoneVerified,
-  loading,
-  onSendCode,
-  onVerifyCode,
-  phoneError,
-  devOtpHint,
-}: {
-  phone: string;
-  setPhone: (v: string) => void;
-  verificationCode: string;
-  setVerificationCode: (v: string) => void;
-  codeSent: boolean;
-  phoneVerified: boolean;
-  loading: boolean;
-  onSendCode: () => void;
-  onVerifyCode: () => void;
-  phoneError: string | null;
-  devOtpHint: string | null;
-}) {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center">
-          <Phone className="h-5 w-5 text-[var(--gold)]" />
-        </div>
-        <div>
-          <h2 className="font-bold text-white">Vérification téléphone</h2>
-          <p className="text-xs text-[var(--foreground-muted)]">Pour plus de confiance</p>
-        </div>
-      </div>
-
-      {phoneVerified ? (
-        <div className="p-4 rounded-xl bg-[var(--success)]/10 border border-[var(--success)]/20 flex items-center gap-3">
-          <CheckCircle2 className="h-5 w-5 text-[var(--success)]" />
-          <div>
-            <p className="font-medium text-[var(--success)]">Numéro vérifié</p>
-            <p className="text-xs text-[var(--foreground-muted)]">{phone}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {phoneError && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400 flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>{phoneError}</span>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
-              Numéro de téléphone
-            </label>
-            <div className="flex gap-2">
-              <div className="h-12 px-4 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center text-white font-medium">
-                +216
-              </div>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                placeholder="55 123 456"
-                disabled={codeSent}
-                className="flex-1 h-12 px-4 rounded-xl bg-[var(--background)] border border-[var(--border)] text-white placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--gold)] transition-colors disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {!codeSent ? (
-            <button
-              onClick={onSendCode}
-              disabled={phone.length < 8 || loading}
-              className="w-full h-12 rounded-xl bg-[var(--surface-elevated)] text-white font-bold text-sm hover:bg-[var(--border)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Envoi en cours..." : "Recevoir le code sur WhatsApp"}
-            </button>
-          ) : (
-            <div className="space-y-3">
-              {devOtpHint && (
-                <p className="text-xs text-center text-[var(--gold)] bg-[var(--gold)]/10 rounded-lg py-2 px-3">
-                  Mode dev : code OTP <span className="font-mono font-bold">{devOtpHint}</span>
-                </p>
-              )}
-              <input
-                type="text"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="Code à 6 chiffres"
-                className="w-full h-12 px-4 rounded-xl bg-[var(--background)] border border-[var(--border)] text-white text-center text-2xl tracking-[0.5em] placeholder:text-[var(--foreground-muted)] placeholder:text-base placeholder:tracking-normal focus:outline-none focus:border-[var(--gold)] transition-colors"
-              />
-              <button
-                onClick={onVerifyCode}
-                disabled={verificationCode.length !== 6 || loading}
-                className="w-full h-12 rounded-xl bg-[var(--success)]/10 text-[var(--success)] font-bold text-sm hover:bg-[var(--success)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? "Vérification..." : "Vérifier le code"}
-              </button>
-            </div>
-          )}
-
-          <p className="text-xs text-[var(--foreground-muted)] text-center">
-            Un numéro vérifié protège la communauté contre les faux profils.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

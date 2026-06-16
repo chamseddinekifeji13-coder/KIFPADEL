@@ -196,7 +196,7 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     return {
       ok: false,
       error:
-        "Vérifiez votre numéro WhatsApp dans l'onboarding ou votre profil avant de réserver.",
+        "Enregistrez et confirmez votre numéro de téléphone dans votre profil avant de réserver.",
       code: "SERVER_ERROR",
     };
   }

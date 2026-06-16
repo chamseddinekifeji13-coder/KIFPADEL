@@ -3,6 +3,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getAuthenticatedUser } from "@/modules/auth/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getPhoneVerificationChannel } from "@/lib/phone/verification-channel";
 import { OnboardingWizard } from "./onboarding-wizard";
 
 type OnboardingPageProps = Readonly<{
@@ -22,7 +23,7 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
   const supabase = await createSupabaseServerClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("phone")
+    .select("phone, phone_verified_at")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -32,6 +33,8 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
     meta?.phone_local ??
     meta?.phone_display?.replace(/\s/g, "") ??
     "";
+  const phoneVerified = Boolean(profile?.phone_verified_at);
+  const verificationChannel = getPhoneVerificationChannel();
 
   return (
     <div className="min-h-screen bg-[var(--background)] py-8">
@@ -58,7 +61,13 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
           </p>
         </div>
 
-        <OnboardingWizard locale={locale} initialPhone={initialPhone} />
+        <OnboardingWizard
+          locale={locale}
+          initialPhone={initialPhone}
+          initialStep={phoneVerified ? "profile" : "phone"}
+          initialPhoneVerified={phoneVerified}
+          verificationChannel={verificationChannel}
+        />
       </div>
     </div>
   );

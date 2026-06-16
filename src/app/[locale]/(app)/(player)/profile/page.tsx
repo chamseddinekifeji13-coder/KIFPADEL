@@ -56,6 +56,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     redirect(`/${locale}/onboarding`);
   }
 
+  const { data: phoneRow } = await supabase
+    .from("profiles")
+    .select("phone_verified_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  const phoneVerified = Boolean(phoneRow?.phone_verified_at);
+
   const [topRivals, bookings, recentTournaments, managedClub, superAdminActor] = await Promise.all([
     playerService.getTopRivals(user.id, 3),
     fetchBookingsForPlayer(user.id, 20),
@@ -68,6 +75,17 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   return (
     <div className="flex-1 p-4 space-y-8 pb-20">
+      {!phoneVerified ? (
+        <Link
+          href={`/${locale}/profile/verify-phone?next=/${locale}/book`}
+          className="block rounded-2xl border border-[var(--warning)]/30 bg-[var(--warning)]/10 p-4"
+        >
+          <p className="text-sm font-bold text-[var(--warning)]">{labels.verifyPhoneBannerTitle}</p>
+          <p className="mt-1 text-xs text-[var(--foreground-muted)]">{labels.verifyPhoneBannerSubtitle}</p>
+          <span className="mt-3 inline-flex text-xs font-bold text-[var(--gold)]">{labels.verifyPhoneBannerCta} →</span>
+        </Link>
+      ) : null}
+
       <header className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-900">{labels.profileTitle}</h1>
         <a
@@ -255,7 +273,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           )}
 
           {/* Standard Settings */}
+          {/* Standard Settings */}
           {[
+            ...(phoneVerified
+              ? []
+              : [{ label: labels.accountVerifyPhone, href: `/${locale}/profile/verify-phone` }]),
             { label: labels.accountPersonalInfo, href: `/${locale}/profile/edit` },
             { label: labels.accountNotifications, href: `/${locale}/profile/notifications` },
             { label: labels.accountSupport, href: `/${locale}/support` },
