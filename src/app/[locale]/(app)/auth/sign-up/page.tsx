@@ -49,6 +49,8 @@ function resolveSignUpError(
       return auth.invalidRedirectUrlError;
     case "invalid_phone":
       return auth.invalidPhoneError;
+    case "phone_in_use":
+      return auth.phoneInUseError;
     case "profile_trigger_error":
       return auth.profileTriggerError;
     case "auth_config_error":

@@ -1,23 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isPhoneE164VerifiedByAnotherUser } from "@/lib/phone/phone-duplicate-guard";
 
 export async function applyVerifiedPhoneToProfile(
   userClient: SupabaseClient,
   userId: string,
   phoneE164: string,
 ): Promise<{ ok: true } | { ok: false; error: string; code?: string }> {
-  const admin = createSupabaseAdminClient();
-
-  const { data: duplicate } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("phone_e164", phoneE164)
-    .not("phone_verified_at", "is", null)
-    .neq("id", userId)
-    .maybeSingle();
-
-  if (duplicate?.id) {
+  if (await isPhoneE164VerifiedByAnotherUser(phoneE164, userId)) {
     return {
       ok: false,
       error: "Ce numéro est déjà utilisé par un autre compte.",

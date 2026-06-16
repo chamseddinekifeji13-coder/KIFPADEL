@@ -15,6 +15,7 @@ import {
   OTP_MAX_ATTEMPTS,
   OTP_MAX_SENDS_PER_HOUR,
 } from "@/lib/phone/otp-crypto";
+import { isPhoneE164VerifiedByAnotherUser } from "@/lib/phone/phone-duplicate-guard";
 import { applyVerifiedPhoneToProfile } from "@/modules/phone-verification/apply-verified-phone";
 import { sendEmailOtpMessage } from "@/modules/phone-verification/email-otp";
 import { sendWhatsAppOtpMessage } from "@/modules/phone-verification/whatsapp-cloud";
@@ -73,15 +74,7 @@ export async function sendPhoneOtpAction(localDigits: string): Promise<PhoneOtpA
 
   const admin = createSupabaseAdminClient();
 
-  const { data: existingPhone } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("phone_e164", phoneE164)
-    .not("phone_verified_at", "is", null)
-    .neq("id", user.id)
-    .maybeSingle();
-
-  if (existingPhone?.id) {
+  if (await isPhoneE164VerifiedByAnotherUser(phoneE164, user.id)) {
     return {
       ok: false,
       error: "Ce numéro est déjà lié à un autre compte.",

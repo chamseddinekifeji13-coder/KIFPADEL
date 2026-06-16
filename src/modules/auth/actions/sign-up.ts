@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isPhoneE164VerifiedByAnotherUser } from "@/lib/phone/phone-duplicate-guard";
 import { formatTunisiaLocalDisplay } from "@/lib/phone/normalize-tunisia";
 import { normalizeTunisiaPhoneToE164 } from "@/lib/phone/normalize-tunisia";
 import { publicEnv } from "@/lib/config/env";
@@ -24,6 +25,15 @@ export async function signUpAction(formData: FormData) {
   const phoneE164 = normalizeTunisiaPhoneToE164(phoneRaw);
   if (!phoneE164) {
     redirect(`/${locale}/auth/sign-up?error=invalid_phone`);
+  }
+
+  try {
+    if (await isPhoneE164VerifiedByAnotherUser(phoneE164)) {
+      redirect(`/${locale}/auth/sign-up?error=phone_in_use`);
+    }
+  } catch (dupErr) {
+    console.warn("[signUpAction] phone duplicate check failed", dupErr);
+    redirect(`/${locale}/auth/sign-up?error=signup_failed`);
   }
 
   const phoneLocal = digitsOnly(phoneRaw).replace(/^216/, "").slice(-8);
