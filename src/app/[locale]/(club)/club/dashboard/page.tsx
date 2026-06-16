@@ -4,7 +4,12 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
-import { fetchBookingsForClubOperations, todayTunisYmd } from "@/modules/bookings/repository";
+import { fetchCourtsByClub } from "@/modules/clubs/repository";
+import {
+  fetchClubSlotOperationRows,
+  todayTunisYmd,
+} from "@/modules/bookings/repository";
+import { formatTunisHm } from "@/modules/bookings/timezone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   Calendar,
@@ -59,44 +64,71 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
   }
 
   const todayDate = todayTunisYmd();
-  const timeLocale = locale === "en" ? "en-GB" : "fr-FR";
   const now = Date.now();
-  const todayBookings = await fetchBookingsForClubOperations(managedClub.id, todayDate);
 
-  const playerIds = [...new Set(todayBookings.map((booking) => booking.created_by ?? booking.player_id).filter(Boolean))];
+  const [participantRows, courtsRows] = await Promise.all([
+    fetchClubSlotOperationRows(managedClub.id, todayDate),
+    fetchCourtsByClub(managedClub.id),
+  ]);
+
+  const playerIds = [...new Set(participantRows.map((row) => row.player_id).filter(Boolean))];
   const supabase = await createSupabaseServerClient();
   const { data: players } = playerIds.length
     ? await supabase.from("profiles").select("id, display_name, trust_score").in("id", playerIds as string[])
     : { data: [] as { id: string; display_name: string | null; trust_score: number | null }[] };
 
   const playerById = new Map((players ?? []).map((player) => [player.id, player]));
-  const pendingBookings = todayBookings.filter((booking) => booking.status === "pending");
-  const stalePendingBookings = pendingBookings.filter(
-    (booking) => now - new Date(booking.created_at).getTime() > 15 * 60 * 1000
-  );
-  const confirmedBookings = todayBookings.filter((booking) => booking.status === "confirmed");
-  const occupiedSlots = confirmedBookings.length + pendingBookings.length;
-  const occupancyTrend = todayBookings.length === 0 ? 0 : Math.round((occupiedSlots / todayBookings.length) * 100);
+  const courtLabelById = new Map(courtsRows.map((court) => [court.id, court.label]));
 
-  const noShowAlerts = todayBookings
-    .filter((booking) => booking.status === "no_show")
-    .map((booking) => ({
-      id: booking.id,
-      playerName: playerById.get((booking.created_by ?? booking.player_id) as string)?.display_name ?? labels.genericPlayerName,
-      trustScore: playerById.get((booking.created_by ?? booking.player_id) as string)?.trust_score ?? 0,
+  const todaySlots = participantRows.map((row) => {
+    const bookingRaw = row.bookings;
+    const booking = Array.isArray(bookingRaw) ? bookingRaw[0] : bookingRaw;
+    const player = playerById.get(row.player_id);
+    const courtId = booking?.court_id ?? "";
+
+    return {
+      id: row.id,
+      bookingId: row.booking_id,
+      playerId: row.player_id,
+      startsAt: booking?.starts_at ?? "",
+      endsAt: booking?.ends_at ?? "",
+      courtId,
+      courtLabel:
+        courtLabelById.get(courtId) ?? `${labels.fallbackCourtLabel} ${courtId.slice(0, 4)}`,
+      status: row.status,
+      paymentMethod: row.payment_method,
+      displayName: player?.display_name ?? labels.genericPlayerName,
+      trustScore: player?.trust_score ?? 0,
+      createdAt: row.created_at,
+    };
+  });
+
+  const pendingBookings = todaySlots.filter((slot) => slot.status === "pending");
+  const stalePendingBookings = pendingBookings.filter(
+    (slot) => now - new Date(slot.createdAt).getTime() > 15 * 60 * 1000,
+  );
+  const uniqueSessions = new Set(todaySlots.map((slot) => slot.bookingId)).size;
+  const occupancyTrend =
+    uniqueSessions === 0
+      ? 0
+      : Math.min(100, Math.round((todaySlots.length / (uniqueSessions * 4)) * 100));
+
+  const noShowAlerts = todaySlots
+    .filter((slot) => slot.status === "no_show")
+    .map((slot) => ({
+      id: slot.id,
+      playerName: slot.displayName,
+      trustScore: slot.trustScore,
       reason: "no_show",
     }));
 
-  const lowTrustAlerts = todayBookings
-    .filter((booking) => {
-      const trust = playerById.get((booking.created_by ?? booking.player_id) as string)?.trust_score ?? 100;
-      return trust < 60;
-    })
+  const lowTrustAlerts = todaySlots
+    .filter((slot) => slot.trustScore < 60)
     .slice(0, 3)
-    .map((booking) => ({
-      id: booking.id,
-      playerName: playerById.get((booking.created_by ?? booking.player_id) as string)?.display_name ?? labels.genericPlayerName,
-      trustScore: playerById.get((booking.created_by ?? booking.player_id) as string)?.trust_score ?? 0,
+    .map((slot) => ({
+      id: slot.id,
+      playerName: slot.displayName,
+      trustScore: slot.trustScore,
       reason: "low_trust",
     }));
 
@@ -116,7 +148,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           label={labels.kpiTodayBookings}
-          value={todayBookings.length}
+          value={todaySlots.length}
           icon={Calendar}
         />
         <StatCard
@@ -151,7 +183,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
               <div>
                 <h2 className="font-bold text-white text-sm">{labels.todayBookingsTitle}</h2>
                 <p className="text-[10px] text-[var(--foreground-muted)]">
-                  {todayBookings.length} {labels.todayBookingsObserved}
+                  {todaySlots.length} {labels.todayBookingsObserved}
                 </p>
               </div>
             </div>
@@ -163,26 +195,26 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
             </Link>
           </div>
           <div className="divide-y divide-[var(--border)]">
-            {todayBookings.slice(0, 8).map((slot) => (
+            {todaySlots.slice(0, 8).map((slot) => (
               <div key={slot.id} className="p-4 flex items-center gap-4 hover:bg-[var(--surface-elevated)] transition-colors">
                 <div className="text-center min-w-[50px]">
                   <p className="text-sm font-bold text-white">
-                    {new Date(slot.starts_at).toLocaleTimeString(timeLocale, { hour: "2-digit", minute: "2-digit" })}
+                    {slot.startsAt ? formatTunisHm(new Date(slot.startsAt)) : "--:--"}
                   </p>
                   <p className="text-[10px] text-[var(--foreground-muted)]">
-                    {new Date(slot.ends_at).toLocaleTimeString(timeLocale, { hour: "2-digit", minute: "2-digit" })}
+                    {slot.endsAt ? formatTunisHm(new Date(slot.endsAt)) : "--:--"}
                   </p>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-white text-sm truncate">
-                    {playerById.get((slot.created_by ?? slot.player_id) as string)?.display_name ?? labels.genericPlayerName}
+                    {slot.displayName}
                   </p>
                   <p className="text-[11px] text-[var(--foreground-muted)]">
-                    {(slot.court_label?.trim() || `${labels.fallbackCourtLabel} ${slot.court_id.slice(0, 4)}`)}
+                    {slot.courtLabel}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {slot.payment_method === "online" ? (
+                  {slot.paymentMethod === "online" ? (
                     <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-[var(--success)]/10 text-[var(--success)]">
                       {labels.paymentOnline}
                     </span>
@@ -201,7 +233,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
                 </div>
               </div>
             ))}
-            {todayBookings.length === 0 && (
+            {todaySlots.length === 0 && (
               <div className="p-4 text-sm text-[var(--foreground-muted)]">
                 {labels.noBookingsToday}
               </div>
@@ -284,11 +316,11 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="p-4 rounded-xl bg-[var(--success)]/5 border border-[var(--success)]/20">
             <p className="text-2xl font-bold text-[var(--success)]">
-              {todayBookings.length === 0
+              {todaySlots.length === 0
                 ? "0%"
                 : `${Math.round(
-                    (todayBookings.filter((booking) => booking.payment_method === "online").length /
-                      todayBookings.length) *
+                    (todaySlots.filter((slot) => slot.paymentMethod === "online").length /
+                      todaySlots.length) *
                       100
                   )}%`}
             </p>
@@ -297,11 +329,11 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
           </div>
           <div className="p-4 rounded-xl bg-[var(--warning)]/5 border border-[var(--warning)]/20">
             <p className="text-2xl font-bold text-[var(--warning)]">
-              {todayBookings.length === 0
+              {todaySlots.length === 0
                 ? "0%"
                 : `${Math.round(
-                    (todayBookings.filter((booking) => booking.payment_method !== "online").length /
-                      todayBookings.length) *
+                    (todaySlots.filter((slot) => slot.paymentMethod !== "online").length /
+                      todaySlots.length) *
                       100
                   )}%`}
             </p>
