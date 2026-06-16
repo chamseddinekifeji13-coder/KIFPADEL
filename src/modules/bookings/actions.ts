@@ -15,7 +15,6 @@ import {
   isPhoneVerified,
   newAccountMustPayOnline,
 } from "@/modules/compliance/new-account-gates";
-import { createBookingDirect } from "@/modules/bookings/create-booking-direct";
 import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { isRacketRentalBookingPipelineReady } from "@/modules/bookings/racket-rental-pipeline";
 import { notifyBookingCreated } from "@/modules/notifications/booking-created";
@@ -131,20 +130,6 @@ function mapBookingRpcFailure(row: BookingRpcRow | null): BookingResult {
     };
   }
   return { ok: false, error: "Erreur lors de la création de la réservation.", code: "SERVER_ERROR" };
-}
-
-function shouldTryDirectBookingFallback(
-  rpcError: { message?: string; code?: string } | null,
-  bookingResult: BookingRpcRow | null,
-): boolean {
-  if (rpcError) return true;
-  if (!bookingResult) return true;
-  if (!isBookingRpcSuccess(bookingResult)) {
-    const code = bookingResult.error_code?.toUpperCase() ?? "";
-    return code !== "SLOT_TAKEN" && code !== "UNAUTHORIZED";
-  }
-  if (!bookingResult.booking_id) return true;
-  return false;
 }
 
 export async function createBookingAction(input: CreateBookingInput): Promise<BookingResult> {
@@ -356,36 +341,6 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
 
   if (rpcError) {
     console.error("Booking RPC error:", rpcError.message, rpcError.code, rpcError.details, rpcError);
-  }
-
-  let directFailure: BookingResult | null = null;
-  if (shouldTryDirectBookingFallback(rpcError, bookingResult)) {
-    console.warn("[createBookingAction] repli insertion directe", {
-      rpcError: rpcError?.message,
-      bookingResult,
-    });
-    const direct = await createBookingDirect(supabase, {
-      clubId: input.clubId,
-      courtId: input.courtId,
-      playerId: user.id,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
-      paymentMethod: input.paymentMethod,
-      bookingStatus,
-      totals,
-      includeRacketColumns: pipelineReady,
-    });
-    if (direct.ok) {
-      return direct;
-    }
-    directFailure = direct;
-    if (direct.code === "SLOT_TAKEN" || direct.code === "UNAUTHORIZED") {
-      return direct;
-    }
-  }
-
-  if (directFailure) {
-    return directFailure;
   }
 
   if (rpcError) {
