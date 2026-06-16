@@ -24,6 +24,30 @@ type ParticipantStaffContext = {
   clubId: string;
 };
 
+async function resolveParticipantIdForStaff(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerActionClient>>,
+  participantId: string,
+): Promise<string> {
+  if (!participantId.startsWith("legacy-")) {
+    return participantId;
+  }
+
+  const bookingId = participantId.slice("legacy-".length);
+  const { data } = await supabase
+    .from("booking_participants")
+    .select("id")
+    .eq("booking_id", bookingId)
+    .order("seat_index", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (data?.id) {
+    return String(data.id);
+  }
+
+  return participantId;
+}
+
 async function loadParticipantForStaffAction(
   participantId: string,
 ): Promise<{ ok: true; ctx: ParticipantStaffContext } | { ok: false; error: string }> {
@@ -36,10 +60,42 @@ async function loadParticipantForStaffAction(
     return { ok: false, error: "Vous devez être connecté." };
   }
 
+  const resolvedParticipantId = await resolveParticipantIdForStaff(supabase, participantId);
+
+  if (resolvedParticipantId.startsWith("legacy-")) {
+    const bookingId = resolvedParticipantId.slice("legacy-".length);
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select("id, status, club_id")
+      .eq("id", bookingId)
+      .maybeSingle();
+
+    if (bookingError || !booking) {
+      return { ok: false, error: "Réservation introuvable." };
+    }
+
+    const clubId = String((booking as { club_id?: string }).club_id ?? "");
+    const guard = await assertClubStaffCanManage(supabase, clubId, user.id);
+    if (!guard.ok) {
+      return { ok: false, error: "Action non autorisée pour ce club." };
+    }
+
+    return {
+      ok: true,
+      ctx: {
+        supabase,
+        participantId: resolvedParticipantId,
+        status: String((booking as { status?: string }).status ?? ""),
+        paymentConfirmedAt: null,
+        clubId,
+      },
+    };
+  }
+
   const { data: row, error: loadError } = await supabase
     .from("booking_participants")
     .select("id, status, payment_confirmed_at, bookings!inner(club_id)")
-    .eq("id", participantId)
+    .eq("id", resolvedParticipantId)
     .maybeSingle();
 
   if (loadError || !row) {
@@ -63,7 +119,7 @@ async function loadParticipantForStaffAction(
     ok: true,
     ctx: {
       supabase,
-      participantId,
+      participantId: resolvedParticipantId,
       status: String((row as { status?: string }).status ?? ""),
       paymentConfirmedAt: (row as { payment_confirmed_at?: string | null }).payment_confirmed_at ?? null,
       clubId,
@@ -80,10 +136,24 @@ export async function confirmParticipantPaymentAction(participantId: string): Pr
     return loaded;
   }
 
-  const { supabase, status, paymentConfirmedAt } = loaded.ctx;
+  const { supabase, status, paymentConfirmedAt, participantId: resolvedId } = loaded.ctx;
 
   if (!isParticipantPaymentPending(status, paymentConfirmedAt)) {
     return { ok: false, error: "Encaissement déjà confirmé ou place non éligible." };
+  }
+
+  if (resolvedId.startsWith("legacy-")) {
+    const bookingId = resolvedId.slice("legacy-".length);
+    const { error } = await supabase
+      .from("bookings")
+      .update({ status: "confirmed" })
+      .eq("id", bookingId);
+
+    if (error) {
+      return { ok: false, error: "Erreur lors de la confirmation de l'encaissement." };
+    }
+
+    return { ok: true };
   }
 
   const updates: { payment_confirmed_at: string; status?: string } = {
@@ -93,13 +163,13 @@ export async function confirmParticipantPaymentAction(participantId: string): Pr
     updates.status = "confirmed";
   }
 
-  const { error } = await supabase.from("booking_participants").update(updates).eq("id", participantId);
+  const { error } = await supabase.from("booking_participants").update(updates).eq("id", resolvedId);
 
   if (error) {
     return { ok: false, error: "Erreur lors de la confirmation de l'encaissement." };
   }
 
-  void notifyParticipantPaymentConfirmed(participantId).catch((err) =>
+  void notifyParticipantPaymentConfirmed(resolvedId).catch((err) =>
     console.error("[confirmParticipantPaymentAction] notify failed", err),
   );
 
@@ -115,16 +185,25 @@ export async function confirmParticipantArrivalAction(participantId: string): Pr
     return loaded;
   }
 
-  const { supabase, status, paymentConfirmedAt } = loaded.ctx;
+  const { supabase, status, paymentConfirmedAt, participantId: resolvedId } = loaded.ctx;
 
   if (isParticipantPaymentPending(status, paymentConfirmedAt)) {
     return { ok: false, error: "Confirmez l'encaissement avant la présence." };
   }
 
+  if (resolvedId.startsWith("legacy-")) {
+    const bookingId = resolvedId.slice("legacy-".length);
+    const { error } = await supabase.from("bookings").update({ status: "completed" }).eq("id", bookingId);
+    if (error) {
+      return { ok: false, error: "Erreur lors de la mise à jour de la réservation." };
+    }
+    return { ok: true };
+  }
+
   const { data: row, error: loadError } = await supabase
     .from("booking_participants")
     .select("id, booking_id, status")
-    .eq("id", participantId)
+    .eq("id", resolvedId)
     .maybeSingle();
 
   if (loadError || !row) {
@@ -134,7 +213,7 @@ export async function confirmParticipantArrivalAction(participantId: string): Pr
   const { error } = await supabase
     .from("booking_participants")
     .update({ status: "completed" })
-    .eq("id", participantId);
+    .eq("id", resolvedId);
 
   if (error) {
     return { ok: false, error: "Erreur lors de la mise à jour de la place." };
@@ -191,12 +270,53 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
     return loaded;
   }
 
-  const supabase = loaded.ctx.supabase;
+  const { supabase, participantId: resolvedId } = loaded.ctx;
+
+  if (resolvedId.startsWith("legacy-")) {
+    const bookingId = resolvedId.slice("legacy-".length);
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select("id, created_by, player_id, total_price, status")
+      .eq("id", bookingId)
+      .maybeSingle();
+
+    if (bookingError || !booking) {
+      return { ok: false, error: "Réservation introuvable." };
+    }
+
+    const playerId = String(
+      (booking as { created_by?: string; player_id?: string }).created_by ??
+        (booking as { player_id?: string }).player_id ??
+        "",
+    );
+    if (!playerId) {
+      return { ok: false, error: "Joueur introuvable pour cette réservation." };
+    }
+
+    const { error } = await supabase.from("bookings").update({ status: "no_show" }).eq("id", bookingId);
+    if (error) {
+      return { ok: false, error: "Erreur lors du signalement no-show." };
+    }
+
+    const impact = trustImpactFromEvent("no_show");
+    try {
+      await addTrustEvent({
+        player_id: playerId,
+        kind: "no_show",
+        delta: impact.delta,
+        booking_id: bookingId,
+      });
+    } catch {
+      return { ok: false, error: "Erreur lors de l'enregistrement de l'incident." };
+    }
+
+    return { ok: true };
+  }
 
   const { data: participant, error: loadError } = await supabase
     .from("booking_participants")
     .select("id, booking_id, player_id, share_price, status")
-    .eq("id", participantId)
+    .eq("id", resolvedId)
     .maybeSingle();
 
   if (loadError || !participant) {
@@ -222,7 +342,7 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
   const { error: participantError } = await supabase
     .from("booking_participants")
     .update({ status: "no_show" })
-    .eq("id", participantId);
+    .eq("id", resolvedId);
 
   if (participantError) {
     return { ok: false, error: "Erreur lors de la mise à jour de la place." };
@@ -245,7 +365,7 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
     clubId,
     playerId,
     bookingId,
-    participantId,
+    participantId: resolvedId,
     reason: "no_show",
     amountCents: deriveNoShowDebtAmountCents(sharePrice),
   });
@@ -254,7 +374,7 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
     console.warn("[reportParticipantNoShowAction] club_debt insert failed (non-blocking):", debt.error);
   }
 
-  void notifyParticipantNoShow(participantId).catch((err) =>
+  void notifyParticipantNoShow(resolvedId).catch((err) =>
     console.error("[reportParticipantNoShowAction] notify failed", err),
   );
 

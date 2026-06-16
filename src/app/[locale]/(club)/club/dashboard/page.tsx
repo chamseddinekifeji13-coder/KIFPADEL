@@ -4,7 +4,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
-import { fetchBookingsForClubOperations } from "@/modules/bookings/repository";
+import { fetchBookingsForClubOperations, todayTunisYmd } from "@/modules/bookings/repository";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   Calendar,
@@ -58,7 +58,7 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
     );
   }
 
-  const todayDate = new Date().toISOString().slice(0, 10);
+  const todayDate = todayTunisYmd();
   const timeLocale = locale === "en" ? "en-GB" : "fr-FR";
   const now = Date.now();
   const todayBookings = await fetchBookingsForClubOperations(managedClub.id, todayDate);

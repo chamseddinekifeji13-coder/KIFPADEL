@@ -52,6 +52,16 @@ export function formatTunisHm(date: Date) {
   }).format(date);
 }
 
+/** Date calendaire (YYYY-MM-DD) en fuseau Tunis — pour filtres club / réservation. */
+export function formatTunisYmd(date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TUNIS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 /** Créneau réservation aligné sur la grille (heure Tunis → ISO UTC). */
 export function buildTunisSlotTimestamps(
   dateYmd: string,

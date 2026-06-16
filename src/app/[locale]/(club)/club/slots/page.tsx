@@ -6,17 +6,26 @@ import { SlotsManager } from "./slots-manager";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
 import { fetchCourtsByClub } from "@/modules/clubs/repository";
-import { fetchBookingParticipantsForClubOperations } from "@/modules/bookings/repository";
+import {
+  fetchClubSlotOperationRows,
+  todayTunisYmd,
+} from "@/modules/bookings/repository";
+import { formatTunisHm } from "@/modules/bookings/timezone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ClubSlotsPageProps = {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ date?: string }>;
 };
 
 function addCalendarDaysYmd(ymd: string, deltaDays: number): string {
   const [y, mo, d] = ymd.split("-").map((p) => parseInt(p, 10));
   const ms = Date.UTC(y, mo - 1, d) + deltaDays * 86_400_000;
   return new Date(ms).toISOString().slice(0, 10);
+}
+
+function isValidYmd(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 export async function generateMetadata({ params }: ClubSlotsPageProps): Promise<Metadata> {
@@ -27,7 +36,7 @@ export async function generateMetadata({ params }: ClubSlotsPageProps): Promise<
   };
 }
 
-export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
+export default async function ClubSlotsPage({ params, searchParams }: ClubSlotsPageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
@@ -43,10 +52,12 @@ export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
     );
   }
 
-  const todayDate = new Date().toISOString().slice(0, 10);
+  const { date: dateQuery } = await searchParams;
+  const todayDate = todayTunisYmd();
+  const selectedDate = dateQuery && isValidYmd(dateQuery) ? dateQuery : todayDate;
   const timeLocale = locale === "en" ? "en-GB" : "fr-FR";
   const [participantRows, courtsRows] = await Promise.all([
-    fetchBookingParticipantsForClubOperations(managedClub.id, todayDate),
+    fetchClubSlotOperationRows(managedClub.id, selectedDate),
     fetchCourtsByClub(managedClub.id),
   ]);
 
@@ -75,12 +86,8 @@ export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
       id: row.id,
       bookingId: row.booking_id,
       seatIndex: row.seat_index,
-      time: startsAt
-        ? new Date(startsAt).toLocaleTimeString(timeLocale, { hour: "2-digit", minute: "2-digit" })
-        : "--:--",
-      endTime: endsAt
-        ? new Date(endsAt).toLocaleTimeString(timeLocale, { hour: "2-digit", minute: "2-digit" })
-        : "--:--",
+      time: startsAt ? formatTunisHm(new Date(startsAt)) : "--:--",
+      endTime: endsAt ? formatTunisHm(new Date(endsAt)) : "--:--",
       court:
         courtLabelById.get(booking?.court_id ?? "") ??
         `${labels.fallbackCourtLabel} ${String(booking?.court_id ?? "").slice(0, 4)}`,
@@ -119,7 +126,14 @@ export default async function ClubSlotsPage({ params }: ClubSlotsPageProps) {
         </div>
       </div>
 
-      <SlotsManager bookings={bookings} courts={courts} labels={labels} weekDays={weekDays} />
+      <SlotsManager
+        bookings={bookings}
+        courts={courts}
+        labels={labels}
+        weekDays={weekDays}
+        locale={locale}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { tunisDayRangeUtc } from "./timezone";
+import { isBookingParticipantActive } from "@/domain/rules/booking-participant";
+import { tunisDayRangeUtc, formatTunisYmd } from "./timezone";
 
 /** Must stay aligned with overlap logic in `create_booking_atomic` + `bookings.is_blocking` trigger */
 export const PENDING_BOOKING_TTL_MINUTES = 15;
@@ -28,6 +29,7 @@ export type BookingParticipantDbRow = {
   seat_index: number;
   share_price: number | null;
   payment_method?: string | null;
+  payment_confirmed_at?: string | null;
   status: string;
   created_at: string;
 };
@@ -39,7 +41,9 @@ export async function fetchBookingsByClubAndDate(clubId: string, date: string) {
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, booking_participants(id, player_id, seat_index, status, created_at, share_price)")
+    .select(
+      "*, booking_participants(id, booking_id, player_id, seat_index, status, created_at, share_price, payment_method, payment_confirmed_at)",
+    )
     .eq("club_id", clubId)
     .lt("starts_at", nextDayStart.toISOString())
     .gt("ends_at", dayStart.toISOString())
@@ -182,6 +186,71 @@ export async function fetchBookingParticipantsForClubOperations(clubId: string, 
   }
 
   return (data ?? []) as ClubOperationsParticipantRow[];
+}
+
+function bookingStartsAtFromParticipantRow(row: ClubOperationsParticipantRow): string {
+  const bookingRaw = row.bookings;
+  const booking = Array.isArray(bookingRaw) ? bookingRaw[0] : bookingRaw;
+  return booking?.starts_at ?? "";
+}
+
+/**
+ * Lignes créneaux club : réservations du jour + participants (repli si backfill manquant).
+ */
+export async function fetchClubSlotOperationRows(clubId: string, date: string) {
+  const bookings = await fetchBookingsByClubAndDate(clubId, date);
+  const rows: ClubOperationsParticipantRow[] = [];
+
+  for (const booking of bookings) {
+    const participants = booking.booking_participants ?? [];
+    const visibleParticipants = participants.filter((p) =>
+      isBookingParticipantActive(p.status, p.created_at),
+    );
+    const list = visibleParticipants.length > 0 ? visibleParticipants : participants;
+
+    if (list.length > 0) {
+      for (const p of list) {
+        rows.push({
+          id: p.id,
+          booking_id: booking.id,
+          player_id: p.player_id,
+          seat_index: p.seat_index,
+          share_price: p.share_price,
+          payment_method: p.payment_method,
+          payment_confirmed_at: p.payment_confirmed_at,
+          status: p.status,
+          created_at: p.created_at,
+          bookings: booking,
+        });
+      }
+      continue;
+    }
+
+    const playerId = booking.created_by ?? booking.player_id;
+    if (!playerId) continue;
+
+    rows.push({
+      id: `legacy-${booking.id}`,
+      booking_id: booking.id,
+      player_id: playerId,
+      seat_index: 1,
+      share_price: booking.total_price ?? null,
+      payment_method: booking.payment_method,
+      payment_confirmed_at: null,
+      status: booking.status,
+      created_at: booking.created_at,
+      bookings: booking,
+    });
+  }
+
+  return rows.sort((a, b) =>
+    bookingStartsAtFromParticipantRow(a).localeCompare(bookingStartsAtFromParticipantRow(b)),
+  );
+}
+
+/** Date du jour en fuseau Tunis (pour dashboard / créneaux club). */
+export function todayTunisYmd(): string {
+  return formatTunisYmd();
 }
 
 export async function fetchBookingsForClubOperations(clubId: string, date: string) {

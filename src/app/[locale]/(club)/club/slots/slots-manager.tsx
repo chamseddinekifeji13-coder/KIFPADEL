@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
@@ -56,10 +57,18 @@ type SlotsManagerProps = {
   labels: Record<string, string>;
   /** Pré-calculé côté serveur (UTC) — évite #418 hydration sur toLocaleDateString + new Date() client. */
   weekDays: WeekDayStripItem[];
+  locale: string;
+  selectedDate: string;
 };
 
-export function SlotsManager({ bookings, courts, labels, weekDays }: SlotsManagerProps) {
-  const [selectedYmd, setSelectedYmd] = useState(() => weekDays[0]?.ymd ?? "");
+export function SlotsManager({
+  bookings,
+  courts,
+  labels,
+  weekDays,
+  locale,
+  selectedDate,
+}: SlotsManagerProps) {
   const [filterCourt, setFilterCourt] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
@@ -84,12 +93,11 @@ export function SlotsManager({ bookings, courts, labels, weekDays }: SlotsManage
       {/* Date Selector */}
       <div className="flex items-center gap-4 overflow-x-auto pb-2">
         {weekDays.map((day) => {
-          const isSelected = day.ymd === selectedYmd;
+          const isSelected = day.ymd === selectedDate;
           return (
-            <button
+            <Link
               key={day.ymd}
-              type="button"
-              onClick={() => setSelectedYmd(day.ymd)}
+              href={`/${locale}/club/slots?date=${day.ymd}`}
               className={cn(
                 "flex flex-col items-center px-4 py-3 rounded-xl transition-all min-w-[60px]",
                 isSelected
@@ -99,7 +107,7 @@ export function SlotsManager({ bookings, courts, labels, weekDays }: SlotsManage
             >
               <span className="text-[10px] uppercase font-bold tracking-wider">{day.weekdayShort}</span>
               <span className="text-xl font-bold">{day.dayOfMonth}</span>
-            </button>
+            </Link>
           );
         })}
       </div>
