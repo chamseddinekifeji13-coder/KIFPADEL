@@ -188,6 +188,33 @@ export async function fetchBookingParticipantsForClubOperations(clubId: string, 
   return (data ?? []) as ClubOperationsParticipantRow[];
 }
 
+/** Participants club sur une plage de dates (inclusif, fuseau Tunis). */
+export async function fetchClubParticipantsForDateRange(
+  clubId: string,
+  startDate: string,
+  endDate: string,
+) {
+  const supabase = await createSupabaseServerClient();
+  const { dayStart } = tunisDayRangeUtc(startDate);
+  const { nextDayStart } = tunisDayRangeUtc(endDate);
+
+  const { data, error } = await supabase
+    .from("booking_participants")
+    .select(
+      "id, booking_id, player_id, seat_index, share_price, payment_method, payment_confirmed_at, status, created_at, bookings!inner(id, club_id, court_id, starts_at, ends_at, status)",
+    )
+    .eq("bookings.club_id", clubId)
+    .gte("bookings.starts_at", dayStart.toISOString())
+    .lt("bookings.starts_at", nextDayStart.toISOString())
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ClubOperationsParticipantRow[];
+}
+
 function bookingStartsAtFromParticipantRow(row: ClubOperationsParticipantRow): string {
   const bookingRaw = row.bookings;
   const booking = Array.isArray(bookingRaw) ? bookingRaw[0] : bookingRaw;

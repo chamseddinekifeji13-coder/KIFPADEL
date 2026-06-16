@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { PlayersDirectory } from "./players-directory";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
-import { fetchBookingsForClubDateRange } from "@/modules/bookings/repository";
+import { fetchClubParticipantsForDateRange } from "@/modules/bookings/repository";
 import { normalizePlayerCategoryId } from "@/domain/rules/player-category";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -40,39 +40,46 @@ export default async function ClubPlayersPage({ params }: ClubPlayersPageProps) 
   const today = new Date();
   const start = new Date(today);
   start.setDate(start.getDate() - 30);
-  const bookings = await fetchBookingsForClubDateRange(
+  const startYmd = start.toISOString().slice(0, 10);
+  const endYmd = today.toISOString().slice(0, 10);
+
+  const participantRows = await fetchClubParticipantsForDateRange(
     managedClub.id,
-    start.toISOString().slice(0, 10),
-    today.toISOString().slice(0, 10)
+    startYmd,
+    endYmd,
   );
 
-  const playerIds = [...new Set(bookings.map((booking) => booking.created_by ?? booking.player_id).filter(Boolean))] as string[];
+  const playerIds = [...new Set(participantRows.map((row) => row.player_id).filter(Boolean))];
   const supabase = await createSupabaseServerClient();
   const { data: profiles } = playerIds.length
     ? await supabase.from("profiles").select("id, display_name, trust_score, league, phone").in("id", playerIds)
     : { data: [] as { id: string; display_name: string | null; trust_score: number | null; league: string | null; phone: string | null }[] };
 
-  const bookingsByPlayer = new Map<string, typeof bookings>();
-  for (const booking of bookings) {
-    const key = (booking.created_by ?? booking.player_id) as string | undefined;
-    if (!key) continue;
-    const list = bookingsByPlayer.get(key) ?? [];
-    list.push(booking);
-    bookingsByPlayer.set(key, list);
+  const visitsByPlayer = new Map<string, { count: number; lastVisit: string }>();
+  for (const row of participantRows) {
+    const bookingRaw = row.bookings;
+    const booking = Array.isArray(bookingRaw) ? bookingRaw[0] : bookingRaw;
+    const startsAt = booking?.starts_at ?? row.created_at;
+    const existing = visitsByPlayer.get(row.player_id);
+    if (!existing) {
+      visitsByPlayer.set(row.player_id, { count: 1, lastVisit: startsAt });
+      continue;
+    }
+    existing.count += 1;
+    if (new Date(startsAt).getTime() > new Date(existing.lastVisit).getTime()) {
+      existing.lastVisit = startsAt;
+    }
   }
 
   const players = (profiles ?? []).map((profile) => {
-    const playerBookings = bookingsByPlayer.get(profile.id) ?? [];
-    const latestBooking = playerBookings.sort(
-      (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
-    )[0];
+    const stats = visitsByPlayer.get(profile.id);
     return {
       id: profile.id,
       name: profile.display_name ?? labels.genericPlayerName,
       trustScore: profile.trust_score ?? 70,
       league: normalizePlayerCategoryId(profile.league),
-      bookingsCount: playerBookings.length,
-      lastVisit: latestBooking?.starts_at ?? today.toISOString(),
+      bookingsCount: stats?.count ?? 0,
+      lastVisit: stats?.lastVisit ?? today.toISOString(),
       phone: profile.phone ?? labels.unknownPhone,
     };
   });

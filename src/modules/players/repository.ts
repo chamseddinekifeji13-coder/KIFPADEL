@@ -86,8 +86,10 @@ export async function fetchPlayers(
 
     let request = supabase
       .from("profiles")
-      .select("*")
-      .not("phone_verified_at", "is", null)
+      .select(
+        "id, display_name, avatar_url, league, sport_rating, trust_score, gender, reliability, reliability_status, created_at",
+      )
+      .is("suspended_at", null)
       .order("sport_rating", { ascending: false });
 
     if (options?.excludeUserId) {

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
+import { requireUser } from "@/modules/auth/guards/require-user";
 import { playerService } from "@/modules/players/service";
 import { Player } from "@/modules/players/repository";
 import { PlayerCard } from "@/components/features/players/player-card";
@@ -13,7 +14,6 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Search, Filter, Users } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type FindPlayersPageProps = {
   params: Promise<{ locale: string }>;
@@ -44,19 +44,14 @@ export default async function FindPlayersPage({
   const q = typeof sp.q === "string" ? sp.q : undefined;
   const dictionary = await getDictionary(locale as Locale);
   const labels = dictionary.player;
+  const user = await requireUser({ locale, redirectPath: "find-players" });
   const title = labels.findPlayersTitle;
   const subtitle = labels.findPlayersSubtitle;
-
-  const supabase = await createSupabaseServerClient();
-  const { data: authData } = await supabase.auth.getUser();
-  const currentUserId = authData.user?.id;
 
   // Fetch real data from Supabase with heavy protection
   let players: Player[] = [];
   try {
-    const data = await playerService.getPlayers(q, {
-      ...(currentUserId ? { excludeUserId: currentUserId } : {}),
-    });
+    const data = await playerService.getPlayers(q, { excludeUserId: user.id });
     if (Array.isArray(data)) {
       players = data.filter((p) => p && typeof p === "object" && p.id);
     }
