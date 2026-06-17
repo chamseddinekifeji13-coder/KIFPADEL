@@ -203,6 +203,9 @@
   "playNowGenderIncompleteHint": "Complete your profile to access men's, women's, and mixed matches.",
   "createMatchCta": "Create match",
   "matchCreatedSuccess": "Your match is live. Share this page or wait for other players to join.",
+  "matchJoinedSuccess": "Registration confirmed! You are signed up for this match.",
+  "matchJoinedTeamLabel": "Team {team}",
+  "matchAlreadyJoined": "You are registered for this match.",
   "playNowMyMatchesSectionTitle": "My open matches",
   "genericPlayerName": "Player",
   "defaultLeagueLabel": "P25"

@@ -203,6 +203,9 @@
   "playNowGenderIncompleteHint": "Complétez votre profil pour accéder aux matchs hommes, femmes ou mixtes.",
   "createMatchCta": "Créer un match",
   "matchCreatedSuccess": "Votre match est publié. Partagez ce lien ou attendez que d'autres joueurs rejoignent.",
+  "matchJoinedSuccess": "Inscription confirmée ! Tu es bien enregistré sur ce match.",
+  "matchJoinedTeamLabel": "Équipe {team}",
+  "matchAlreadyJoined": "Tu es inscrit sur ce match.",
   "playNowMyMatchesSectionTitle": "Mes matchs ouverts",
   "genericPlayerName": "Joueur",
   "defaultLeagueLabel": "P25"

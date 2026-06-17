@@ -21,7 +21,9 @@ export type CreateOpenMatchResult =
   | { ok: true; matchId: string }
   | { ok: false; error: string };
 
-export type JoinOpenMatchResult = { ok: true } | { ok: false; error: string };
+export type JoinOpenMatchResult =
+  | { ok: true; team: "A" | "B" }
+  | { ok: false; error: string };
 
 const DEFAULT_PRICE_PER_PLAYER = 0;
 /** Durée padel classique, pour colonne ends_at si présente. */
@@ -351,7 +353,7 @@ export async function joinOpenMatchAction(input: {
 
   revalidatePath(`/${loc}/play-now`);
   revalidatePath(`/${loc}/matches/${matchId}`);
-  return { ok: true };
+  return { ok: true, team };
 }
 
 /** Alias export pour les appels génériques « rejoindre un match ». */
