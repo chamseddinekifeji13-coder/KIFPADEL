@@ -1,8 +1,8 @@
 import type { Gender, MatchGenderType } from "@/domain/types/core";
 
-/** Match types a viewer can see in listings (NULL profile = only `all`). */
+/** Match types visible in open-match listings (join rules stay strict). */
 export function matchGenderTypesVisibleToViewer(viewerGender: Gender | null): MatchGenderType[] {
-  if (viewerGender === null) return ["all"];
+  if (viewerGender === null) return ["all", "men_only", "women_only", "mixed"];
   if (viewerGender === "male") return ["all", "men_only", "mixed"];
   return ["all", "women_only", "mixed"];
 }

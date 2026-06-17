@@ -4,6 +4,7 @@ import {
 } from "@/domain/rules/match-gender";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface MatchParticipantRow {
   player_id: string;
@@ -39,48 +40,26 @@ export interface MatchWithDetails extends Match {
   clubAddress: string | null;
 }
 
-const MATCH_SELECT = `
-  *,
-  clubs (
-    id,
-    name,
-    city,
-    address
-  ),
-  match_participants (
-    player_id,
-    team
-  )
-`;
+type MatchRow = {
+  id: string;
+  club_id: string;
+  created_by?: string | null;
+  starts_at: string;
+  ends_at?: string | null;
+  status: string;
+  price_per_player?: number | string | null;
+  court_id?: string | null;
+  match_gender_type?: string | null;
+};
+
+const MATCH_ROW_SELECT =
+  "id, club_id, created_by, starts_at, ends_at, status, price_per_player, court_id, match_gender_type";
 
 function coerceMatchGenderType(value: string | null | undefined): MatchGenderType {
   if (value === "men_only" || value === "women_only" || value === "mixed" || value === "all") {
     return value;
   }
   return "all";
-}
-
-function normalizeMatches(raw: unknown): MatchWithDetails[] {
-  if (!Array.isArray(raw)) return [];
-  return (raw as Match[])
-    .filter((m): m is Match => Boolean(m && typeof m === "object" && m.id))
-    .map((match) => {
-      const addr = match.clubs?.address?.trim();
-      const parts = Array.isArray(match.match_participants) ? match.match_participants : [];
-      const clubs = match.clubs
-        ? { ...match.clubs, type: match.clubs.type ?? "Outdoor" }
-        : match.clubs;
-
-      return {
-        ...match,
-        clubs,
-        match_gender_type: coerceMatchGenderType(match.match_gender_type),
-        price_per_player: Number(match.price_per_player ?? 0),
-        playerCount: parts.length,
-        clubName: match.clubs?.name ?? "Club Inconnu",
-        clubAddress: addr && addr.length > 0 ? addr : null,
-      };
-    });
 }
 
 function typesFilterForViewer(viewerGender: Gender | null) {
@@ -103,6 +82,85 @@ export function sortMatchesByStartsAt(matches: MatchWithDetails[]): MatchWithDet
 function filterListableOpenMatches(matches: MatchWithDetails[]): MatchWithDetails[] {
   const floor = Date.now() - OPEN_MATCH_LISTING_GRACE_MS;
   return matches.filter((m) => new Date(m.starts_at).getTime() >= floor);
+}
+
+async function hydrateMatchRows(
+  supabase: SupabaseClient,
+  rows: MatchRow[],
+): Promise<MatchWithDetails[]> {
+  if (rows.length === 0) return [];
+
+  const clubIds = [...new Set(rows.map((row) => row.club_id).filter(Boolean))];
+  const matchIds = rows.map((row) => row.id);
+
+  const clubById = new Map<string, MatchClub>();
+  if (clubIds.length > 0) {
+    const { data: clubRows, error } = await supabase
+      .from("clubs")
+      .select("id, name, city, address")
+      .in("id", clubIds);
+
+    if (error) {
+      console.warn("[matches.hydrateMatchRows] clubs error", error.message);
+    }
+
+    for (const club of clubRows ?? []) {
+      clubById.set(club.id, {
+        id: club.id,
+        name: club.name,
+        city: club.city ?? "Tunis",
+        address: club.address ?? null,
+        type: "Outdoor",
+      });
+    }
+  }
+
+  const participantsByMatch = new Map<string, MatchParticipantRow[]>();
+  if (matchIds.length > 0) {
+    const { data: partRows, error } = await supabase
+      .from("match_participants")
+      .select("match_id, player_id, team")
+      .in("match_id", matchIds);
+
+    if (error) {
+      console.warn("[matches.hydrateMatchRows] participants error", error.message);
+    }
+
+    for (const row of partRows ?? []) {
+      const list = participantsByMatch.get(row.match_id) ?? [];
+      list.push({ player_id: row.player_id, team: row.team });
+      participantsByMatch.set(row.match_id, list);
+    }
+  }
+
+  return rows.map((row) => {
+    const clubs = clubById.get(row.club_id) ?? {
+      id: row.club_id,
+      name: "Club Inconnu",
+      city: "Tunis",
+      address: null,
+      type: "Outdoor",
+    };
+    const parts = participantsByMatch.get(row.id) ?? [];
+    const addr = clubs.address?.trim();
+
+    return {
+      id: row.id,
+      club_id: row.club_id,
+      created_by: row.created_by,
+      starts_at: row.starts_at,
+      ends_at: row.ends_at ?? undefined,
+      status: row.status,
+      price_per_player: Number(row.price_per_player ?? 0),
+      court_id: row.court_id ?? undefined,
+      match_gender_type: coerceMatchGenderType(row.match_gender_type),
+      match_participants: parts,
+      clubs,
+      playerCount: parts.length,
+      clubName: clubs.name,
+      clubAddress: addr && addr.length > 0 ? addr : null,
+    };
+  });
 }
 
 /**
@@ -128,7 +186,7 @@ export async function fetchOpenMatches(viewerGender: Gender | null = null): Prom
 
     const { data, error } = await supabase
       .from("matches")
-      .select(MATCH_SELECT)
+      .select(MATCH_ROW_SELECT)
       .eq("status", "open")
       .gte("starts_at", openMatchListingFloorIso())
       .in("match_gender_type", allowed)
@@ -139,7 +197,8 @@ export async function fetchOpenMatches(viewerGender: Gender | null = null): Prom
       return [];
     }
 
-    return filterListableOpenMatches(normalizeMatches(data));
+    const hydrated = await hydrateMatchRows(supabase, (data ?? []) as MatchRow[]);
+    return filterListableOpenMatches(hydrated);
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[matches.fetchOpenMatches] unexpected error", err);
@@ -154,7 +213,7 @@ export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDet
 
     const { data: createdRows, error: createdError } = await supabase
       .from("matches")
-      .select(MATCH_SELECT)
+      .select(MATCH_ROW_SELECT)
       .eq("status", "open")
       .eq("created_by", userId)
       .gte("starts_at", openMatchListingFloorIso());
@@ -174,11 +233,11 @@ export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDet
 
     const participantIds = [...new Set((participations ?? []).map((p) => p.match_id as string))];
 
-    let participantRows: unknown[] = [];
+    let participantRows: MatchRow[] = [];
     if (participantIds.length > 0) {
       const { data, error } = await supabase
         .from("matches")
-        .select(MATCH_SELECT)
+        .select(MATCH_ROW_SELECT)
         .eq("status", "open")
         .gte("starts_at", openMatchListingFloorIso())
         .in("id", participantIds);
@@ -186,13 +245,14 @@ export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDet
       if (error) {
         console.warn("[matches.fetchUserOpenMatches] participant matches error", error.message);
       } else {
-        participantRows = data ?? [];
+        participantRows = (data ?? []) as MatchRow[];
       }
     }
 
-    return filterListableOpenMatches(
-      mergeMatchesById([normalizeMatches(createdRows ?? []), normalizeMatches(participantRows)]),
-    );
+    const createdHydrated = await hydrateMatchRows(supabase, (createdRows ?? []) as MatchRow[]);
+    const participantHydrated = await hydrateMatchRows(supabase, participantRows);
+
+    return filterListableOpenMatches(mergeMatchesById([createdHydrated, participantHydrated]));
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[matches.fetchUserOpenMatches] unexpected error", err);
@@ -224,7 +284,7 @@ export async function fetchOpenMatchesByClub(
 
     const { data, error } = await supabase
       .from("matches")
-      .select(MATCH_SELECT)
+      .select(MATCH_ROW_SELECT)
       .eq("club_id", clubId)
       .eq("status", "open")
       .gte("starts_at", openMatchListingFloorIso())
@@ -236,7 +296,8 @@ export async function fetchOpenMatchesByClub(
       return [];
     }
 
-    return filterListableOpenMatches(normalizeMatches(data));
+    const hydrated = await hydrateMatchRows(supabase, (data ?? []) as MatchRow[]);
+    return filterListableOpenMatches(hydrated);
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[matches.fetchOpenMatchesByClub] unexpected error", err);
@@ -250,7 +311,7 @@ export async function fetchMatchById(matchId: string): Promise<MatchWithDetails 
 
     const { data, error } = await supabase
       .from("matches")
-      .select(MATCH_SELECT)
+      .select(MATCH_ROW_SELECT)
       .eq("id", matchId)
       .maybeSingle();
 
@@ -259,7 +320,7 @@ export async function fetchMatchById(matchId: string): Promise<MatchWithDetails 
       return null;
     }
 
-    const list = normalizeMatches([data as Match]);
+    const list = await hydrateMatchRows(supabase, [data as MatchRow]);
     return list[0] ?? null;
   } catch (err) {
     rethrowFrameworkError(err);

@@ -9,7 +9,12 @@ import {
 
 describe("matchGenderTypesVisibleToViewer", () => {
   it("profil sans genre : uniquement les matchs « all »", () => {
-    expect(matchGenderTypesVisibleToViewer(null)).toEqual(["all"]);
+    expect(matchGenderTypesVisibleToViewer(null)).toEqual([
+      "all",
+      "men_only",
+      "women_only",
+      "mixed",
+    ]);
   });
 
   it("homme : all, men_only, mixed", () => {
