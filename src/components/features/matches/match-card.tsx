@@ -60,6 +60,7 @@ export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps)
     <Card className="p-0 overflow-hidden hover:shadow-gold-strong transition-all duration-500 group bg-surface rounded-3xl border-white/5">
       <Link
         href={detailHref}
+        prefetch={false}
         className="relative flex h-full min-h-[140px] touch-manipulation active:scale-[0.99] transition-transform"
         aria-label={`Voir le match ${match.clubName}`}
       >

@@ -171,6 +171,8 @@
   "noPlayersForQueryPrefix": "No player found for",
   "noPlayersAvailable": "No players available for now.",
   "playNowDescription": "Join an open match and meet new players.",
+  "playNowSignInToJoin": "Sign in to join a match or create one.",
+  "playNowSignInCta": "Sign in",
   "openMatchesSectionTitle": "Open matches",
   "filterMatchesAria": "Filter matches",
   "playNowTypeFilterGroupAria": "Filter by match type",

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   matchGenderTypesVisibleToViewer,
 } from "@/domain/rules/match-gender";
@@ -112,6 +113,29 @@ async function hydrateMatchRows(
         address: club.address ?? null,
         type: "Outdoor",
       });
+    }
+
+    const missingClubIds = clubIds.filter((id) => !clubById.has(id));
+    if (missingClubIds.length > 0) {
+      const admin = createSupabaseAdminClient();
+      const { data: adminClubRows, error: adminError } = await admin
+        .from("clubs")
+        .select("id, name, city, address")
+        .in("id", missingClubIds);
+
+      if (adminError) {
+        console.warn("[matches.hydrateMatchRows] clubs admin fallback error", adminError.message);
+      }
+
+      for (const club of adminClubRows ?? []) {
+        clubById.set(club.id, {
+          id: club.id,
+          name: club.name,
+          city: club.city ?? "Tunis",
+          address: club.address ?? null,
+          type: "Outdoor",
+        });
+      }
     }
   }
 

@@ -172,6 +172,21 @@ export default async function PlayNowPage({ params, searchParams }: PlayNowPageP
         </p>
       </header>
 
+      {!isSignedIn ? (
+        <div
+          className="rounded-2xl border border-gold/25 bg-gold/10 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          role="status"
+        >
+          <p className="text-sm text-white/90">{labels.playNowSignInToJoin}</p>
+          <Link
+            href={`/${locale}/auth/sign-in?next=/${locale}/play-now`}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-gold px-5 text-sm font-bold text-black touch-manipulation shrink-0"
+          >
+            {labels.playNowSignInCta}
+          </Link>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SectionTitle
           title={labels.openMatchesSectionTitle}
