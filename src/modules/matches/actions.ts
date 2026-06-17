@@ -7,6 +7,10 @@ import {
   canJoinMatchByGenderRules,
   isValidTeamCompositionAfterJoin,
 } from "@/domain/rules/match-gender";
+import {
+  isActiveMatchParticipant,
+  normalizeMatchParticipantStatus,
+} from "@/domain/rules/match-participant";
 import { resolveCourtPlayerPrice } from "@/domain/rules/court-pricing";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
@@ -22,8 +26,12 @@ export type CreateOpenMatchResult =
   | { ok: false; error: string };
 
 export type JoinOpenMatchResult =
-  | { ok: true; team: "A" | "B" }
+  | { ok: true; team: "A" | "B"; status: "pending" }
   | { ok: false; error: string };
+
+export type ConfirmMatchParticipationResult = { ok: true } | { ok: false; error: string };
+
+export type DeclineMatchParticipationResult = { ok: true } | { ok: false; error: string };
 
 const DEFAULT_PRICE_PER_PLAYER = 0;
 /** Durée padel classique, pour colonne ends_at si présente. */
@@ -197,6 +205,8 @@ export async function createOpenMatchAction(input: {
     match_id: createdId,
     player_id: user.id,
     team: "A",
+    status: "pending",
+    share_price: pricePerPlayer,
   });
 
   if (partError) {
@@ -255,7 +265,7 @@ export async function joinOpenMatchAction(input: {
 
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("id, status, match_gender_type")
+    .select("id, status, match_gender_type, price_per_player")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -279,24 +289,29 @@ export async function joinOpenMatchAction(input: {
 
   const { data: participantRows, error: participantsError } = await supabase
     .from("match_participants")
-    .select("player_id, team")
+    .select("player_id, team, status")
     .eq("match_id", matchId);
 
   if (participantsError) {
     return { ok: false, error: "Impossible de lire les participants du match." };
   }
 
-  const participants = (participantRows ?? []) as { player_id: string; team: string }[];
+  const participants = (participantRows ?? []) as {
+    player_id: string;
+    team: string;
+    status?: string | null;
+  }[];
+  const activeParticipants = participants.filter((p) => isActiveMatchParticipant(p.status));
 
-  if (participants.some((p) => p.player_id === user.id)) {
+  if (activeParticipants.some((p) => p.player_id === user.id)) {
     return { ok: false, error: "Tu es déjà inscrit sur ce match." };
   }
 
-  if (participants.length >= 4) {
+  if (activeParticipants.length >= 4) {
     return { ok: false, error: "Le match est complet." };
   }
 
-  const teamMembers = participants.filter((p) => p.team === team);
+  const teamMembers = activeParticipants.filter((p) => p.team === team);
   if (teamMembers.length >= 2) {
     return { ok: false, error: "Cette équipe est complète." };
   }
@@ -341,10 +356,14 @@ export async function joinOpenMatchAction(input: {
     };
   }
 
+  const sharePrice = Number(match.price_per_player ?? DEFAULT_PRICE_PER_PLAYER);
+
   const { error: insError } = await supabase.from("match_participants").insert({
     match_id: matchId,
     player_id: user.id,
     team,
+    status: "pending",
+    share_price: sharePrice,
   });
 
   if (insError) {
@@ -353,7 +372,137 @@ export async function joinOpenMatchAction(input: {
 
   revalidatePath(`/${loc}/play-now`);
   revalidatePath(`/${loc}/matches/${matchId}`);
-  return { ok: true, team };
+  return { ok: true, team, status: "pending" };
+}
+
+/**
+ * Confirme la participation après engagement de paiement envers le club.
+ */
+export async function confirmMatchParticipationAction(input: {
+  locale: string;
+  matchId: string;
+  paymentMethod: "online" | "on_site";
+}): Promise<ConfirmMatchParticipationResult> {
+  const loc = input.locale?.trim() || "fr";
+  const matchId = input.matchId?.trim();
+  const paymentMethod = input.paymentMethod;
+
+  if (!matchId || (paymentMethod !== "online" && paymentMethod !== "on_site")) {
+    return { ok: false, error: "Données invalides." };
+  }
+
+  const supabase = await createSupabaseServerActionClient();
+  const auth = await getActionUser(supabase);
+
+  if ("error" in auth) {
+    return { ok: false, error: auth.error };
+  }
+
+  const user = auth.user;
+
+  try {
+    await assertNotSuspended(supabase, user.id);
+  } catch (e) {
+    if (isPlayerAccessError(e)) {
+      return { ok: false, error: e.message };
+    }
+    throw e;
+  }
+
+  const { data: row, error: rowError } = await supabase
+    .from("match_participants")
+    .select("status")
+    .eq("match_id", matchId)
+    .eq("player_id", user.id)
+    .maybeSingle();
+
+  if (rowError || !row) {
+    return { ok: false, error: "Participation introuvable." };
+  }
+
+  const status = normalizeMatchParticipantStatus(row.status as string);
+  if (status === "confirmed") {
+    return { ok: true };
+  }
+  if (status !== "pending") {
+    return { ok: false, error: "Cette participation ne peut plus être confirmée." };
+  }
+
+  const committedAt = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from("match_participants")
+    .update({
+      status: "confirmed",
+      payment_method: paymentMethod,
+      payment_committed_at: committedAt,
+      updated_at: committedAt,
+    })
+    .eq("match_id", matchId)
+    .eq("player_id", user.id);
+
+  if (updateError) {
+    return { ok: false, error: updateError.message || "Confirmation refusée." };
+  }
+
+  revalidatePath(`/${loc}/play-now`);
+  revalidatePath(`/${loc}/matches/${matchId}`);
+  return { ok: true };
+}
+
+/** Décline une participation en attente (libère la place sur le match). */
+export async function declineMatchParticipationAction(input: {
+  locale: string;
+  matchId: string;
+}): Promise<DeclineMatchParticipationResult> {
+  const loc = input.locale?.trim() || "fr";
+  const matchId = input.matchId?.trim();
+
+  if (!matchId) {
+    return { ok: false, error: "Données invalides." };
+  }
+
+  const supabase = await createSupabaseServerActionClient();
+  const auth = await getActionUser(supabase);
+
+  if ("error" in auth) {
+    return { ok: false, error: auth.error };
+  }
+
+  const user = auth.user;
+
+  const { data: row, error: rowError } = await supabase
+    .from("match_participants")
+    .select("status")
+    .eq("match_id", matchId)
+    .eq("player_id", user.id)
+    .maybeSingle();
+
+  if (rowError || !row) {
+    return { ok: false, error: "Participation introuvable." };
+  }
+
+  const status = normalizeMatchParticipantStatus(row.status as string);
+  if (status === "confirmed") {
+    return { ok: false, error: "Participation déjà confirmée — contacte le club pour annuler." };
+  }
+  if (status !== "pending") {
+    return { ok: true };
+  }
+
+  const { error: deleteError } = await supabase
+    .from("match_participants")
+    .delete()
+    .eq("match_id", matchId)
+    .eq("player_id", user.id)
+    .eq("status", "pending");
+
+  if (deleteError) {
+    return { ok: false, error: deleteError.message || "Impossible de décliner." };
+  }
+
+  revalidatePath(`/${loc}/play-now`);
+  revalidatePath(`/${loc}/matches/${matchId}`);
+  return { ok: true };
 }
 
 /** Alias export pour les appels génériques « rejoindre un match ». */

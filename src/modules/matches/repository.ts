@@ -1,6 +1,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
+  countActiveMatchParticipants,
+  isActiveMatchParticipant,
+} from "@/domain/rules/match-participant";
+import {
   matchGenderTypesVisibleToViewer,
 } from "@/domain/rules/match-gender";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
@@ -10,6 +14,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export interface MatchParticipantRow {
   player_id: string;
   team: string;
+  status?: string | null;
+  share_price?: number | string | null;
+  payment_method?: string | null;
+  payment_committed_at?: string | null;
 }
 
 export interface MatchClub {
@@ -143,7 +151,9 @@ async function hydrateMatchRows(
   if (matchIds.length > 0) {
     const { data: partRows, error } = await supabase
       .from("match_participants")
-      .select("match_id, player_id, team")
+      .select(
+        "match_id, player_id, team, status, share_price, payment_method, payment_committed_at",
+      )
       .in("match_id", matchIds);
 
     if (error) {
@@ -152,7 +162,14 @@ async function hydrateMatchRows(
 
     for (const row of partRows ?? []) {
       const list = participantsByMatch.get(row.match_id) ?? [];
-      list.push({ player_id: row.player_id, team: row.team });
+      list.push({
+        player_id: row.player_id,
+        team: row.team,
+        status: row.status,
+        share_price: row.share_price,
+        payment_method: row.payment_method,
+        payment_committed_at: row.payment_committed_at,
+      });
       participantsByMatch.set(row.match_id, list);
     }
   }
@@ -180,7 +197,7 @@ async function hydrateMatchRows(
       match_gender_type: coerceMatchGenderType(row.match_gender_type),
       match_participants: parts,
       clubs,
-      playerCount: parts.length,
+      playerCount: countActiveMatchParticipants(parts),
       clubName: clubs.name,
       clubAddress: addr && addr.length > 0 ? addr : null,
     };
@@ -248,14 +265,20 @@ export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDet
 
     const { data: participations, error: partError } = await supabase
       .from("match_participants")
-      .select("match_id")
+      .select("match_id, status")
       .eq("player_id", userId);
 
     if (partError) {
       console.warn("[matches.fetchUserOpenMatches] participations error", partError.message);
     }
 
-    const participantIds = [...new Set((participations ?? []).map((p) => p.match_id as string))];
+    const participantIds = [
+      ...new Set(
+        (participations ?? [])
+          .filter((p) => isActiveMatchParticipant(p.status as string))
+          .map((p) => p.match_id as string),
+      ),
+    ];
 
     let participantRows: MatchRow[] = [];
     if (participantIds.length > 0) {

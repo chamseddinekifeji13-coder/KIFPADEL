@@ -6,18 +6,28 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchMatchById } from "@/modules/matches/repository";
 import { playerService } from "@/modules/players/service";
 import { MatchJoinActions } from "@/components/features/matches/match-join-actions";
+import {
+  isActiveMatchParticipant,
+  normalizeMatchParticipantStatus,
+} from "@/domain/rules/match-participant";
 
 type MatchDetailsPageProps = {
   params: Promise<{ locale: string; matchId: string }>;
-  searchParams: Promise<{ created?: string; joined?: string; team?: string }>;
+  searchParams: Promise<{
+    created?: string;
+    reserved?: string;
+    confirmed?: string;
+    team?: string;
+  }>;
 };
 
 export default async function MatchDetailsPage({ params, searchParams }: MatchDetailsPageProps) {
   const { locale, matchId } = await params;
   const sp = await searchParams;
   const showCreatedBanner = sp.created === "1" || sp.created === "true";
-  const showJoinedBanner = sp.joined === "1" || sp.joined === "true";
-  const joinedTeam = sp.team === "A" || sp.team === "B" ? sp.team : null;
+  const showReservedBanner = sp.reserved === "1" || sp.reserved === "true";
+  const showConfirmedBanner = sp.confirmed === "1" || sp.confirmed === "true";
+  const bannerTeam = sp.team === "A" || sp.team === "B" ? sp.team : null;
   if (!isLocale(locale)) notFound();
 
   const dictionary = await getDictionary(locale as Locale);
@@ -31,18 +41,29 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
   } = await supabase.auth.getUser();
 
   let viewerGender = null;
-  let alreadyJoined = false;
+  let participationStatus: "pending" | "confirmed" | "declined" | "cancelled" | null = null;
   let viewerTeam: "A" | "B" | null = null;
+  let sharePrice = match.price_per_player;
+
   if (user) {
     const profile = await playerService.getPlayerProfile(user.id);
     viewerGender = profile?.gender ?? null;
     const myRow = match.match_participants.find((p) => p.player_id === user.id);
-    alreadyJoined = Boolean(myRow);
-    viewerTeam = myRow?.team === "A" || myRow?.team === "B" ? myRow.team : null;
+    if (myRow) {
+      participationStatus = normalizeMatchParticipantStatus(myRow.status);
+      viewerTeam = myRow.team === "A" || myRow.team === "B" ? myRow.team : null;
+      const rowPrice = Number(myRow.share_price);
+      if (Number.isFinite(rowPrice) && rowPrice > 0) {
+        sharePrice = rowPrice;
+      }
+    }
   }
 
-  const teamA = match.match_participants.filter((p) => p.team === "A");
-  const teamB = match.match_participants.filter((p) => p.team === "B");
+  const activeParticipants = match.match_participants.filter((p) =>
+    isActiveMatchParticipant(p.status),
+  );
+  const teamA = activeParticipants.filter((p) => p.team === "A");
+  const teamB = activeParticipants.filter((p) => p.team === "B");
 
   const typeLabels: Record<string, string> = {
     all: labels.matchTypeLabelAll,
@@ -56,7 +77,9 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
     teamA: locale === "en" ? "Team A ({count}/2)" : "Équipe A ({count}/2)",
     teamB: locale === "en" ? "Team B ({count}/2)" : "Équipe B ({count}/2)",
     teamFull: locale === "en" ? "(full)" : "(pleine)",
-    alreadyJoined: labels.matchAlreadyJoined,
+    participationConfirmed: labels.matchParticipationConfirmed,
+    participationPendingTitle: labels.matchParticipationPendingTitle,
+    participationPendingHint: labels.matchParticipationPendingHint,
     viewerTeam: labels.matchJoinedTeamLabel,
     matchClosed: locale === "en" ? "This match is no longer open." : "Ce match n'est plus ouvert.",
     matchFull: locale === "en" ? "Match is full." : "Match complet.",
@@ -65,6 +88,13 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
         ? "For this match type, set your gender on your profile (or pick an « All » match)."
         : "Pour ce type de match, indique ton genre dans ton profil (ou choisis un match « Tous »).",
     joining: locale === "en" ? "Joining…" : "Inscription…",
+    confirmParticipation: labels.matchConfirmParticipation,
+    declineParticipation: labels.matchDeclineParticipation,
+    confirming: locale === "en" ? "Confirming…" : "Confirmation…",
+    declining: locale === "en" ? "Declining…" : "Déclinaison…",
+    commitmentLabel: labels.matchPaymentCommitmentLabel,
+    commitmentRequired: labels.matchCommitmentRequired,
+    paymentRequired: labels.matchPaymentMethodRequired,
   };
 
   return (
@@ -82,14 +112,26 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
         </div>
       ) : null}
 
-      {showJoinedBanner ? (
+      {showReservedBanner && participationStatus === "pending" ? (
+        <div
+          role="status"
+          className="rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 space-y-1"
+        >
+          <p className="font-bold">{labels.matchParticipationReserved}</p>
+          {bannerTeam ? (
+            <p>{labels.matchJoinedTeamLabel.replace("{team}", bannerTeam)}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showConfirmedBanner && participationStatus === "confirmed" ? (
         <div
           role="status"
           className="rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 space-y-1"
         >
           <p className="font-bold">{labels.matchJoinedSuccess}</p>
-          {joinedTeam ? (
-            <p>{labels.matchJoinedTeamLabel.replace("{team}", joinedTeam)}</p>
+          {viewerTeam ? (
+            <p>{labels.matchJoinedTeamLabel.replace("{team}", viewerTeam)}</p>
           ) : null}
         </div>
       ) : null}
@@ -103,6 +145,11 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
         <p className="text-xs font-bold uppercase tracking-wide text-white/70">
           {typeLabels[match.match_gender_type] ?? match.match_gender_type}
         </p>
+        {sharePrice > 0 ? (
+          <p className="text-sm text-white/70">
+            {locale === "en" ? "Your share" : "Votre part"} : {sharePrice} DT
+          </p>
+        ) : null}
       </header>
 
       <section className="rounded-2xl border border-white/10 p-4 space-y-3 bg-surface-elevated">
@@ -127,8 +174,10 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
           matchId={match.id}
           matchType={match.match_gender_type}
           viewerGender={viewerGender}
-          alreadyJoined={alreadyJoined}
+          participationStatus={participationStatus}
           viewerTeam={viewerTeam}
+          sharePrice={sharePrice}
+          clubName={match.clubName}
           isOpen={match.status === "open"}
           teamACount={teamA.length}
           teamBCount={teamB.length}
