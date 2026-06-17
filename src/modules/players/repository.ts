@@ -87,7 +87,7 @@ export async function fetchPlayers(
     let request = supabase
       .from("profiles")
       .select(
-        "id, display_name, avatar_url, league, sport_rating, trust_score, gender, reliability, reliability_status, created_at",
+        "id, display_name, avatar_url, league, sport_rating, trust_score, gender, reliability_status, created_at",
       )
       .is("suspended_at", null)
       .order("sport_rating", { ascending: false });
