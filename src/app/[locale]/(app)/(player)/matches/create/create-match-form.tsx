@@ -130,12 +130,12 @@ export function CreateMatchForm({ clubs, locale, copy }: CreateMatchFormProps) {
         /* navigation privée / quota */
       }
 
-      if (inviteName) {
-        await shareMatchInviteLink(locale, result.matchId, inviteName);
-      }
-
       router.push(`/${locale}/matches/${result.matchId}?created=1`);
       router.refresh();
+
+      if (inviteName) {
+        void shareMatchInviteLink(locale, result.matchId, inviteName);
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -45,8 +45,7 @@ const MATCH_SELECT = `
     id,
     name,
     city,
-    address,
-    type
+    address
   ),
   match_participants (
     player_id,
@@ -68,8 +67,13 @@ function normalizeMatches(raw: unknown): MatchWithDetails[] {
     .map((match) => {
       const addr = match.clubs?.address?.trim();
       const parts = Array.isArray(match.match_participants) ? match.match_participants : [];
+      const clubs = match.clubs
+        ? { ...match.clubs, type: match.clubs.type ?? "Outdoor" }
+        : match.clubs;
+
       return {
         ...match,
+        clubs,
         match_gender_type: coerceMatchGenderType(match.match_gender_type),
         price_per_player: Number(match.price_per_player ?? 0),
         playerCount: parts.length,
