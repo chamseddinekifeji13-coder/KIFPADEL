@@ -58,14 +58,23 @@ export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps)
 
   return (
     <Card className="p-0 overflow-hidden hover:shadow-gold-strong transition-all duration-500 group bg-surface rounded-3xl border-white/5">
-      <div className="flex h-full min-h-[140px] relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--gold)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        {/* Date/Time Decorative Column */}
-        <Link
-          href={detailHref}
-          className="bg-black/40 p-5 flex flex-col items-center justify-center min-w-[100px] text-white relative overflow-hidden hover:bg-white/5 transition-colors"
+      <Link
+        href={detailHref}
+        className="relative flex h-full min-h-[140px] touch-manipulation active:scale-[0.99] transition-transform"
+        aria-label={`Voir le match ${match.clubName}`}
+      >
+        <div
+          className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-[var(--gold)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          aria-hidden="true"
+        />
+
+        <div
+          className="relative z-10 bg-black/40 p-5 flex flex-col items-center justify-center min-w-[100px] text-white overflow-hidden group-hover:bg-white/5 transition-colors"
         >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-[var(--gold)] rounded-full blur-3xl opacity-20 -mr-10 -mt-10" />
+          <div
+            className="pointer-events-none absolute top-0 right-0 w-20 h-20 bg-[var(--gold)] rounded-full blur-3xl opacity-20 -mr-10 -mt-10"
+            aria-hidden="true"
+          />
 
           <span className="text-[10px] uppercase font-black tracking-widest text-[var(--gold)]/80 mb-1">
             {dateWeekday}
@@ -74,11 +83,10 @@ export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps)
             {dateDay}
           </span>
           <span className="text-[10px] font-bold text-white/50">{formattedTime}</span>
-        </Link>
+        </div>
 
-        {/* Content Column */}
-        <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
-          <Link href={detailHref} className="block space-y-3 text-left">
+        <div className="relative z-10 flex-1 p-5 flex flex-col justify-between min-w-0">
+          <div className="space-y-3 text-left">
             <div className="flex justify-between items-start gap-2">
               <div className="space-y-0.5 min-w-0">
                 <h3 className="font-bold text-white group-hover:text-[var(--gold)] transition-colors line-clamp-1">
@@ -86,9 +94,7 @@ export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps)
                 </h3>
                 <div className="flex items-center gap-1 text-[10px] text-white/50 font-medium">
                   <MapPin className="h-3 w-3 text-[var(--gold)]/60 shrink-0" />
-                  <span className="truncate">
-                    {match.clubCity}, Tunisie
-                  </span>
+                  <span className="truncate">{match.clubCity}, Tunisie</span>
                 </div>
                 <Badge
                   variant="secondary"
@@ -133,7 +139,7 @@ export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps)
                 />
               </div>
             </div>
-          </Link>
+          </div>
 
           <div className="pt-3 flex justify-between items-center border-t border-white/5 gap-2">
             <div className="flex items-baseline gap-1 min-w-0">
@@ -142,16 +148,15 @@ export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps)
                 DT / pers
               </span>
             </div>
-            <Link
-              href={detailHref}
-              className="h-8 w-8 shrink-0 rounded-full bg-[var(--gold)]/10 flex items-center justify-center text-[var(--gold)] group-hover:bg-[var(--gold)] group-hover:text-black transition-all"
-              aria-label="Voir le match"
+            <span
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--gold)]/10 text-[var(--gold)] group-hover:bg-[var(--gold)] group-hover:text-black transition-all"
+              aria-hidden="true"
             >
-              <ChevronRight className="h-4 w-4" />
-            </Link>
+              <ChevronRight className="h-5 w-5" />
+            </span>
           </div>
         </div>
-      </div>
+      </Link>
 
       <div className="border-t border-white/5 p-3 bg-black/20">
         <ClubDirectionsButton

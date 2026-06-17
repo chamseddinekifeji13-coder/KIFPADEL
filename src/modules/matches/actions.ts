@@ -253,7 +253,7 @@ export async function joinOpenMatchAction(input: {
 
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("id, status, match_gender_type, match_participants(player_id, team)")
+    .select("id, status, match_gender_type")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -275,7 +275,16 @@ export async function joinOpenMatchAction(input: {
     };
   }
 
-  const participants = (match.match_participants ?? []) as { player_id: string; team: string }[];
+  const { data: participantRows, error: participantsError } = await supabase
+    .from("match_participants")
+    .select("player_id, team")
+    .eq("match_id", matchId);
+
+  if (participantsError) {
+    return { ok: false, error: "Impossible de lire les participants du match." };
+  }
+
+  const participants = (participantRows ?? []) as { player_id: string; team: string }[];
 
   if (participants.some((p) => p.player_id === user.id)) {
     return { ok: false, error: "Tu es déjà inscrit sur ce match." };
