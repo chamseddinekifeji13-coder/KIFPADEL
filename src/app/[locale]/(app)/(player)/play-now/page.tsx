@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { matchService } from "@/modules/matches/service";
-import { fetchUserOpenMatches, MatchWithDetails } from "@/modules/matches/repository";
+import { fetchUserOpenMatches, sortMatchesByStartsAt, MatchWithDetails } from "@/modules/matches/repository";
 import { MatchCard, type MatchCardMatchTypeUi } from "@/components/features/matches/match-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Trophy } from "lucide-react";
@@ -83,12 +83,15 @@ export default async function PlayNowPage({ params, searchParams }: PlayNowPageP
       ? matches.filter((m) => m.match_gender_type === typeFilter)
       : matches;
 
-  const displayedMyMatches =
+  const displayedMyMatches = sortMatchesByStartsAt(
     typeFilter != null
       ? myMatches.filter((m) => m.match_gender_type === typeFilter)
-      : myMatches;
+      : myMatches,
+  );
 
-  const otherDisplayedMatches = displayedMatches.filter((m) => !myMatchIds.has(m.id));
+  const otherDisplayedMatches = sortMatchesByStartsAt(
+    displayedMatches.filter((m) => !myMatchIds.has(m.id)),
+  );
 
   const totalOpenMatches = matches.length;
   const showGenderProfileHint =

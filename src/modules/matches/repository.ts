@@ -87,6 +87,24 @@ function typesFilterForViewer(viewerGender: Gender | null) {
   return matchGenderTypesVisibleToViewer(viewerGender);
 }
 
+/** Matchs ouverts encore « à l’affiche » (créneau pas trop ancien). */
+const OPEN_MATCH_LISTING_GRACE_MS = 90 * 60 * 1000;
+
+function openMatchListingFloorIso(): string {
+  return new Date(Date.now() - OPEN_MATCH_LISTING_GRACE_MS).toISOString();
+}
+
+export function sortMatchesByStartsAt(matches: MatchWithDetails[]): MatchWithDetails[] {
+  return [...matches].sort(
+    (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+  );
+}
+
+function filterListableOpenMatches(matches: MatchWithDetails[]): MatchWithDetails[] {
+  const floor = Date.now() - OPEN_MATCH_LISTING_GRACE_MS;
+  return matches.filter((m) => new Date(m.starts_at).getTime() >= floor);
+}
+
 /**
  * Repository for Match related database operations.
  * Single source of truth: public.match_participants (not legacy match_players).
@@ -112,6 +130,7 @@ export async function fetchOpenMatches(viewerGender: Gender | null = null): Prom
       .from("matches")
       .select(MATCH_SELECT)
       .eq("status", "open")
+      .gte("starts_at", openMatchListingFloorIso())
       .in("match_gender_type", allowed)
       .order("starts_at", { ascending: true });
 
@@ -120,7 +139,7 @@ export async function fetchOpenMatches(viewerGender: Gender | null = null): Prom
       return [];
     }
 
-    return normalizeMatches(data);
+    return filterListableOpenMatches(normalizeMatches(data));
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[matches.fetchOpenMatches] unexpected error", err);
@@ -137,7 +156,8 @@ export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDet
       .from("matches")
       .select(MATCH_SELECT)
       .eq("status", "open")
-      .eq("created_by", userId);
+      .eq("created_by", userId)
+      .gte("starts_at", openMatchListingFloorIso());
 
     if (createdError) {
       console.warn("[matches.fetchUserOpenMatches] created error", createdError.message);
@@ -160,6 +180,7 @@ export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDet
         .from("matches")
         .select(MATCH_SELECT)
         .eq("status", "open")
+        .gte("starts_at", openMatchListingFloorIso())
         .in("id", participantIds);
 
       if (error) {
@@ -169,7 +190,9 @@ export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDet
       }
     }
 
-    return normalizeMatches([...(createdRows ?? []), ...participantRows]);
+    return filterListableOpenMatches(
+      mergeMatchesById([normalizeMatches(createdRows ?? []), normalizeMatches(participantRows)]),
+    );
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[matches.fetchUserOpenMatches] unexpected error", err);
@@ -204,6 +227,7 @@ export async function fetchOpenMatchesByClub(
       .select(MATCH_SELECT)
       .eq("club_id", clubId)
       .eq("status", "open")
+      .gte("starts_at", openMatchListingFloorIso())
       .in("match_gender_type", allowed)
       .order("starts_at", { ascending: true });
 
@@ -212,7 +236,7 @@ export async function fetchOpenMatchesByClub(
       return [];
     }
 
-    return normalizeMatches(data);
+    return filterListableOpenMatches(normalizeMatches(data));
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[matches.fetchOpenMatchesByClub] unexpected error", err);

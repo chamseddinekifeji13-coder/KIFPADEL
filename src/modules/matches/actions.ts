@@ -7,6 +7,7 @@ import {
   canJoinMatchByGenderRules,
   isValidTeamCompositionAfterJoin,
 } from "@/domain/rules/match-gender";
+import { resolveCourtPlayerPrice } from "@/domain/rules/court-pricing";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import {
@@ -116,10 +117,13 @@ export async function createOpenMatchAction(input: {
 
   const { data: court } = await supabase
     .from("courts")
-    .select("id")
+    .select("id, price_per_player, price_per_slot")
     .eq("club_id", clubId)
     .limit(1)
     .maybeSingle();
+
+  const pricePerPlayer =
+    court != null ? resolveCourtPlayerPrice(court) : DEFAULT_PRICE_PER_PLAYER;
 
   const base = {
     club_id: clubId,
@@ -131,11 +135,11 @@ export async function createOpenMatchAction(input: {
 
   const attempts: Record<string, unknown>[] = [
     { ...base },
-    { ...base, price_per_player: DEFAULT_PRICE_PER_PLAYER },
+    { ...base, price_per_player: pricePerPlayer },
     { ...base, ends_at: endsAtIso },
     {
       ...base,
-      price_per_player: DEFAULT_PRICE_PER_PLAYER,
+      price_per_player: pricePerPlayer,
       ends_at: endsAtIso,
     },
   ];
@@ -143,12 +147,12 @@ export async function createOpenMatchAction(input: {
   if (court?.id) {
     attempts.push(
       { ...base, court_id: court.id },
-      { ...base, court_id: court.id, price_per_player: DEFAULT_PRICE_PER_PLAYER },
+      { ...base, court_id: court.id, price_per_player: pricePerPlayer },
       { ...base, court_id: court.id, ends_at: endsAtIso },
       {
         ...base,
         court_id: court.id,
-        price_per_player: DEFAULT_PRICE_PER_PLAYER,
+        price_per_player: pricePerPlayer,
         ends_at: endsAtIso,
       },
     );
