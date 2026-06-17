@@ -8,8 +8,8 @@ import {
   isValidTeamCompositionAfterJoin,
 } from "@/domain/rules/match-gender";
 import {
-  isActiveMatchParticipant,
-  normalizeMatchParticipantStatus,
+  isActiveMatchParticipantRow,
+  resolveViewerParticipationPhase,
 } from "@/domain/rules/match-participant";
 import { resolveCourtPlayerPrice } from "@/domain/rules/court-pricing";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
@@ -289,7 +289,7 @@ export async function joinOpenMatchAction(input: {
 
   const { data: participantRows, error: participantsError } = await supabase
     .from("match_participants")
-    .select("player_id, team, status")
+    .select("player_id, team, status, payment_method")
     .eq("match_id", matchId);
 
   if (participantsError) {
@@ -300,8 +300,9 @@ export async function joinOpenMatchAction(input: {
     player_id: string;
     team: string;
     status?: string | null;
+    payment_method?: string | null;
   }[];
-  const activeParticipants = participants.filter((p) => isActiveMatchParticipant(p.status));
+  const activeParticipants = participants.filter((p) => isActiveMatchParticipantRow(p));
 
   if (activeParticipants.some((p) => p.player_id === user.id)) {
     return { ok: false, error: "Tu es déjà inscrit sur ce match." };
@@ -411,7 +412,7 @@ export async function confirmMatchParticipationAction(input: {
 
   const { data: row, error: rowError } = await supabase
     .from("match_participants")
-    .select("status")
+    .select("status, payment_method")
     .eq("match_id", matchId)
     .eq("player_id", user.id)
     .maybeSingle();
@@ -420,11 +421,17 @@ export async function confirmMatchParticipationAction(input: {
     return { ok: false, error: "Participation introuvable." };
   }
 
-  const status = normalizeMatchParticipantStatus(row.status as string);
-  if (status === "confirmed") {
+  const phase = resolveViewerParticipationPhase({
+    player_id: user.id,
+    team: "",
+    status: row.status as string,
+    payment_method: row.payment_method as string,
+  });
+
+  if (phase === "confirmed") {
     return { ok: true };
   }
-  if (status !== "pending") {
+  if (phase !== "pending") {
     return { ok: false, error: "Cette participation ne peut plus être confirmée." };
   }
 
@@ -472,7 +479,7 @@ export async function declineMatchParticipationAction(input: {
 
   const { data: row, error: rowError } = await supabase
     .from("match_participants")
-    .select("status")
+    .select("status, payment_method")
     .eq("match_id", matchId)
     .eq("player_id", user.id)
     .maybeSingle();
@@ -481,11 +488,17 @@ export async function declineMatchParticipationAction(input: {
     return { ok: false, error: "Participation introuvable." };
   }
 
-  const status = normalizeMatchParticipantStatus(row.status as string);
-  if (status === "confirmed") {
+  const phase = resolveViewerParticipationPhase({
+    player_id: user.id,
+    team: "",
+    status: row.status as string,
+    payment_method: row.payment_method as string,
+  });
+
+  if (phase === "confirmed") {
     return { ok: false, error: "Participation déjà confirmée — contacte le club pour annuler." };
   }
-  if (status !== "pending") {
+  if (phase !== "pending") {
     return { ok: true };
   }
 
@@ -494,7 +507,7 @@ export async function declineMatchParticipationAction(input: {
     .delete()
     .eq("match_id", matchId)
     .eq("player_id", user.id)
-    .eq("status", "pending");
+    .in("status", ["pending", "confirmed"]);
 
   if (deleteError) {
     return { ok: false, error: deleteError.message || "Impossible de décliner." };

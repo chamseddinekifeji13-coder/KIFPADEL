@@ -7,8 +7,9 @@ import { fetchMatchById } from "@/modules/matches/repository";
 import { playerService } from "@/modules/players/service";
 import { MatchJoinActions } from "@/components/features/matches/match-join-actions";
 import {
-  isActiveMatchParticipant,
-  normalizeMatchParticipantStatus,
+  isActiveMatchParticipantRow,
+  resolveSharePrice,
+  resolveViewerParticipationPhase,
 } from "@/domain/rules/match-participant";
 
 type MatchDetailsPageProps = {
@@ -41,7 +42,7 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
   } = await supabase.auth.getUser();
 
   let viewerGender = null;
-  let participationStatus: "pending" | "confirmed" | "declined" | "cancelled" | null = null;
+  let participationPhase: "none" | "pending" | "confirmed" = "none";
   let viewerTeam: "A" | "B" | null = null;
   let sharePrice = match.price_per_player;
 
@@ -50,18 +51,13 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
     viewerGender = profile?.gender ?? null;
     const myRow = match.match_participants.find((p) => p.player_id === user.id);
     if (myRow) {
-      participationStatus = normalizeMatchParticipantStatus(myRow.status);
+      participationPhase = resolveViewerParticipationPhase(myRow);
       viewerTeam = myRow.team === "A" || myRow.team === "B" ? myRow.team : null;
-      const rowPrice = Number(myRow.share_price);
-      if (Number.isFinite(rowPrice) && rowPrice > 0) {
-        sharePrice = rowPrice;
-      }
+      sharePrice = resolveSharePrice(myRow, match.price_per_player);
     }
   }
 
-  const activeParticipants = match.match_participants.filter((p) =>
-    isActiveMatchParticipant(p.status),
-  );
+  const activeParticipants = match.match_participants.filter((p) => isActiveMatchParticipantRow(p));
   const teamA = activeParticipants.filter((p) => p.team === "A");
   const teamB = activeParticipants.filter((p) => p.team === "B");
 
@@ -112,7 +108,7 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
         </div>
       ) : null}
 
-      {showReservedBanner && participationStatus === "pending" ? (
+      {showReservedBanner && participationPhase === "pending" ? (
         <div
           role="status"
           className="rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 space-y-1"
@@ -124,7 +120,7 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
         </div>
       ) : null}
 
-      {showConfirmedBanner && participationStatus === "confirmed" ? (
+      {showConfirmedBanner && participationPhase === "confirmed" ? (
         <div
           role="status"
           className="rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 space-y-1"
@@ -174,7 +170,7 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
           matchId={match.id}
           matchType={match.match_gender_type}
           viewerGender={viewerGender}
-          participationStatus={participationStatus}
+          participationPhase={participationPhase}
           viewerTeam={viewerTeam}
           sharePrice={sharePrice}
           clubName={match.clubName}

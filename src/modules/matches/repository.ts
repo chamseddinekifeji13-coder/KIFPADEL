@@ -2,7 +2,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   countActiveMatchParticipants,
-  isActiveMatchParticipant,
+  isActiveMatchParticipantRow,
+  resolveSharePrice,
+  resolveViewerParticipationPhase,
 } from "@/domain/rules/match-participant";
 import {
   matchGenderTypesVisibleToViewer,
@@ -265,7 +267,7 @@ export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDet
 
     const { data: participations, error: partError } = await supabase
       .from("match_participants")
-      .select("match_id, status")
+      .select("match_id, status, payment_method")
       .eq("player_id", userId);
 
     if (partError) {
@@ -275,7 +277,14 @@ export async function fetchUserOpenMatches(userId: string): Promise<MatchWithDet
     const participantIds = [
       ...new Set(
         (participations ?? [])
-          .filter((p) => isActiveMatchParticipant(p.status as string))
+          .filter((p) =>
+            isActiveMatchParticipantRow({
+              player_id: userId,
+              team: "",
+              status: p.status as string,
+              payment_method: (p as { payment_method?: string }).payment_method,
+            }),
+          )
           .map((p) => p.match_id as string),
       ),
     ];

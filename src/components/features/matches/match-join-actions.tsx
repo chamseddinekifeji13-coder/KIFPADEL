@@ -10,14 +10,14 @@ import {
 } from "@/modules/matches/actions";
 import { canJoinMatchByGenderRules } from "@/domain/rules/match-gender";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
-import type { MatchParticipantStatus } from "@/domain/rules/match-participant";
+import type { ViewerParticipationPhase } from "@/domain/rules/match-participant";
 
 type Props = {
   locale: string;
   matchId: string;
   matchType: MatchGenderType;
   viewerGender: Gender | null;
-  participationStatus: MatchParticipantStatus | null;
+  participationPhase: ViewerParticipationPhase;
   viewerTeam?: "A" | "B" | null;
   sharePrice: number;
   clubName: string;
@@ -52,7 +52,7 @@ export function MatchJoinActions({
   matchId,
   matchType,
   viewerGender,
-  participationStatus,
+  participationPhase,
   viewerTeam,
   sharePrice,
   clubName,
@@ -127,7 +127,7 @@ export function MatchJoinActions({
     return <p className="text-sm text-white/60">{labels.matchClosed}</p>;
   }
 
-  if (participationStatus === "confirmed") {
+  if (participationPhase === "confirmed") {
     return (
       <div
         role="status"
@@ -150,7 +150,7 @@ export function MatchJoinActions({
     );
   }
 
-  if (participationStatus === "pending") {
+  if (participationPhase === "pending") {
     return (
       <div className="space-y-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
         <div className="space-y-1">
