@@ -2,17 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 
+import { sanitizeHttpsUrl } from "@/lib/url/sanitize-https-url";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { getSuperAdminActor } from "@/modules/admin/actor";
 import { insertAuditRow } from "@/modules/admin/audit-log";
 import { insertSponsorRow, updateSponsorPatch } from "@/modules/sponsors/repository";
 
 function parseOptionalUrl(raw: string): string | null {
-  const t = raw.trim();
-  if (!t.length) return null;
-  return t;
+  return sanitizeHttpsUrl(raw);
 }
-
 export async function adminCreateSponsorAction(formData: FormData): Promise<void> {
   const locale = String(formData.get("locale") ?? "fr").trim() || "fr";
   const name = String(formData.get("name") ?? "").trim();

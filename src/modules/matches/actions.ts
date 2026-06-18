@@ -15,11 +15,11 @@ import {
 import { resolveCourtPlayerPrice } from "@/domain/rules/court-pricing";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { requireActionUser } from "@/lib/supabase/action-auth";
 import {
   assertNotSuspended,
   isPlayerAccessError,
 } from "@/modules/compliance/player-access";
-import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type CreateOpenMatchResult =
@@ -38,22 +38,8 @@ const DEFAULT_PRICE_PER_PLAYER = 0;
 /** Durée padel classique, pour colonne ends_at si présente. */
 const MATCH_DURATION_MS = 90 * 60 * 1000;
 
-async function getActionUser(
-  supabase: SupabaseClient,
-): Promise<{ user: User } | { error: string }> {
-  const {
-    data: { session: initialSession },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-
-  const { data: refreshData } = await supabase.auth.refreshSession();
-  const session = refreshData.session ?? initialSession;
-
-  if (sessionError || !session?.user) {
-    return { error: "Connexion requise." };
-  }
-
-  return { user: session.user };
+async function getActionUser(supabase: SupabaseClient) {
+  return requireActionUser(supabase);
 }
 
 function parseMatchGenderType(raw: string | null | undefined): MatchGenderType {
@@ -476,20 +462,25 @@ export async function confirmMatchParticipationAction(input: {
     return { ok: false, error: "Cette participation ne peut plus être confirmée." };
   }
 
-  const committedAt = new Date().toISOString();
-  const { error: updateError } = await supabase
-    .from("match_participants")
-    .update({
-      status: "confirmed",
-      payment_method: "on_site",
-      payment_committed_at: committedAt,
-      updated_at: committedAt,
-    })
-    .eq("match_id", matchId)
-    .eq("player_id", user.id);
+  const { data: rpcRows, error: rpcError } = await supabase.rpc(
+    "confirm_match_participation_on_site",
+    {
+      p_match_id: matchId,
+      p_payment_commitment: true,
+    },
+  );
 
-  if (updateError) {
-    return { ok: false, error: updateError.message || "Confirmation refusée." };
+  if (rpcError) {
+    return { ok: false, error: rpcError.message || "Confirmation refusée." };
+  }
+
+  const rpc = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as {
+    ok?: boolean;
+    error_message?: string;
+  } | null;
+
+  if (!rpc?.ok) {
+    return { ok: false, error: rpc?.error_message || "Confirmation refusée." };
   }
 
   revalidatePath(`/${loc}/play-now`);
@@ -548,7 +539,7 @@ export async function declineMatchParticipationAction(input: {
     .delete()
     .eq("match_id", matchId)
     .eq("player_id", user.id)
-    .in("status", ["pending", "confirmed"]);
+    .eq("status", "pending");
 
   if (deleteError) {
     return { ok: false, error: deleteError.message || "Impossible de décliner." };

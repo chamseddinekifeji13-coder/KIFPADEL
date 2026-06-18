@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { isParticipantPaymentPending } from "@/domain/rules/booking-participant";
 import { trustImpactFromEvent } from "@/domain/rules/trust";
@@ -23,6 +22,72 @@ type ParticipantStaffContext = {
   paymentConfirmedAt: string | null;
   clubId: string;
 };
+
+async function requireStaffForTrustIncident(
+  bookingId?: string,
+  playerId?: string,
+): Promise<
+  | { ok: true; supabase: Awaited<ReturnType<typeof createSupabaseServerActionClient>> }
+  | { ok: false; error: string }
+> {
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, error: "Vous devez être connecté." };
+  }
+
+  const { data: isSa } = await supabase.rpc("is_super_admin");
+  if (isSa === true) {
+    return { ok: true, supabase };
+  }
+
+  if (bookingId) {
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("club_id")
+      .eq("id", bookingId)
+      .maybeSingle();
+
+    if (!booking?.club_id) {
+      return { ok: false, error: "Réservation introuvable." };
+    }
+
+    const guard = await assertClubStaffCanManage(supabase, String(booking.club_id), user.id);
+    if (!guard.ok) {
+      return { ok: false, error: "Action non autorisée pour ce club." };
+    }
+
+    return { ok: true, supabase };
+  }
+
+  if (playerId) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("main_club_id")
+      .eq("id", playerId)
+      .maybeSingle();
+
+    if (!profile?.main_club_id) {
+      return { ok: false, error: "Joueur sans club principal — incident non autorisé." };
+    }
+
+    const guard = await assertClubStaffCanManage(
+      supabase,
+      String(profile.main_club_id),
+      user.id,
+    );
+    if (!guard.ok) {
+      return { ok: false, error: "Action non autorisée pour ce club." };
+    }
+
+    return { ok: true, supabase };
+  }
+
+  return { ok: false, error: "Contexte club requis pour cette action." };
+}
 
 async function resolveParticipantIdForStaff(
   supabase: Awaited<ReturnType<typeof createSupabaseServerActionClient>>,
@@ -238,7 +303,29 @@ export async function confirmParticipantArrivalAction(participantId: string): Pr
 
 /** Legacy : confirme toute la réservation (première place). */
 export async function confirmArrivalAction(bookingId: string): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, error: "Vous devez être connecté." };
+  }
+
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("club_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking?.club_id) {
+    return { ok: false, error: "Réservation introuvable." };
+  }
+
+  const guard = await assertClubStaffCanManage(supabase, String(booking.club_id), user.id);
+  if (!guard.ok) {
+    return { ok: false, error: "Action non autorisée pour ce club." };
+  }
 
   const { data: participant } = await supabase
     .from("booking_participants")
@@ -383,7 +470,12 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
 
 /** Legacy : résout la place du joueur si possible. */
 export async function reportNoShowAction(bookingId: string, playerId: string): Promise<ActionResult> {
-  const supabase = await createClient();
+  const staff = await requireStaffForTrustIncident(bookingId);
+  if (!staff.ok) {
+    return staff;
+  }
+
+  const supabase = staff.supabase;
 
   const { data: participant } = await supabase
     .from("booking_participants")
@@ -451,6 +543,11 @@ export async function confirmIncidentAction(
   incidentType: "no_show" | "late_cancel" | "bad_behavior",
   bookingId?: string,
 ): Promise<ActionResult> {
+  const staff = await requireStaffForTrustIncident(bookingId, bookingId ? undefined : playerId);
+  if (!staff.ok) {
+    return staff;
+  }
+
   const impact = trustImpactFromEvent(incidentType);
 
   try {
@@ -468,6 +565,11 @@ export async function confirmIncidentAction(
 }
 
 export async function recordGoodBehaviorAction(playerId: string): Promise<ActionResult> {
+  const staff = await requireStaffForTrustIncident(undefined, playerId);
+  if (!staff.ok) {
+    return staff;
+  }
+
   const impact = trustImpactFromEvent("good_behavior");
 
   try {

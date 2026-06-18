@@ -49,7 +49,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
       aria-label="Navigation principale"
       className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-lg animate-fade-in pb-[max(env(safe-area-inset-bottom),0px)]"
     >
-      <div className="glass-gold rounded-[2rem] p-2 flex justify-between items-center px-4 h-20 shadow-premium touch-manipulation">
+      <div className="glass-gold rounded-[2rem] p-2 flex justify-between items-center px-4 h-20 shadow-premium max-md:backdrop-blur-none">
         {items.map((item) => {
           const active = pathname === item.href || (item.href !== `/${locale}` && pathname.startsWith(item.href + "/"));
           const Icon = item.icon;
@@ -58,15 +58,16 @@ export function MainNav({ locale, labels }: MainNavProps) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1.5 transition-all duration-300 min-h-14 min-w-[64px] rounded-2xl group",
+                "tap-target relative flex flex-col items-center justify-center gap-1.5 min-h-14 min-w-[64px] rounded-2xl group",
                 active ? "text-gold" : "text-foreground-muted hover:text-white"
               )}
             >
               <div className={cn(
-                "p-2 rounded-xl transition-all duration-300",
+                "p-2 rounded-xl transition-[background-color,transform,border-color] duration-150",
                 active ? "bg-gold/10 scale-110 shadow-gold/20 border border-gold/20" : "group-hover:bg-white/5"
               )}>
                 <Icon

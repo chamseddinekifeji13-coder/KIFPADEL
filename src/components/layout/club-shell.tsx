@@ -112,7 +112,7 @@ export function ClubShell({ children, locale, clubName, navLabels, uiLabels }: C
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[var(--surface)]/95 backdrop-blur-xl border-b border-[var(--border)]">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[var(--surface)] border-b border-[var(--border)] max-md:backdrop-blur-none md:bg-[var(--surface)]/95 md:backdrop-blur-xl">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-lg bg-[var(--gold)] flex items-center justify-center">
@@ -136,7 +136,7 @@ export function ClubShell({ children, locale, clubName, navLabels, uiLabels }: C
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--surface)] max-md:backdrop-blur-none md:bg-[var(--surface)]/95 md:backdrop-blur-xl md:hidden">
         <div className="flex h-16 items-center justify-around px-2 pb-[max(env(safe-area-inset-bottom),0px)]">
           {navItems.slice(0, 5).map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -146,8 +146,9 @@ export function ClubShell({ children, locale, clubName, navLabels, uiLabels }: C
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={true}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all min-w-[56px]",
+                  "tap-target flex flex-col items-center justify-center gap-1 p-2 rounded-xl min-w-[56px]",
                   active ? "text-[var(--gold)]" : "text-[var(--foreground-muted)]"
                 )}
               >

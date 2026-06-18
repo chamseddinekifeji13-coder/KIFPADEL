@@ -3,16 +3,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { LOCALES, DEFAULT_LOCALE } from "@/i18n/config";
-import { publicEnv } from "@/lib/config/env";
+import { getEdgeSupabasePublicConfig } from "@/lib/config/public-env-edge";
 import { isUuidString } from "@/lib/uuid-utils";
 
 /**
- * Middleware.
- *
- * Responsibilities:
- * 1. Refresh the Supabase auth session on every request (keep cookies alive).
- * 2. Redirect bare `/` to `/<DEFAULT_LOCALE>`.
- * 3. Reject unknown locale prefixes → 404.
+ * Proxy Next.js 16 — refresh session Supabase, i18n, validation liens réservation.
  */
 export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({
@@ -21,21 +16,17 @@ export default async function proxy(request: NextRequest) {
     },
   });
 
-  // Create the Supabase client
   let supabase;
   try {
-    supabase = createServerClient(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
+    const { supabaseUrl, supabaseAnonKey } = getEdgeSupabasePublicConfig();
+    supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value),
-          );
-          response = NextResponse.next({
-            request,
-          });
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),
           );
@@ -43,29 +34,18 @@ export default async function proxy(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[Middleware] CRITICAL: Failed to create Supabase client:", err);
-    return response; // Continue without auth instead of crashing
+    console.error("[Proxy] CRITICAL: Failed to create Supabase client:", err);
+    return response;
   }
 
-  // Refresh the session
   try {
-    const { error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      // It's normal for guests, but let's log if it's a config error
-      const msg = userError.message.toLowerCase();
-      if (msg.includes("api key") || msg.includes("invalid") || msg.includes("unauthorized")) {
-        console.error("[Middleware] Auth Config Error detected via getUser():", userError.message);
-      }
-    }
+    await supabase.auth.getUser();
   } catch (err) {
-    console.error("[Middleware] Error during session refresh:", err);
+    console.error("[Proxy] Error during session refresh:", err);
   }
 
   const { pathname } = request.nextUrl;
 
-  /* ------------------------------------------------------------------ */
-  /* 1b — Canonique www (cookies OAuth PKCE sur un seul host)           */
-  /* ------------------------------------------------------------------ */
   const hostname = request.nextUrl.hostname;
   if (hostname === "kifpadel.tn") {
     const canonicalUrl = request.nextUrl.clone();
@@ -77,26 +57,17 @@ export default async function proxy(request: NextRequest) {
     return redirectResponse;
   }
 
-  /* ------------------------------------------------------------------ */
-  /* 2 — i18n redirect: bare "/" → "/fr"                                */
-  /* ------------------------------------------------------------------ */
   if (pathname === "/") {
     const url = new URL(`/${DEFAULT_LOCALE}`, request.url);
     const redirectResponse = NextResponse.redirect(url);
-    // Copy cookies to redirect response
     response.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value);
     });
     return redirectResponse;
   }
 
-  /* ------------------------------------------------------------------ */
-  /* 3 — Validate locale segment                                        */
-  /* ------------------------------------------------------------------ */
   const segments = pathname.split("/");
-  const candidateLocale = segments[1]; // e.g. "fr" or "en"
-
-  // API & static assets are not locale-prefixed — let them through.
+  const candidateLocale = segments[1];
   const hasExtension = segments[segments.length - 1].includes(".");
 
   if (
@@ -108,20 +79,15 @@ export default async function proxy(request: NextRequest) {
     return response;
   }
 
-  // If the first segment is not a known locale, redirect to default.
   if (!LOCALES.includes(candidateLocale as (typeof LOCALES)[number])) {
     const url = new URL(`/${DEFAULT_LOCALE}${pathname}`, request.url);
     const redirectResponse = NextResponse.redirect(url);
-    // Copy cookies to redirect response
     response.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value);
     });
     return redirectResponse;
   }
 
-  /* ------------------------------------------------------------------ */
-  /* 4 — Lien réservation : /fr/book/<clubId> doit être un UUID valide   */
-  /* ------------------------------------------------------------------ */
   const section = segments[2];
   const clubSegment = segments[3];
   if (section === "book" && clubSegment) {
@@ -142,12 +108,6 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image  (image optimiser)
-     * - favicon.ico, sitemap.xml, robots.txt
-     */
     "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
   ],
 };

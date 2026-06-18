@@ -44,6 +44,9 @@ next-env.d.ts
 # supabase local
 supabase/.temp/
 
+# scripts with secrets (use sync-env.example.cjs as template)
+sync-env.cjs
+
 
 server_log.txt
 logs/

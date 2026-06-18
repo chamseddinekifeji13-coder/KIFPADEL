@@ -8,9 +8,13 @@ export type PhoneVerificationChannel = "instant" | "email" | "whatsapp";
 export function getPhoneVerificationChannel(): PhoneVerificationChannel {
   const raw = process.env.PHONE_VERIFICATION_CHANNEL?.trim().toLowerCase();
   if (raw === "email" || raw === "whatsapp") return raw;
+  if (raw === "instant") return "instant";
+  // Production : OTP requis par défaut si non configuré explicitement.
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
+    return "email";
+  }
   return "instant";
 }
-
 export function isOtpPhoneVerificationChannel(channel: PhoneVerificationChannel): boolean {
   return channel === "email" || channel === "whatsapp";
 }

@@ -2,34 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isKifWalletAutoCompleteAllowed } from "@/lib/config/env";
+import { requireActionUser } from "@/lib/supabase/action-auth";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
-import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type TopUpResult =
   | { ok: true; newBalance: number; pendingGateway: boolean }
   | { ok: false; error: string };
 
-async function getActionUser(
-  supabase: SupabaseClient,
-): Promise<{ user: User } | { error: string }> {
-  const {
-    data: { session: initialSession },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-
-  const { data: refreshData } = await supabase.auth.refreshSession();
-  const session = refreshData.session ?? initialSession;
-
-  if (sessionError || !session?.user) {
-    return { error: "Connexion requise." };
-  }
-
-  return { user: session.user };
+async function getActionUser(supabase: SupabaseClient) {
+  return requireActionUser(supabase);
 }
 
 function isAutoCompleteTopUpEnabled(): boolean {
-  return process.env.KIF_WALLET_AUTO_COMPLETE_TOPUP === "true";
+  return isKifWalletAutoCompleteAllowed();
 }
 
 export async function requestKifTopUpAction(input: {

@@ -27,11 +27,11 @@ export function IntentCard({ href, title, description, icon: Icon, variant = "pr
     <Link
       href={href}
       className={cn(
-        "group relative flex items-center gap-6 rounded-[2rem] border p-6 transition-all duration-500 hover:shadow-gold-strong hover:-translate-y-1 active:scale-[0.98]",
+        "tap-target group relative flex items-center gap-6 rounded-[2rem] border p-6 hover:shadow-gold-strong active:scale-[0.98]",
         variants[variant]
       )}
     >
-      <div className={cn("flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl transition-all group-hover:scale-110 duration-500", iconColors[variant])}>
+      <div className={cn("flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl transition-transform duration-150 group-hover:scale-105", iconColors[variant])}>
         <Icon className="h-8 w-8" />
       </div>
       

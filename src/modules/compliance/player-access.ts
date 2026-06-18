@@ -33,8 +33,8 @@ export async function assertNotSuspended(supabase: SupabaseClient, playerId: str
     .maybeSingle();
 
   if (error) {
-    console.warn("[assertNotSuspended] profile read failed", error.message);
-    return;
+    console.error("[assertNotSuspended] profile read failed", error.message);
+    throw new PlayerAccessError("PLAYER_SUSPENDED");
   }
 
   if (profile?.suspended_at) {

@@ -20,15 +20,21 @@ export default async function ClubLayout({ children, params }: ClubLayoutProps) 
   const dictionary = await getDictionary(locale as Locale);
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const managedClub = user ? await clubService.getManagedClub(user.id) : null;
 
-  // For now, allow access without strict role check (will be enforced later)
-  // In production, you would check if user has club_manager or club_staff role
+  if (!user) {
+    redirect(`/${locale}/auth/sign-in?next=/${locale}/club`);
+  }
+
+  const managedClub = await clubService.getManagedClub(user.id);
+
+  if (!managedClub) {
+    redirect(`/${locale}/dashboard?error=club_access_denied`);
+  }
 
   return (
     <ClubShell
       locale={locale}
-      clubName={managedClub?.name ?? dictionary.club.defaultClubName}
+      clubName={managedClub.name}
       navLabels={{
         dashboard: dictionary.club.dashboardTitle,
         bookings: dictionary.club.navBookings,

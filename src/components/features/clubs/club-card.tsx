@@ -98,8 +98,8 @@ export function ClubCard({
 
         <Link
           href={bookHref}
-          prefetch={false}
-          className="flex w-full min-h-[48px] items-center justify-center py-3.5 bg-gold hover:bg-gold-light active:bg-gold-dark text-black rounded-xl text-sm font-bold shadow-lg shadow-gold/10 touch-manipulation select-none"
+          prefetch={true}
+          className="tap-target flex w-full min-h-[48px] items-center justify-center py-3.5 bg-gold hover:bg-gold-light active:bg-gold-dark text-black rounded-xl text-sm font-bold shadow-lg shadow-gold/10"
         >
           Réserver un terrain
         </Link>

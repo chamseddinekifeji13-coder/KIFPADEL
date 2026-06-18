@@ -57,15 +57,14 @@ export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps)
   const detailHref = `/${locale}/matches/${match.id}`;
 
   return (
-    <Card className="p-0 overflow-hidden hover:shadow-gold-strong transition-all duration-500 group bg-surface rounded-3xl border-white/5">
+    <Card className="p-0 overflow-hidden hover:shadow-gold-strong transition-shadow duration-200 group bg-surface rounded-3xl border-white/5">
       <Link
         href={detailHref}
-        prefetch={false}
-        className="relative flex h-full min-h-[140px] touch-manipulation active:scale-[0.99] transition-transform"
+        className="tap-target relative flex h-full min-h-[140px] active:scale-[0.99]"
         aria-label={`Voir le match ${match.clubName}`}
       >
         <div
-          className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-[var(--gold)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-[var(--gold)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"
           aria-hidden="true"
         />
 

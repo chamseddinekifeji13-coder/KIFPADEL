@@ -1,13 +1,13 @@
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isPhoneE164VerifiedByAnotherUser } from "@/lib/phone/phone-duplicate-guard";
 
 export async function applyVerifiedPhoneToProfile(
-  userClient: SupabaseClient,
+  _userClient: SupabaseClient,
   userId: string,
   phoneE164: string,
-): Promise<{ ok: true } | { ok: false; error: string; code?: string }> {
-  if (await isPhoneE164VerifiedByAnotherUser(phoneE164, userId)) {
+): Promise<{ ok: true } | { ok: false; error: string; code?: string }> {  if (await isPhoneE164VerifiedByAnotherUser(phoneE164, userId)) {
     return {
       ok: false,
       error: "Ce numéro est déjà utilisé par un autre compte.",
@@ -18,7 +18,8 @@ export async function applyVerifiedPhoneToProfile(
   const nowIso = new Date().toISOString();
   const localDisplay = phoneE164.replace(/^\+216/, "");
 
-  const { error: profileErr } = await userClient
+  const admin = createSupabaseAdminClient();
+  const { error: profileErr } = await admin
     .from("profiles")
     .update({
       phone: localDisplay,
@@ -27,7 +28,6 @@ export async function applyVerifiedPhoneToProfile(
       verification_level: 2,
     })
     .eq("id", userId);
-
   if (profileErr) {
     console.error("[applyVerifiedPhoneToProfile]", profileErr.message);
     return { ok: false, error: "Numéro non enregistré. Réessayez.", code: "SERVER_ERROR" };

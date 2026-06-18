@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { requireActionUser } from "@/lib/supabase/action-auth";
 import {
   isBookingRpcSuccess,
   parseBookingRpcRow,
@@ -145,15 +146,8 @@ function mapBookingRpcFailure(row: BookingRpcRow | null): BookingResult {
 export async function createBookingAction(input: CreateBookingInput): Promise<BookingResult> {
   const supabase = await createSupabaseServerActionClient();
 
-  const {
-    data: { session: initialSession },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-
-  const { data: refreshData } = await supabase.auth.refreshSession();
-  const session = refreshData.session ?? initialSession;
-
-  if (sessionError || !session?.user) {
+  const auth = await requireActionUser(supabase);
+  if ("error" in auth) {
     return {
       ok: false,
       error: "Session expirée. Déconnectez-vous puis reconnectez-vous.",
@@ -161,7 +155,7 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     };
   }
 
-  const user = session.user;
+  const user = auth.user;
 
   try {
     await assertPlayerCanBook(supabase, { playerId: user.id, clubId: input.clubId });

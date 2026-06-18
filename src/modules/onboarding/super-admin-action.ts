@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 function normalizeSecret(value: string) {
   return value
@@ -18,8 +19,6 @@ function getConfiguredSecret() {
     process.env.SUPER_ADMIN_ONBOARDING_KEY,
     process.env.SUPER_ADMIN_SECRET,
     process.env.ADMIN_ONBOARDING_KEY,
-    // Fallback for misconfigured environments.
-    process.env.NEXT_PUBLIC_SUPER_ADMIN_ONBOARDING_KEY,
   ];
 
   for (const candidate of candidates) {
@@ -62,10 +61,14 @@ export async function completeSuperAdminOnboardingAction(formData: FormData) {
     await supabase.from("profiles").update({ display_name: displayName }).eq("id", user.id);
   }
 
-  // Role promotion.
-  const { data: beforeRole } = await supabase.from("profiles").select("global_role").eq("id", user.id).maybeSingle();
+  const admin = createSupabaseAdminClient();
+  const { data: beforeRole } = await admin
+    .from("profiles")
+    .select("global_role")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  await supabase.from("profiles").update({ global_role: "super_admin" }).eq("id", user.id);
+  await admin.from("profiles").update({ global_role: "super_admin" }).eq("id", user.id);
 
   try {
     const { insertAuditRow } = await import("@/modules/admin/audit-log");

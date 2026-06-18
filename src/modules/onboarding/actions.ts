@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { normalizePlayerCategoryId } from "@/domain/rules/player-category";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function completeOnboardingAction(formData: FormData) {
@@ -9,7 +10,6 @@ export async function completeOnboardingAction(formData: FormData) {
   const displayName = String(formData.get("displayName") ?? "").trim();
   const city = String(formData.get("city") ?? "Tunis").trim();
   const phone = String(formData.get("phone") ?? "").trim();
-  const phoneVerifiedFlag = String(formData.get("phoneVerified") ?? "") === "1";
   const rawLevel = String(formData.get("level") ?? "p25");
   const rawGender = String(formData.get("gender") ?? "").trim();
   const gender =
@@ -28,11 +28,11 @@ export async function completeOnboardingAction(formData: FormData) {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!existingProfile?.phone_verified_at && !phoneVerifiedFlag) {
+  if (!existingProfile?.phone_verified_at) {
     redirect(`/${locale}/onboarding?error=phone_not_verified`);
   }
 
-  const phoneVerified = Boolean(existingProfile?.phone_verified_at || phoneVerifiedFlag);
+  const phoneVerified = Boolean(existingProfile.phone_verified_at);
 
   // Calculate trust score
   let trustScore = 50; // Base score
@@ -74,8 +74,9 @@ export async function completeOnboardingAction(formData: FormData) {
     gender,
   };
 
-  // Avoid upsert here: some environments can keep stale schema cache for conflict keys.
-  let { data: updatedRows, error: updateError } = await supabase
+  // Colonnes sensibles (trust_score, verification_level) via client admin serveur uniquement.
+  const admin = createSupabaseAdminClient();
+  let { data: updatedRows, error: updateError } = await admin
     .from("profiles")
     .update(profilePayload)
     .eq("id", user.id)
@@ -83,7 +84,7 @@ export async function completeOnboardingAction(formData: FormData) {
 
   const updateDiagnostic = `${updateError?.message ?? ""}`.toLowerCase();
   if (updateError && updateDiagnostic.includes("verification_level")) {
-    const retry = await supabase
+    const retry = await admin
       .from("profiles")
       .update(fallbackProfilePayload)
       .eq("id", user.id)
@@ -94,15 +95,14 @@ export async function completeOnboardingAction(formData: FormData) {
 
   if (updateError && `${updateError.message}`.toLowerCase().includes("gender")) {
     const { gender: _omit, ...noGender } = profilePayload;
-    const retry = await supabase.from("profiles").update(noGender).eq("id", user.id).select("id");
+    const retry = await admin.from("profiles").update(noGender).eq("id", user.id).select("id");
     updatedRows = retry.data;
     updateError = retry.error;
   }
 
   if (updateError) {
     console.error("Onboarding update error:", updateError);
-    const encodedError = encodeURIComponent(updateError.message);
-    redirect(`/${locale}/onboarding?error=${encodedError}`);
+    redirect(`/${locale}/onboarding?error=update_failed`);
   }
 
   if (!updatedRows || updatedRows.length === 0) {
@@ -130,8 +130,7 @@ export async function completeOnboardingAction(formData: FormData) {
 
     if (insertError) {
       console.error("Onboarding insert error:", insertError);
-      const encodedError = encodeURIComponent(insertError.message);
-      redirect(`/${locale}/onboarding?error=${encodedError}`);
+      redirect(`/${locale}/onboarding?error=update_failed`);
     }
   }
 

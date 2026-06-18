@@ -56,6 +56,33 @@
   .glass-gold {
     @apply bg-surface/80 backdrop-blur-xl border border-gold/20 shadow-gold;
   }
+  /* Mobile : blur GPU coûteux → fond quasi plein, taps plus réactifs */
+  @media (max-width: 768px) {
+    .glass,
+    .glass-gold {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: color-mix(in oklab, var(--surface) 94%, transparent);
+    }
+    .glass-gold {
+      background: color-mix(in oklab, var(--surface) 94%, var(--gold) 6%);
+    }
+  }
+  .tap-target {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    transition:
+      transform 0.08s ease-out,
+      opacity 0.08s ease-out,
+      background-color 0.15s ease-out,
+      border-color 0.15s ease-out,
+      color 0.15s ease-out;
+  }
+  .tap-target:active {
+    transform: scale(0.97);
+    opacity: 0.92;
+  }
   .border-gold-glow {
     @apply border border-gold/30 shadow-gold/20;
   }

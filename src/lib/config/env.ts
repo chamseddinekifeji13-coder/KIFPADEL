@@ -222,3 +222,14 @@ export const serverEnv = {
     return resolveSupabaseServiceRoleKey();
   },
 };
+
+/** Recharge wallet sans passerelle — interdit en production déployée. */
+export function isKifWalletAutoCompleteAllowed(): boolean {
+  if (process.env.KIF_WALLET_AUTO_COMPLETE_TOPUP !== "true") {
+    return false;
+  }
+  if (process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production") {
+    return false;
+  }
+  return true;
+}

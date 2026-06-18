@@ -38,7 +38,7 @@ export function Button({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-bold uppercase tracking-wide transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-bold uppercase tracking-wide tap-target transition-[transform,background-color,border-color,color,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],
         className,
       )}

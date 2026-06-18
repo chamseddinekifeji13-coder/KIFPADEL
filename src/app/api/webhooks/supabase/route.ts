@@ -1,16 +1,32 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
+function isAuthorizedWebhook(request: Request): boolean {
+  const expected = process.env.SUPABASE_WEBHOOK_SECRET?.trim();
+  if (!expected) {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  const provided =
+    request.headers.get("x-kif-webhook-secret") ??
+    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
+    "";
+
+  return provided.length > 0 && provided === expected;
+}
+
 /**
  * Webhook handler for Supabase Auth events.
  * Listens for new user creation in auth.users and creates a corresponding profile.
  */
 export async function POST(request: Request) {
+  if (!isAuthorizedWebhook(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const payload = await request.json();
 
-    // Supabase Webhooks for Database changes follow this structure
-    // We filter for INSERT events on the auth.users table
     if (payload.table === "users" && payload.type === "INSERT") {
       const user = payload.record;
       const adminClient = createSupabaseAdminClient();
