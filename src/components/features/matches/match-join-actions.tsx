@@ -71,6 +71,12 @@ export function MatchJoinActions({
   const teamBFull = teamBCount >= 2;
   const matchFull = teamACount + teamBCount >= 4;
   const price = Number.isFinite(sharePrice) ? sharePrice : 0;
+  const readyToConfirm = paymentMethod !== null && commitmentChecked;
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const commitmentText = labels.commitmentLabel
+    .replace("{price}", String(price))
+    .replace("{club}", clubName);
 
   const onJoin = (team: "A" | "B") => {
     startTransition(async () => {
@@ -87,12 +93,14 @@ export function MatchJoinActions({
   };
 
   const onConfirm = () => {
+    setFormError(null);
+
     if (!paymentMethod) {
-      alert(labels.paymentRequired);
+      setFormError(labels.paymentRequired);
       return;
     }
     if (!commitmentChecked) {
-      alert(labels.commitmentRequired);
+      setFormError(labels.commitmentRequired);
       return;
     }
 
@@ -101,12 +109,13 @@ export function MatchJoinActions({
         locale,
         matchId,
         paymentMethod,
+        paymentCommitment: true,
       });
       if (res.ok) {
         router.push(`/${locale}/matches/${matchId}?confirmed=1`);
         router.refresh();
       } else {
-        alert(res.error);
+        setFormError(res.error);
       }
     });
   };
@@ -165,32 +174,61 @@ export function MatchJoinActions({
 
         <PaymentMethodSelector
           selected={paymentMethod}
-          onSelect={setPaymentMethod}
+          onSelect={(method) => {
+            setPaymentMethod(method);
+            setFormError(null);
+          }}
           isRestricted={false}
           price={price}
           priceLabel={locale === "en" ? "Your share" : "Votre part"}
         />
 
-        <label className="flex items-start gap-3 text-sm text-white/90 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={commitmentChecked}
-            onChange={(e) => setCommitmentChecked(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-white/30 accent-[var(--gold)]"
-          />
-          <span>
-            {labels.commitmentLabel
-              .replace("{price}", String(price))
-              .replace("{club}", clubName)}
+        <button
+          type="button"
+          onClick={() => {
+            setCommitmentChecked((checked) => !checked);
+            setFormError(null);
+          }}
+          className={`w-full rounded-xl border-2 p-4 text-left transition-colors touch-manipulation ${
+            commitmentChecked
+              ? "border-gold bg-gold/10"
+              : "border-white/20 bg-white/5 hover:border-white/35"
+          }`}
+          aria-pressed={commitmentChecked}
+        >
+          <span className="flex items-start gap-3 text-sm text-white/90">
+            <span
+              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 ${
+                commitmentChecked
+                  ? "border-gold bg-gold text-black"
+                  : "border-white/40 bg-transparent"
+              }`}
+              aria-hidden="true"
+            >
+              {commitmentChecked ? "✓" : ""}
+            </span>
+            <span>{commitmentText}</span>
           </span>
-        </label>
+        </button>
+
+        {!commitmentChecked ? (
+          <p className="text-xs text-amber-100/80">
+            {locale === "en"
+              ? "Check the commitment above to enable confirmation."
+              : "Coche l’engagement ci-dessus pour activer la confirmation."}
+          </p>
+        ) : null}
+
+        {formError ? (
+          <p role="alert" className="text-sm font-medium text-red-300">{formError}</p>
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={pending}
+            disabled={pending || !readyToConfirm}
             onClick={onConfirm}
-            className="flex-1 min-w-[140px] min-h-11 rounded-xl bg-gold text-black text-sm font-bold disabled:opacity-40 touch-manipulation"
+            className="flex-1 min-w-[140px] min-h-11 rounded-xl bg-gold text-black text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
           >
             {pending ? labels.confirming : labels.confirmParticipation}
           </button>

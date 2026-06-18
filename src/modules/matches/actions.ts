@@ -383,6 +383,7 @@ export async function confirmMatchParticipationAction(input: {
   locale: string;
   matchId: string;
   paymentMethod: "online" | "on_site";
+  paymentCommitment: boolean;
 }): Promise<ConfirmMatchParticipationResult> {
   const loc = input.locale?.trim() || "fr";
   const matchId = input.matchId?.trim();
@@ -390,6 +391,10 @@ export async function confirmMatchParticipationAction(input: {
 
   if (!matchId || (paymentMethod !== "online" && paymentMethod !== "on_site")) {
     return { ok: false, error: "Données invalides." };
+  }
+
+  if (!input.paymentCommitment) {
+    return { ok: false, error: "Tu dois confirmer ton engagement de paiement envers le club." };
   }
 
   const supabase = await createSupabaseServerActionClient();
