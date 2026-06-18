@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { sanitizeHttpsUrl } from "@/lib/url/sanitize-https-url";
 import {
   optionalTrimmedString,
   parseNonNegativeInt,
@@ -47,6 +48,15 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
   const contactEmail = optionalTrimmedString(formData.get("contact_email"));
   const racketRentalEnabled = String(formData.get("racket_rental_enabled") ?? "") === "1";
   const racketPriceParsed = parsePositiveMoneyOrNull(formData.get("racket_rental_price_per_unit"));
+  const logoUrlRaw = String(formData.get("logo_url") ?? "").trim();
+  const logoUrl = logoUrlRaw.length > 0 ? sanitizeHttpsUrl(logoUrlRaw) : null;
+
+  if (logoUrlRaw.length > 0 && !logoUrl) {
+    return {
+      ok: false,
+      error: "URL du logo invalide — utilisez une adresse https:// complète.",
+    };
+  }
 
   if (!clubId || !name || !city) {
     return {
@@ -88,6 +98,7 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
       contact_name: contactName,
       contact_phone: contactPhone,
       contact_email: contactEmail,
+      logo_url: logoUrl,
       racket_rental_enabled: racketRentalEnabled,
       racket_rental_price_per_unit: racketRentalEnabled ? racketPriceParsed : null,
     })
@@ -101,6 +112,8 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
   revalidatePath(`/${locale}/club/settings`, "page");
   revalidatePath(`/${locale}/club/dashboard`, "page");
   revalidatePath(`/${locale}/book/${clubId}`, "page");
+  revalidatePath(`/${locale}/book`, "page");
+  revalidatePath(`/${locale}/clubs`, "page");
 
   return { ok: true };
 }

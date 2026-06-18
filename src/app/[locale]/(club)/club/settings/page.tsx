@@ -57,6 +57,7 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
     contactName: managed.contact_name ?? "",
     phone: managed.contact_phone ?? "",
     email: managed.contact_email ?? "",
+    logoUrlRaw: fullClub.logo_url ?? "",
     racketRentalEnabled: fullClub.racket_rental_enabled,
     racketRentalPriceRaw:
       fullClub.racket_rental_price_per_unit != null

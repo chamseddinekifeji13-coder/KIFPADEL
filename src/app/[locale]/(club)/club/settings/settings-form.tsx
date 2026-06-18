@@ -16,6 +16,7 @@ import {
   User,
   Dumbbell,
   Coins,
+  ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { updateClubBasicsAction } from "@/modules/clubs/actions/update-club-basics";
@@ -30,6 +31,8 @@ type Settings = {
   contactName: string;
   phone: string;
   email: string;
+  /** URL HTTPS du logo (champ libre, validé côté serveur). */
+  logoUrlRaw: string;
   racketRentalEnabled: boolean;
   /** Champ libre prix unitaire DT (parsé côté serveur). */
   racketRentalPriceRaw: string;
@@ -71,6 +74,7 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
     fd.set("contact_name", settings.contactName);
     fd.set("contact_phone", settings.phone);
     fd.set("contact_email", settings.email);
+    fd.set("logo_url", settings.logoUrlRaw.trim());
     fd.set("racket_rental_enabled", settings.racketRentalEnabled ? "1" : "0");
     fd.set("racket_rental_price_per_unit", settings.racketRentalPriceRaw.trim());
 
@@ -166,6 +170,33 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
               value={settings.email}
               onChange={(v) => updateSetting("email", v)}
             />
+          </div>
+          <div className="space-y-3 pt-2 border-t border-[var(--border)]">
+            <InputField
+              label="URL du logo (https)"
+              icon={ImageIcon}
+              type="url"
+              placeholder="https://…/logo.png"
+              value={settings.logoUrlRaw}
+              onChange={(v) => updateSetting("logoUrlRaw", v)}
+            />
+            <p className="text-[10px] text-[var(--foreground-muted)] leading-relaxed">
+              Hébergez l&apos;image sur Supabase Storage, votre site ou un CDN. Format conseillé&nbsp;:
+              PNG/WebP, ratio 16:9 ou carré, fond sombre ou transparent.
+            </p>
+            {settings.logoUrlRaw.trim() ? (
+              <div className="relative aspect-video max-w-sm overflow-hidden rounded-xl border border-[var(--border)] bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={settings.logoUrlRaw.trim()}
+                  alt="Aperçu logo"
+                  className="h-full w-full object-cover opacity-90"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -393,6 +424,7 @@ function InputField({
   type = "text",
   inputMode,
   autoComplete,
+  placeholder,
 }: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -401,6 +433,7 @@ function InputField({
   type?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   autoComplete?: string;
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -413,6 +446,7 @@ function InputField({
           type={type}
           inputMode={inputMode}
           autoComplete={autoComplete}
+          placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full h-11 pl-10 pr-4 rounded-xl bg-[var(--background)] border border-[var(--border)] text-white text-sm focus:outline-none focus:border-[var(--gold)] transition-colors"
