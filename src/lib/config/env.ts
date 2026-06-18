@@ -103,9 +103,11 @@ function resolveSupabaseUrl(): string {
  * Resolve the public anon key.
  */
 function resolveSupabaseAnonKey(): string {
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-              process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
-              process.env.SUPABASE_ANON_KEY;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.SUPABASE_ANON_KEY;
               
   if (key) {
     return key.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "");
@@ -193,11 +195,14 @@ function resolveSupabaseServiceRoleKey(): string {
     return cachedSupabaseServiceRoleKey;
   }
 
-  const picked = firstNonEmpty("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY");
+  const picked = firstNonEmpty(
+    "SUPABASE_SECRET_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  );
   const raw =
     picked?.value ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
     "";
 
   const cleaned = raw.replace(/\s+/g, "").replace(/^['"]+|['"]+$/g, "");

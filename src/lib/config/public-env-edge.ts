@@ -6,7 +6,9 @@ export function getEdgeSupabasePublicConfig(): {
   const rawUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\s+/g, "").replace(/\/+$/, "") ?? "";
   const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.replace(/\s+/g, "") ?? "";
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.replace(/\s+/g, "") ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.replace(/\s+/g, "") ||
+    "";
 
   if (!rawUrl || !anonKey) {
     throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
