@@ -72,7 +72,7 @@ export type TimeSlot = {
   isOpen: boolean;
 };
 
-export type PaymentMethod = "online" | "on_site";
+export type PaymentMethod = "wallet" | "on_site" | "online";
 
 export type Booking = {
   id: UUID;

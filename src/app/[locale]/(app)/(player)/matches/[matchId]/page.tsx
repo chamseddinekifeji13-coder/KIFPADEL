@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchMatchById } from "@/modules/matches/repository";
 import { playerService } from "@/modules/players/service";
 import { MatchJoinActions } from "@/components/features/matches/match-join-actions";
+import { fetchKifWalletBalance } from "@/modules/wallet/repository";
 import {
   isActiveMatchParticipantRow,
   resolveSharePrice,
@@ -45,8 +46,10 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
   let participationPhase: "none" | "pending" | "confirmed" = "none";
   let viewerTeam: "A" | "B" | null = null;
   let sharePrice = match.price_per_player;
+  let walletBalance = 0;
 
   if (user) {
+    walletBalance = await fetchKifWalletBalance(user.id);
     const profile = await playerService.getPlayerProfile(user.id);
     viewerGender = profile?.gender ?? null;
     const myRow = match.match_participants.find((p) => p.player_id === user.id);
@@ -174,6 +177,8 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
           viewerTeam={viewerTeam}
           sharePrice={sharePrice}
           clubName={match.clubName}
+          walletBalance={walletBalance}
+          walletHref={`/${locale}/profile/wallet`}
           isOpen={match.status === "open"}
           teamACount={teamA.length}
           teamBCount={teamB.length}

@@ -33,8 +33,11 @@ export function formatPaymentMethodLabel(
   locale: "fr" | "en" = "fr",
 ): string {
   const m = String(paymentMethod ?? "").toLowerCase();
+  if (m === "wallet") {
+    return locale === "en" ? "KIF tokens" : "Jetons KIF";
+  }
   if (m === "online") {
-    return locale === "en" ? "Online (pending)" : "En ligne (en attente)";
+    return locale === "en" ? "Online (legacy)" : "En ligne (ancien)";
   }
   return locale === "en" ? "At the club" : "Sur place au club";
 }

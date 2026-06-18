@@ -7,6 +7,7 @@ import {
   canJoinMatchByGenderRules,
   isValidTeamCompositionAfterJoin,
 } from "@/domain/rules/match-gender";
+import { normalizePaymentMethodForWallet } from "@/domain/rules/kif-wallet";
 import {
   isActiveMatchParticipantRow,
   resolveViewerParticipationPhase,
@@ -382,14 +383,14 @@ export async function joinOpenMatchAction(input: {
 export async function confirmMatchParticipationAction(input: {
   locale: string;
   matchId: string;
-  paymentMethod: "online" | "on_site";
+  paymentMethod: "wallet" | "on_site" | "online";
   paymentCommitment: boolean;
 }): Promise<ConfirmMatchParticipationResult> {
   const loc = input.locale?.trim() || "fr";
   const matchId = input.matchId?.trim();
-  const paymentMethod = input.paymentMethod;
+  const paymentMethod = normalizePaymentMethodForWallet(input.paymentMethod);
 
-  if (!matchId || (paymentMethod !== "online" && paymentMethod !== "on_site")) {
+  if (!matchId || (paymentMethod !== "wallet" && paymentMethod !== "on_site")) {
     return { ok: false, error: "Données invalides." };
   }
 
@@ -413,6 +414,41 @@ export async function confirmMatchParticipationAction(input: {
       return { ok: false, error: e.message };
     }
     throw e;
+  }
+
+  if (paymentMethod === "wallet") {
+    const { data: rpcRows, error: rpcError } = await supabase.rpc(
+      "confirm_match_participation_kif",
+      {
+        p_match_id: matchId,
+        p_payment_commitment: true,
+      },
+    );
+
+    if (rpcError) {
+      return { ok: false, error: rpcError.message || "Débit Jetons KIF impossible." };
+    }
+
+    const rpc = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as {
+      ok?: boolean;
+      error_code?: string;
+      error_message?: string;
+    } | null;
+
+    if (!rpc?.ok) {
+      if (rpc?.error_code === "INSUFFICIENT_BALANCE") {
+        return {
+          ok: false,
+          error: "Solde Jetons KIF insuffisant. Recharge ton wallet depuis ton profil.",
+        };
+      }
+      return { ok: false, error: rpc?.error_message || "Confirmation refusée." };
+    }
+
+    revalidatePath(`/${loc}/profile/wallet`);
+    revalidatePath(`/${loc}/play-now`);
+    revalidatePath(`/${loc}/matches/${matchId}`);
+    return { ok: true };
   }
 
   const { data: row, error: rowError } = await supabase
@@ -445,7 +481,7 @@ export async function confirmMatchParticipationAction(input: {
     .from("match_participants")
     .update({
       status: "confirmed",
-      payment_method: paymentMethod,
+      payment_method: "on_site",
       payment_committed_at: committedAt,
       updated_at: committedAt,
     })

@@ -279,6 +279,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               ? []
               : [{ label: labels.accountVerifyPhone, href: `/${locale}/profile/verify-phone` }]),
             { label: labels.accountPersonalInfo, href: `/${locale}/profile/edit` },
+            { label: labels.kifWalletTitle, href: `/${locale}/profile/wallet` },
             { label: labels.accountNotifications, href: `/${locale}/profile/notifications` },
             { label: labels.accountSupport, href: `/${locale}/support` },
           ].map((item) => (

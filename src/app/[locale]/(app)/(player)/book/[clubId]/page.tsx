@@ -16,6 +16,7 @@ import { ClubAlertSubscribe } from "@/components/features/clubs/club-alert-subsc
 import type { Metadata } from "next";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { formatClubCourtsSummary } from "@/lib/utils/club-display";
+import { fetchKifWalletBalance } from "@/modules/wallet/repository";
 import { isRacketRentalShownInBookingFlow } from "@/modules/bookings/racket-rental-pipeline";
 import { Mail, Phone, Building2, User } from "lucide-react";
 
@@ -104,6 +105,7 @@ export default async function ClubDetailPage({
   // Get player trust info
   const playerTrustScore = playerProfile?.trust_score ?? 70;
   const playerReliability = playerProfile?.reliability_status ?? "healthy";
+  const walletBalance = await fetchKifWalletBalance(userId);
 
   const racketOffered = isRacketRentalShownInBookingFlow(club);
   const racketUnitPrice = racketOffered ? Number(club.racket_rental_price_per_unit) : 0;
@@ -288,6 +290,8 @@ export default async function ClubDetailPage({
             racketPricePerUnit={racketUnitPrice}
             playerTrustScore={playerTrustScore}
             playerReliability={playerReliability}
+            walletBalance={walletBalance}
+            locale={locale}
           />
         </section>
       </div>

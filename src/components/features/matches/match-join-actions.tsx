@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { PaymentMethodSelector } from "@/components/features/bookings/payment-method-selector";
+import { PaymentMethodSelector, type PlayerPaymentMethod } from "@/components/features/bookings/payment-method-selector";
 import {
   confirmMatchParticipationAction,
   declineMatchParticipationAction,
@@ -21,6 +21,8 @@ type Props = {
   viewerTeam?: "A" | "B" | null;
   sharePrice: number;
   clubName: string;
+  walletBalance: number;
+  walletHref: string;
   isOpen: boolean;
   teamACount: number;
   teamBCount: number;
@@ -56,6 +58,8 @@ export function MatchJoinActions({
   viewerTeam,
   sharePrice,
   clubName,
+  walletBalance,
+  walletHref,
   isOpen,
   teamACount,
   teamBCount,
@@ -63,7 +67,7 @@ export function MatchJoinActions({
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PlayerPaymentMethod | null>(null);
   const [commitmentChecked, setCommitmentChecked] = useState(false);
 
   const canJoin = canJoinMatchByGenderRules(viewerGender, matchType);
@@ -71,7 +75,11 @@ export function MatchJoinActions({
   const teamBFull = teamBCount >= 2;
   const matchFull = teamACount + teamBCount >= 4;
   const price = Number.isFinite(sharePrice) ? sharePrice : 0;
-  const readyToConfirm = paymentMethod !== null && commitmentChecked;
+  const balance = Number.isFinite(walletBalance) ? walletBalance : 0;
+  const readyToConfirm =
+    paymentMethod !== null &&
+    commitmentChecked &&
+    (paymentMethod === "on_site" || price <= 0 || balance >= price);
   const [formError, setFormError] = useState<string | null>(null);
 
   const commitmentText = labels.commitmentLabel
@@ -101,6 +109,14 @@ export function MatchJoinActions({
     }
     if (!commitmentChecked) {
       setFormError(labels.commitmentRequired);
+      return;
+    }
+    if (paymentMethod === "wallet" && price > 0 && balance < price) {
+      setFormError(
+        locale === "en"
+          ? "Insufficient KIF balance. Top up your wallet."
+          : "Solde Jetons KIF insuffisant. Recharge ton wallet.",
+      );
       return;
     }
 
@@ -181,6 +197,9 @@ export function MatchJoinActions({
           isRestricted={false}
           price={price}
           priceLabel={locale === "en" ? "Your share" : "Votre part"}
+          walletBalance={balance}
+          walletHref={walletHref}
+          locale={locale}
         />
 
         <button

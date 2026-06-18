@@ -21,6 +21,7 @@ function statusLabel(status: string, labels: Record<string, string>) {
 }
 
 function paymentLabel(method: string | null | undefined, labels: Record<string, string>) {
+  if (method === "wallet") return labels.paymentKifTokens ?? labels.paymentOnline;
   if (method === "online") return labels.paymentOnline;
   if (method === "on_site") return labels.paymentAtClub;
   return labels.paymentUnknown;

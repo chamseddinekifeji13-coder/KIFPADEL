@@ -23,7 +23,7 @@ export function normalizeMatchParticipantStatus(
 
 function hasPaymentMethod(method: string | null | undefined): boolean {
   const m = String(method ?? "").trim().toLowerCase();
-  return m === "online" || m === "on_site";
+  return m === "wallet" || m === "online" || m === "on_site";
 }
 
 /**

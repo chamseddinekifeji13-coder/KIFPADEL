@@ -219,5 +219,20 @@
   "matchAlreadyJoined": "You are registered for this match.",
   "playNowMyMatchesSectionTitle": "My open matches",
   "genericPlayerName": "Player",
-  "defaultLeagueLabel": "P25"
+  "defaultLeagueLabel": "P25",
+  "kifWalletTitle": "KIF tokens",
+  "kifWalletSubtitle": "Top up and spend tokens to book courts or confirm matches instantly.",
+  "kifWalletBalanceLabel": "Available balance",
+  "kifWalletBalanceHint": "1 token = 1 DT of play on Kifpadel.",
+  "kifWalletTopUpTitle": "Top up",
+  "kifWalletTopUpSubtitle": "Pick a pack. Tokens are credited to your account.",
+  "kifWalletTopUpCta": "Buy",
+  "kifWalletTopUpBuying": "Processing…",
+  "kifWalletTopUpSuccess": "Tokens credited",
+  "kifWalletTopUpPending": "Request saved — payment gateway coming soon.",
+  "kifWalletTopUpError": "Top-up failed.",
+  "kifWalletBonusLabel": "bonus",
+  "kifWalletHistoryTitle": "History",
+  "kifWalletHistoryEmpty": "No transactions yet.",
+  "paymentKifTokens": "KIF tokens"
 }

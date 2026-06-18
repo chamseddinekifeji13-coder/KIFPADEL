@@ -219,5 +219,20 @@
   "matchAlreadyJoined": "Tu es inscrit sur ce match.",
   "playNowMyMatchesSectionTitle": "Mes matchs ouverts",
   "genericPlayerName": "Joueur",
-  "defaultLeagueLabel": "P25"
+  "defaultLeagueLabel": "P25",
+  "kifWalletTitle": "Jetons KIF",
+  "kifWalletSubtitle": "Recharge et utilise tes jetons pour réserver un terrain ou confirmer un match instantanément.",
+  "kifWalletBalanceLabel": "Solde disponible",
+  "kifWalletBalanceHint": "1 jeton = 1 DT de jeu sur Kifpadel.",
+  "kifWalletTopUpTitle": "Recharger",
+  "kifWalletTopUpSubtitle": "Choisis un pack. Les jetons sont crédités sur ton compte.",
+  "kifWalletTopUpCta": "Acheter",
+  "kifWalletTopUpBuying": "Traitement…",
+  "kifWalletTopUpSuccess": "Jetons crédités",
+  "kifWalletTopUpPending": "Demande enregistrée — finalisation paiement bientôt disponible.",
+  "kifWalletTopUpError": "Recharge impossible.",
+  "kifWalletBonusLabel": "bonus",
+  "kifWalletHistoryTitle": "Historique",
+  "kifWalletHistoryEmpty": "Aucune transaction pour le moment.",
+  "paymentKifTokens": "Jetons KIF"
 }

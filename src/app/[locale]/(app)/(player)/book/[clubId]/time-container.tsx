@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TimeSlotGrid } from "@/components/features/bookings/time-slot-grid";
-import { PaymentMethodSelector } from "@/components/features/bookings/payment-method-selector";
+import { PaymentMethodSelector, type PlayerPaymentMethod } from "@/components/features/bookings/payment-method-selector";
 import { BookingConfirmSheet } from "@/components/features/bookings/booking-confirm-sheet";
 import { type TimeSlot } from "@/modules/bookings/availability-service";
 import { buildTunisSlotTimestamps } from "@/modules/bookings/timezone";
@@ -22,6 +22,8 @@ interface TimeContainerProps {
   racketPricePerUnit?: number;
   playerTrustScore?: number;
   playerReliability?: string;
+  walletBalance?: number;
+  locale?: string;
 }
 
 export function TimeContainer({
@@ -34,13 +36,15 @@ export function TimeContainer({
   racketPricePerUnit = 0,
   playerTrustScore = 70,
   playerReliability = "healthy",
+  walletBalance = 0,
+  locale = "fr",
 }: TimeContainerProps) {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
 
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [rentRacket, setRentRacket] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "on_site" | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PlayerPaymentMethod | null>(null);
   const [showConfirmSheet, setShowConfirmSheet] = useState(false);
   const [bookingState, setBookingState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -77,8 +81,8 @@ export function TimeContainer({
 
   const handleBookingClick = () => {
     if (isBlacklisted) return;
-    if (isRestricted && paymentMethod !== "online") {
-      setPaymentMethod("online");
+    if (isRestricted && paymentMethod !== "wallet") {
+      setPaymentMethod("wallet");
     }
     setBookingState("idle");
     setErrorMessage(null);
@@ -204,7 +208,10 @@ export function TimeContainer({
               onSelect={setPaymentMethod}
               isRestricted={isRestricted}
               price={totalPrice}
-              priceLabel="Votre part"
+              priceLabel={locale === "en" ? "Your share" : "Votre part"}
+              walletBalance={walletBalance}
+              walletHref={`/${locale}/profile/wallet`}
+              locale={locale}
             />
 
             <div className="flex items-center justify-between gap-4">

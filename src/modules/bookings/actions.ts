@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import {
   isBookingRpcSuccess,
@@ -17,6 +18,7 @@ import {
 } from "@/modules/compliance/new-account-gates";
 import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { isRacketRentalBookingPipelineReady } from "@/modules/bookings/racket-rental-pipeline";
+import { normalizePaymentMethodForWallet } from "@/domain/rules/kif-wallet";
 import { notifyBookingCreated } from "@/modules/notifications/booking-created";
 
 /** Erreur PostgREST / PG quand la RPC attendue (10 args + raquettes) n’est pas déployée. */
@@ -44,6 +46,7 @@ export type BookingResult =
         | "UNAUTHORIZED"
         | "SERVER_ERROR"
         | "PLAYER_SUSPENDED"
+        | "INSUFFICIENT_BALANCE"
         | "PLAYER_HAS_PENDING_DEBT";
     };
 
@@ -52,7 +55,7 @@ export type CreateBookingInput = {
   courtId: string;
   startsAt: string;
   endsAt: string;
-  paymentMethod: "online" | "on_site";
+  paymentMethod: "wallet" | "on_site" | "online";
   /** Quantité demandée ; le serveur peut la ramener à 0 si l’offre n’est pas valide. */
   racketRentalQty?: number;
   /** Pour diagnostic uniquement — jamais utilisé comme montant facturé. */
@@ -97,6 +100,13 @@ function mapBookingRpcFailure(row: BookingRpcRow | null): BookingResult {
       error:
         "Schéma base de données incompatible (réservation). L’administrateur doit appliquer les migrations Supabase récentes.",
       code: "SERVER_ERROR",
+    };
+  }
+  if (code === "INSUFFICIENT_BALANCE") {
+    return {
+      ok: false,
+      error: "Solde Jetons KIF insuffisant. Recharge ton wallet depuis ton profil.",
+      code: "INSUFFICIENT_BALANCE",
     };
   }
   if (code === "UNAUTHORIZED") {
@@ -298,7 +308,8 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     return { ok: false, error: "Impossible de calculer le montant de la réservation.", code: "SERVER_ERROR" };
   }
 
-  const bookingStatus = input.paymentMethod === "online" ? "pending" : "confirmed";
+  const paymentMethod = normalizePaymentMethodForWallet(input.paymentMethod);
+  const bookingStatus = paymentMethod === "wallet" ? "confirmed" : "confirmed";
 
   const rpcWithRackets = {
     p_club_id: input.clubId,
@@ -307,7 +318,7 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     p_starts_at: input.startsAt,
     p_ends_at: input.endsAt,
     p_total_price: totals.totalPrice,
-    p_payment_method: input.paymentMethod,
+    p_payment_method: paymentMethod,
     p_status: bookingStatus,
     p_racket_rental_qty: totals.racketRentalQty,
     p_racket_rental_fee: totals.racketFee,
@@ -320,7 +331,7 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     p_starts_at: input.startsAt,
     p_ends_at: input.endsAt,
     p_total_price: totals.totalPrice,
-    p_payment_method: input.paymentMethod,
+    p_payment_method: paymentMethod,
     p_status: bookingStatus,
   };
 
@@ -375,6 +386,11 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
   void notifyBookingCreated({ bookingId, playerId: user.id }).catch((err) =>
     console.error("[createBookingAction] notifyBookingCreated failed", err),
   );
+
+  if (paymentMethod === "wallet") {
+    revalidatePath("/fr/profile/wallet");
+    revalidatePath("/en/profile/wallet");
+  }
 
   return { ok: true, bookingId };
 }
