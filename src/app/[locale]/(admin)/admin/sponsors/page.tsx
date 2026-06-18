@@ -53,7 +53,17 @@ export default async function AdminSponsorsPage({ params }: AdminSponsorsPagePro
         {sponsors.map((s) => (
           <Card key={s.id} className="p-5 border-slate-100 space-y-4">
             <div className="flex justify-between items-start gap-2">
-              <div>
+              <div className="flex gap-3 items-start">
+                {s.logo_url ? (
+                  <div className="h-14 w-20 shrink-0 rounded-lg border border-slate-200 bg-white p-2 flex items-center justify-center">
+                    <img
+                      src={s.logo_url}
+                      alt={s.name}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                ) : null}
+                <div>
                 <h4 className="font-black text-slate-900">{s.name}</h4>
                 <p className="text-[10px] font-mono text-slate-400">{s.id}</p>
                 <p className="text-xs mt-1">
@@ -62,6 +72,7 @@ export default async function AdminSponsorsPage({ params }: AdminSponsorsPagePro
                   </span>
                   {" · "}position {s.position}
                 </p>
+                </div>
               </div>
               <form action={adminToggleSponsorActiveAction}>
                 <input type="hidden" name="locale" value={locale} />

@@ -15,6 +15,42 @@ export type SponsorRow = {
   created_at: string;
 };
 
+function mapSponsorRow(r: Record<string, unknown>): SponsorRow {
+  return {
+    id: String(r.id),
+    name: String(r.name),
+    logo_url: r.logo_url != null ? String(r.logo_url) : null,
+    website_url: r.website_url != null ? String(r.website_url) : null,
+    is_active: Boolean(r.is_active),
+    position: Number(r.position ?? 0),
+    created_at: String(r.created_at),
+  };
+}
+
+/** Sponsors actifs pour l’affichage joueur (RLS : is_active uniquement). */
+export async function listActiveSponsorsForPublic(): Promise<SponsorRow[]> {
+  const supabase = await createSupabaseServerClient();
+  try {
+    const { data, error } = await supabase
+      .from("sponsors")
+      .select("id, name, logo_url, website_url, is_active, position, created_at")
+      .eq("is_active", true)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.warn("[sponsors.listActiveSponsorsForPublic]", error.message);
+      return [];
+    }
+
+    return (data ?? []).map((r) => mapSponsorRow(r as Record<string, unknown>));
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[sponsors.listActiveSponsorsForPublic]", err);
+    return [];
+  }
+}
+
 export async function listAllSponsorsForAdmin(): Promise<SponsorRow[]> {
   const supabase = await createSupabaseServerClient();
   try {
@@ -29,15 +65,7 @@ export async function listAllSponsorsForAdmin(): Promise<SponsorRow[]> {
       return [];
     }
 
-    return (data ?? []).map((r: Record<string, unknown>) => ({
-      id: String(r.id),
-      name: String(r.name),
-      logo_url: r.logo_url != null ? String(r.logo_url) : null,
-      website_url: r.website_url != null ? String(r.website_url) : null,
-      is_active: Boolean(r.is_active),
-      position: Number(r.position ?? 0),
-      created_at: String(r.created_at),
-    }));
+    return (data ?? []).map((r) => mapSponsorRow(r as Record<string, unknown>));
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[sponsors.listAllSponsorsForAdmin]", err);

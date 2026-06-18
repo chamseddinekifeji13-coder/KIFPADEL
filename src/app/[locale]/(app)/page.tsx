@@ -17,6 +17,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { SponsorPartnersStrip } from "@/components/features/sponsors/sponsor-partners-strip";
+import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
 
 type LocaleHomeProps = {
   params: Promise<{ locale: string }>;
@@ -52,6 +54,7 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   }
 
   const dictionary = await getDictionary(locale as Locale);
+  const sponsors = await listActiveSponsorsForPublic();
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isEn = locale === "en";
@@ -169,6 +172,12 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           </span>
         </Link>
       </div>
+
+      <SponsorPartnersStrip
+        sponsors={sponsors}
+        title={dictionary.common.sponsorsPartnersTitle}
+        className="pt-4"
+      />
 
       {/* Trust Indicator */}
       <div className="flex flex-col items-center justify-center space-y-6 pt-12 text-center opacity-80">

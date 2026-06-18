@@ -52,6 +52,8 @@ export async function adminCreateSponsorAction(formData: FormData): Promise<void
   }
 
   revalidatePath(`/${locale}/admin/sponsors`);
+  revalidatePath(`/${locale}`);
+  revalidatePath(`/${locale}/profile`);
 }
 
 export async function adminUpdateSponsorAction(formData: FormData): Promise<void> {
@@ -94,6 +96,8 @@ export async function adminUpdateSponsorAction(formData: FormData): Promise<void
   }
 
   revalidatePath(`/${locale}/admin/sponsors`);
+  revalidatePath(`/${locale}`);
+  revalidatePath(`/${locale}/profile`);
 }
 
 export async function adminToggleSponsorActiveAction(formData: FormData): Promise<void> {
@@ -127,4 +131,6 @@ export async function adminToggleSponsorActiveAction(formData: FormData): Promis
   }
 
   revalidatePath(`/${locale}/admin/sponsors`);
+  revalidatePath(`/${locale}`);
+  revalidatePath(`/${locale}/profile`);
 }

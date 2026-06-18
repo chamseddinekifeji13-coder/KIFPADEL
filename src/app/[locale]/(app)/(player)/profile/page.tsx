@@ -27,6 +27,8 @@ import {
   Shield,
 } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
+import { SponsorPartnersStrip } from "@/components/features/sponsors/sponsor-partners-strip";
+import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
 
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
@@ -63,12 +65,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     .maybeSingle();
   const phoneVerified = Boolean(phoneRow?.phone_verified_at);
 
-  const [topRivals, bookings, recentTournaments, managedClub, superAdminActor] = await Promise.all([
+  const [topRivals, bookings, recentTournaments, managedClub, superAdminActor, sponsors] =
+    await Promise.all([
     playerService.getTopRivals(user.id, 3),
     fetchBookingsForPlayer(user.id, 20),
     fetchRecentTournamentSummariesForPlayer(user.id, 5),
     clubService.getManagedClub(user.id),
     getSuperAdminActor(supabase),
+    listActiveSponsorsForPublic(),
   ]);
   const completedCount = bookings.filter((booking) => booking.status === "completed").length;
   const cancelledCount = bookings.filter((booking) => booking.status === "cancelled").length;
@@ -234,6 +238,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           </div>
         )}
       </section>
+
+      <SponsorPartnersStrip
+        sponsors={sponsors}
+        title={dictionary.common.sponsorsPartnersTitle}
+      />
 
       {/* Account Settings List */}
       <section id="account-settings" className="scroll-mt-6 space-y-3">
