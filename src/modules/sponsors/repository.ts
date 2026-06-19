@@ -100,6 +100,123 @@ export async function insertSponsorRow(
   return String((data as { id: string }).id);
 }
 
+export async function linkSponsorsToTournament(
+  supabase: SupabaseClient,
+  tournamentId: string,
+  sponsorIds: string[],
+): Promise<void> {
+  const uniqueIds = [...new Set(sponsorIds.filter(Boolean))];
+  if (uniqueIds.length === 0) {
+    return;
+  }
+
+  const { data: rows, error: fetchError } = await supabase
+    .from("sponsors")
+    .select("id, position")
+    .in("id", uniqueIds)
+    .eq("is_active", true);
+
+  if (fetchError) {
+    throw new Error(fetchError.message);
+  }
+
+  const valid = (rows ?? []) as { id: string; position: number }[];
+  if (valid.length === 0) {
+    return;
+  }
+
+  const positionById = new Map(valid.map((row) => [row.id, row.position]));
+  const ordered = uniqueIds.filter((id) => positionById.has(id));
+
+  const { error } = await supabase.from("tournament_sponsors").insert(
+    ordered.map((sponsorId, index) => ({
+      tournament_id: tournamentId,
+      sponsor_id: sponsorId,
+      position: positionById.get(sponsorId) ?? index,
+    })),
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+/** Sponsors du tournoi ; sinon sponsors globaux actifs. */
+export async function listSponsorsForTournamentDisplay(tournamentId: string): Promise<SponsorRow[]> {
+  const supabase = await createSupabaseServerClient();
+  try {
+    const { data, error } = await supabase
+      .from("tournament_sponsors")
+      .select(
+        "position, sponsors(id, name, logo_url, website_url, is_active, position, created_at)",
+      )
+      .eq("tournament_id", tournamentId)
+      .order("position", { ascending: true });
+
+    if (error) {
+      console.warn("[sponsors.listSponsorsForTournamentDisplay]", error.message);
+      return listActiveSponsorsForPublic();
+    }
+
+    const linked = (data ?? [])
+      .map((raw) => {
+        const row = raw as {
+          position?: number;
+          sponsors?: Record<string, unknown> | Record<string, unknown>[] | null;
+        };
+        const sponsor = Array.isArray(row.sponsors) ? row.sponsors[0] : row.sponsors;
+        if (!sponsor || sponsor.is_active === false) {
+          return null;
+        }
+        return mapSponsorRow(sponsor);
+      })
+      .filter((s): s is SponsorRow => s != null);
+
+    if (linked.length > 0) {
+      return linked;
+    }
+
+    return listActiveSponsorsForPublic();
+  } catch (err) {
+    rethrowFrameworkError(err);
+    return listActiveSponsorsForPublic();
+  }
+}
+
+export async function listSponsorsLinkedToTournament(tournamentId: string): Promise<SponsorRow[]> {
+  const supabase = await createSupabaseServerClient();
+  try {
+    const { data, error } = await supabase
+      .from("tournament_sponsors")
+      .select(
+        "position, sponsors(id, name, logo_url, website_url, is_active, position, created_at)",
+      )
+      .eq("tournament_id", tournamentId)
+      .order("position", { ascending: true });
+
+    if (error) {
+      console.warn("[sponsors.listSponsorsLinkedToTournament]", error.message);
+      return [];
+    }
+
+    return (data ?? [])
+      .map((raw) => {
+        const row = raw as {
+          sponsors?: Record<string, unknown> | Record<string, unknown>[] | null;
+        };
+        const sponsor = Array.isArray(row.sponsors) ? row.sponsors[0] : row.sponsors;
+        if (!sponsor) {
+          return null;
+        }
+        return mapSponsorRow(sponsor);
+      })
+      .filter((s): s is SponsorRow => s != null);
+  } catch (err) {
+    rethrowFrameworkError(err);
+    return [];
+  }
+}
+
 export async function updateSponsorPatch(
   supabase: SupabaseClient,
   input: {

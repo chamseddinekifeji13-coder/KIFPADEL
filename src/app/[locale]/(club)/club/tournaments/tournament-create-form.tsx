@@ -6,11 +6,13 @@ import { cn } from "@/lib/utils/cn";
 import type { TournamentFormat } from "@/domain/types/tournaments";
 import type { TournamentCategory } from "@/domain/rules/tournament-categories";
 import type { ClubInviteOption } from "@/modules/tournaments/repository";
+import type { SponsorRow } from "@/modules/sponsors/repository";
 import { createTournamentAction } from "@/modules/tournaments/actions";
 
 type Props = {
   locale: string;
   inviteClubOptions: ClubInviteOption[];
+  sponsorOptions: SponsorRow[];
 };
 
 const FORMAT_OPTIONS: { value: TournamentFormat; label: string; hint: string }[] = [
@@ -37,7 +39,7 @@ const CATEGORY_OPTIONS: { value: TournamentCategory; label: string }[] = [
   { value: "mixed", label: "Mixte" },
 ];
 
-export function TournamentCreateForm({ locale, inviteClubOptions }: Props) {
+export function TournamentCreateForm({ locale, inviteClubOptions, sponsorOptions }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -45,6 +47,7 @@ export function TournamentCreateForm({ locale, inviteClubOptions }: Props) {
   const [interclub, setInterclub] = useState(false);
   const [invitedClubIds, setInvitedClubIds] = useState<string[]>([]);
   const [categories, setCategories] = useState<TournamentCategory[]>([]);
+  const [sponsorIds, setSponsorIds] = useState<string[]>([]);
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [fee, setFee] = useState("");
@@ -74,6 +77,7 @@ export function TournamentCreateForm({ locale, inviteClubOptions }: Props) {
         interclub,
         invitedClubIds: interclub ? invitedClubIds : [],
         categories,
+        sponsorIds,
       });
       if (!res.ok) {
         setError(res.error);
@@ -162,6 +166,44 @@ export function TournamentCreateForm({ locale, inviteClubOptions }: Props) {
           })}
         </div>
       </div>
+      {sponsorOptions.length > 0 ? (
+        <div className="space-y-3 rounded-xl border border-[var(--border)] p-3">
+          <p className="text-[10px] font-bold uppercase text-[var(--foreground-muted)]">Sponsors</p>
+          <p className="text-[10px] text-[var(--foreground-muted)]">
+            Sélectionnez les partenaires à afficher sur l’écran TV de ce tournoi. Si aucun n’est
+            coché, les sponsors globaux de la plateforme seront affichés.
+          </p>
+          <div className="max-h-40 space-y-2 overflow-y-auto">
+            {sponsorOptions.map((sponsor) => {
+              const checked = sponsorIds.includes(sponsor.id);
+              return (
+                <label
+                  key={sponsor.id}
+                  className="flex items-center gap-3 text-xs text-white cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      setSponsorIds((prev) =>
+                        checked ? prev.filter((id) => id !== sponsor.id) : [...prev, sponsor.id],
+                      );
+                    }}
+                  />
+                  {sponsor.logo_url ? (
+                    <img
+                      src={sponsor.logo_url}
+                      alt=""
+                      className="h-8 w-16 object-contain rounded bg-white/5"
+                    />
+                  ) : null}
+                  <span>{sponsor.name}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       <div className="space-y-3 rounded-xl border border-[var(--border)] p-3">
         <label className="flex items-center gap-2 text-sm font-bold text-white">
           <input

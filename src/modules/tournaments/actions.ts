@@ -40,6 +40,7 @@ import {
   isClubAcceptedParticipant,
 } from "@/modules/tournaments/repository";
 import { enqueueTournamentAlerts } from "@/modules/notifications/alert-outbox";
+import { linkSponsorsToTournament } from "@/modules/sponsors/repository";
 
 export type ActionResult<T = void> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -116,6 +117,7 @@ export async function createTournamentAction(input: {
   interclub?: boolean;
   invitedClubIds?: string[];
   categories?: TournamentCategory[];
+  sponsorIds?: string[];
 }): Promise<ActionResult<{ tournamentId: string }>> {
   const loc = input.locale?.trim() || "fr";
   const supabase = await createSupabaseServerActionClient();
@@ -191,12 +193,26 @@ export async function createTournamentAction(input: {
     }
   }
 
+  const sponsorIds = [...new Set((input.sponsorIds ?? []).filter((id) => id?.trim()))];
+  if (sponsorIds.length > 0) {
+    try {
+      await linkSponsorsToTournament(supabase, tournamentId, sponsorIds);
+    } catch (err) {
+      await supabase.from("tournaments").delete().eq("id", tournamentId);
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Sponsors invalides.",
+      };
+    }
+  }
+
   const tournamentIdFromRow = tournamentId;
   if (input.initialStatus === "registration_open") {
     void enqueueTournamentAlerts(tournamentIdFromRow);
   }
   revalidatePath(`/${loc}/club/tournaments`);
   revalidatePath(`/${loc}/club/tournaments/${tournamentIdFromRow}`);
+  revalidatePath(`/${loc}/tournaments/${tournamentIdFromRow}/display`);
   return { ok: true, data: { tournamentId: tournamentIdFromRow } };
 }
 

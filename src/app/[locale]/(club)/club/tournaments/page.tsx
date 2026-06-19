@@ -4,6 +4,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
 import { listTournamentsForClub, listActiveClubsForTournamentInvite } from "@/modules/tournaments/repository";
+import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
 import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
 import { TournamentCreateForm } from "@/app/[locale]/(club)/club/tournaments/tournament-create-form";
 import Link from "next/link";
@@ -27,9 +28,10 @@ export default async function ClubTournamentsPage({ params }: Props) {
     );
   }
 
-  const [tournaments, inviteClubOptions] = await Promise.all([
+  const [tournaments, inviteClubOptions, sponsorOptions] = await Promise.all([
     listTournamentsForClub(managed.id),
     listActiveClubsForTournamentInvite(managed.id),
+    listActiveSponsorsForPublic(),
   ]);
 
   return (
@@ -40,7 +42,11 @@ export default async function ClubTournamentsPage({ params }: Props) {
       </header>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <TournamentCreateForm locale={locale} inviteClubOptions={inviteClubOptions} />
+        <TournamentCreateForm
+          locale={locale}
+          inviteClubOptions={inviteClubOptions}
+          sponsorOptions={sponsorOptions}
+        />
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-3">
           <h2 className="text-sm font-bold text-white">{labels.tournamentsListTitle}</h2>
           {tournaments.length === 0 ? (

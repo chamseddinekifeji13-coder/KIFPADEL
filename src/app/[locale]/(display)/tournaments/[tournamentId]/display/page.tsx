@@ -15,7 +15,7 @@ import {
   listSoloEntriesWithDisplayNames,
   listTournamentMatchesWithResults,
 } from "@/modules/tournaments/repository";
-import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
+import { listSponsorsForTournamentDisplay, listSponsorsLinkedToTournament } from "@/modules/sponsors/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +57,7 @@ export default async function TournamentDisplayPage({ params }: Props) {
     listSoloEntriesWithDisplayNames(tournamentId),
     listTournamentMatchesWithResults(tournamentId),
     listParticipatingClubsForTournament(tournamentId),
-    listActiveSponsorsForPublic(),
+    listSponsorsForTournamentDisplay(tournamentId),
   ]);
 
   const activeEntries = entries.filter((e) => e.status !== "withdrawn");

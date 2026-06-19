@@ -15,6 +15,8 @@ import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano
 import { parseTournamentCategories, tournamentCategoryLabel } from "@/domain/rules/tournament-categories";
 import { TournamentRegisterForm } from "@/app/[locale]/(app)/(player)/tournaments/[tournamentId]/tournament-register-form";
 import { TournamentSoloRegisterForm } from "@/app/[locale]/(app)/(player)/tournaments/[tournamentId]/tournament-solo-register-form";
+import { TournamentDisplaySponsorsBar } from "@/components/features/tournaments/tournament-display-sponsors-bar";
+import { listSponsorsForTournamentDisplay } from "@/modules/sponsors/repository";
 
 type Props = { params: Promise<{ locale: string; tournamentId: string }> };
 
@@ -59,6 +61,7 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
   const entries = await listEntriesWithDisplayNames(tournamentId);
   const soloEntries = await listSoloEntriesWithDisplayNames(tournamentId);
   const matches = await listTournamentMatchesWithResults(tournamentId);
+  const sponsors = await listSponsorsForTournamentDisplay(tournamentId);
   const configuredCategories = parseTournamentCategories(tournament.settings);
 
   let canRegister = false;
@@ -174,6 +177,14 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
           </ul>
         )}
       </section>
+
+      {sponsors.length > 0 ? (
+        <TournamentDisplaySponsorsBar
+          sponsors={sponsors}
+          title={dictionary.common.sponsorsPartnersTitle}
+          variant="inline-light"
+        />
+      ) : null}
     </div>
   );
 }

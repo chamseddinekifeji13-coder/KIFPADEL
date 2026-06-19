@@ -3,13 +3,23 @@ import type { SponsorRow } from "@/modules/sponsors/repository";
 type Props = {
   sponsors: SponsorRow[];
   title: string;
-  variant?: "tv" | "inline";
+  variant?: "tv" | "inline" | "inline-light";
 };
 
-function SponsorLogo({ sponsor, large }: { sponsor: SponsorRow; large?: boolean }) {
+function SponsorLogo({
+  sponsor,
+  large,
+  light,
+}: {
+  sponsor: SponsorRow;
+  large?: boolean;
+  light?: boolean;
+}) {
   const boxClass = large
     ? "flex h-20 w-44 items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-4 py-3"
-    : "flex h-16 w-[120px] items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2";
+    : light
+      ? "flex h-16 w-[120px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2"
+      : "flex h-16 w-[120px] items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2";
 
   const imgClass = large ? "max-h-14 max-w-full object-contain" : "max-h-12 max-w-full object-contain";
 
@@ -23,9 +33,9 @@ function SponsorLogo({ sponsor, large }: { sponsor: SponsorRow; large?: boolean 
     />
   ) : (
     <span
-      className={`font-bold uppercase tracking-wide text-white/70 text-center line-clamp-2 ${
+      className={`font-bold uppercase tracking-wide text-center line-clamp-2 ${
         large ? "text-xs" : "text-[10px]"
-      }`}
+      } ${light ? "text-slate-600" : "text-white/70"}`}
     >
       {sponsor.name}
     </span>
@@ -57,13 +67,20 @@ export function TournamentDisplaySponsorsBar({ sponsors, title, variant = "tv" }
     return null;
   }
 
-  if (variant === "inline") {
+  if (variant === "inline" || variant === "inline-light") {
+    const light = variant === "inline-light";
     return (
       <section className="space-y-3" aria-label={title}>
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{title}</p>
+        <p
+          className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+            light ? "text-slate-500" : "text-white/40"
+          }`}
+        >
+          {title}
+        </p>
         <div className="flex flex-wrap justify-center gap-4">
           {sponsors.map((sponsor) => (
-            <SponsorLogo key={sponsor.id} sponsor={sponsor} />
+            <SponsorLogo key={sponsor.id} sponsor={sponsor} light={light} />
           ))}
         </div>
       </section>

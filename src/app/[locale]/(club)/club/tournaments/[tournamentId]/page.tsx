@@ -17,6 +17,8 @@ import { canGenerateTournamentSchedule, parseTournamentCategories, tournamentCat
 import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
 import { TournamentStaffPanel } from "@/app/[locale]/(club)/club/tournaments/[tournamentId]/tournament-staff-panel";
 import { TournamentClubInvitePanel } from "@/app/[locale]/(club)/club/tournaments/[tournamentId]/tournament-club-invite-panel";
+import { TournamentDisplaySponsorsBar } from "@/components/features/tournaments/tournament-display-sponsors-bar";
+import { listSponsorsLinkedToTournament } from "@/modules/sponsors/repository";
 
 type Props = { params: Promise<{ locale: string; tournamentId: string }> };
 
@@ -41,12 +43,14 @@ export default async function ClubTournamentDetailPage({ params }: Props) {
 
   const isHost = accessRole === "host";
 
-  const [entries, soloEntries, matches, bracketCount, participatingClubs] = await Promise.all([
+  const [entries, soloEntries, matches, bracketCount, participatingClubs, tournamentSponsors] =
+    await Promise.all([
     listEntriesWithDisplayNames(tournamentId),
     listSoloEntriesWithDisplayNames(tournamentId),
     listTournamentMatchesWithResults(tournamentId),
     countBracketMatches(tournamentId),
     listParticipatingClubsForTournament(tournamentId),
+    listSponsorsLinkedToTournament(tournamentId),
   ]);
 
   const configuredCategories = parseTournamentCategories(tournament.settings);
@@ -94,6 +98,14 @@ export default async function ClubTournamentDetailPage({ params }: Props) {
             Ouvrir l’écran d’affichage (TV)
           </a>
         </p>
+      ) : null}
+
+      {tournamentSponsors.length > 0 ? (
+        <TournamentDisplaySponsorsBar
+          sponsors={tournamentSponsors}
+          title="Sponsors du tournoi"
+          variant="inline"
+        />
       ) : null}
 
       <TournamentClubInvitePanel
