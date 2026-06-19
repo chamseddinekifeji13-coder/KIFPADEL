@@ -17,8 +17,11 @@ import { canGenerateTournamentSchedule, parseTournamentCategories, tournamentCat
 import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
 import { TournamentStaffPanel } from "@/app/[locale]/(club)/club/tournaments/[tournamentId]/tournament-staff-panel";
 import { TournamentClubInvitePanel } from "@/app/[locale]/(club)/club/tournaments/[tournamentId]/tournament-club-invite-panel";
-import { TournamentDisplaySponsorsBar } from "@/components/features/tournaments/tournament-display-sponsors-bar";
-import { listSponsorsLinkedToTournament } from "@/modules/sponsors/repository";
+import { TournamentSponsorsPanel } from "@/app/[locale]/(club)/club/tournaments/[tournamentId]/tournament-sponsors-panel";
+import {
+  listActiveSponsorsForPublic,
+  listSponsorsLinkedToTournament,
+} from "@/modules/sponsors/repository";
 
 type Props = { params: Promise<{ locale: string; tournamentId: string }> };
 
@@ -43,7 +46,7 @@ export default async function ClubTournamentDetailPage({ params }: Props) {
 
   const isHost = accessRole === "host";
 
-  const [entries, soloEntries, matches, bracketCount, participatingClubs, tournamentSponsors] =
+  const [entries, soloEntries, matches, bracketCount, participatingClubs, tournamentSponsors, sponsorOptions] =
     await Promise.all([
     listEntriesWithDisplayNames(tournamentId),
     listSoloEntriesWithDisplayNames(tournamentId),
@@ -51,6 +54,7 @@ export default async function ClubTournamentDetailPage({ params }: Props) {
     countBracketMatches(tournamentId),
     listParticipatingClubsForTournament(tournamentId),
     listSponsorsLinkedToTournament(tournamentId),
+    listActiveSponsorsForPublic(),
   ]);
 
   const configuredCategories = parseTournamentCategories(tournament.settings);
@@ -100,13 +104,13 @@ export default async function ClubTournamentDetailPage({ params }: Props) {
         </p>
       ) : null}
 
-      {tournamentSponsors.length > 0 ? (
-        <TournamentDisplaySponsorsBar
-          sponsors={tournamentSponsors}
-          title="Sponsors du tournoi"
-          variant="inline"
-        />
-      ) : null}
+      <TournamentSponsorsPanel
+        locale={locale}
+        tournamentId={tournamentId}
+        sponsorOptions={sponsorOptions}
+        linkedSponsors={tournamentSponsors}
+        isHost={isHost}
+      />
 
       <TournamentClubInvitePanel
         locale={locale}

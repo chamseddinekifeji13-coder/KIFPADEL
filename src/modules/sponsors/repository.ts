@@ -141,6 +141,24 @@ export async function linkSponsorsToTournament(
   }
 }
 
+/** Remplace les sponsors liés à un tournoi (vide = sponsors globaux sur l'écran TV). */
+export async function replaceTournamentSponsors(
+  supabase: SupabaseClient,
+  tournamentId: string,
+  sponsorIds: string[],
+): Promise<void> {
+  const { error: deleteError } = await supabase
+    .from("tournament_sponsors")
+    .delete()
+    .eq("tournament_id", tournamentId);
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  await linkSponsorsToTournament(supabase, tournamentId, sponsorIds);
+}
+
 /** Sponsors du tournoi ; sinon sponsors globaux actifs. */
 export async function listSponsorsForTournamentDisplay(tournamentId: string): Promise<SponsorRow[]> {
   const supabase = await createSupabaseServerClient();

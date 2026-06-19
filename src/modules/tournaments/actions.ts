@@ -40,7 +40,7 @@ import {
   isClubAcceptedParticipant,
 } from "@/modules/tournaments/repository";
 import { enqueueTournamentAlerts } from "@/modules/notifications/alert-outbox";
-import { linkSponsorsToTournament } from "@/modules/sponsors/repository";
+import { linkSponsorsToTournament, replaceTournamentSponsors } from "@/modules/sponsors/repository";
 
 export type ActionResult<T = void> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -247,6 +247,41 @@ export async function respondTournamentClubInviteAction(input: {
   revalidatePath(`/${loc}/club/tournaments`);
   revalidatePath(`/${loc}/club/tournaments/${input.tournamentId}`);
   revalidatePath(`/${loc}/tournaments/${input.tournamentId}`);
+  return { ok: true };
+}
+
+export async function updateTournamentSponsorsAction(input: {
+  locale: string;
+  tournamentId: string;
+  sponsorIds: string[];
+}): Promise<ActionResult> {
+  const loc = input.locale?.trim() || "fr";
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Connexion requise." };
+
+  const tournament = await getTournamentById(input.tournamentId);
+  if (!tournament) return { ok: false, error: "Tournoi introuvable." };
+
+  const access = await requireStaffForClubOrSuperAdmin(supabase, user.id, tournament.clubId);
+  if (!access.ok) return access;
+
+  const sponsorIds = [...new Set((input.sponsorIds ?? []).filter((id) => id?.trim()))];
+
+  try {
+    await replaceTournamentSponsors(supabase, input.tournamentId, sponsorIds);
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Mise à jour des sponsors impossible.",
+    };
+  }
+
+  revalidatePath(`/${loc}/club/tournaments/${input.tournamentId}`);
+  revalidatePath(`/${loc}/tournaments/${input.tournamentId}`);
+  revalidatePath(`/${loc}/tournaments/${input.tournamentId}/display`);
   return { ok: true };
 }
 
