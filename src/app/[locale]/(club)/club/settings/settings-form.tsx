@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { updateClubBasicsAction } from "@/modules/clubs/actions/update-club-basics";
 import { uploadClubLogoAction } from "@/modules/clubs/actions/upload-club-logo";
+import type { NoShowDebtMode } from "@/domain/rules/club-financial-policy";
 
 type Settings = {
   clubId: string;
@@ -39,12 +40,16 @@ type Settings = {
   racketRentalEnabled: boolean;
   /** Champ libre prix unitaire DT (parsé côté serveur). */
   racketRentalPriceRaw: string;
+  noShowDebtMode: NoShowDebtMode;
+  noShowDebtPercent: number;
+  noShowDebtFixedRaw: string;
   allowPayOnSite: boolean;
   minTrustForPayOnSite: number;
   requirePhoneVerification: boolean;
   requireProfileComplete: boolean;
   freeCancellationHours: number;
   lateCancelPenalty: boolean;
+  lateCancelTrustPenalty: number;
   noShowPenaltyPoints: number;
   autoReportNoShow: boolean;
   noShowGracePeriodMinutes: number;
@@ -83,6 +88,19 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
     fd.set("logo_url", settings.logoUrlRaw.trim());
     fd.set("racket_rental_enabled", settings.racketRentalEnabled ? "1" : "0");
     fd.set("racket_rental_price_per_unit", settings.racketRentalPriceRaw.trim());
+    fd.set("no_show_debt_mode", settings.noShowDebtMode);
+    fd.set("no_show_debt_percent", String(settings.noShowDebtPercent));
+    fd.set("no_show_debt_fixed_dt", settings.noShowDebtFixedRaw.trim());
+    fd.set("no_show_trust_penalty", String(settings.noShowPenaltyPoints));
+    fd.set("no_show_grace_minutes", String(settings.noShowGracePeriodMinutes));
+    fd.set("no_show_auto_report", settings.autoReportNoShow ? "1" : "0");
+    fd.set("free_cancellation_hours", String(settings.freeCancellationHours));
+    fd.set("late_cancel_penalty_enabled", settings.lateCancelPenalty ? "1" : "0");
+    fd.set("late_cancel_trust_penalty", String(settings.lateCancelTrustPenalty));
+    fd.set("allow_pay_on_site", settings.allowPayOnSite ? "1" : "0");
+    fd.set("min_trust_for_pay_on_site", String(settings.minTrustForPayOnSite));
+    fd.set("require_phone_verification", settings.requirePhoneVerification ? "1" : "0");
+    fd.set("require_profile_complete", settings.requireProfileComplete ? "1" : "0");
 
     const result = await updateClubBasicsAction(fd);
 
@@ -311,24 +329,17 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
         </div>
       </section>
 
-      <p className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 px-4 py-3 text-xs text-[var(--foreground-muted)] flex gap-2">
-        <Info className="h-4 w-4 shrink-0 text-[var(--gold)] mt-0.5" />
-        <span>
-          Les sections « Politique de réservation » ci-dessous sont encore locales à cette page : elles ne sont pas
-          enregistrées en base. Les informations du club et la location de raquettes sont persistées lorsque vous
-          enregistrez.
-        </span>
-      </p>
-
       {/* Booking Policy */}
-      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden opacity-90">
+      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-[var(--border)] flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-[var(--gold)]/10 flex items-center justify-center">
             <CreditCard className="h-4 w-4 text-[var(--gold)]" />
           </div>
           <div>
             <h2 className="font-bold text-white">Politique de paiement</h2>
-            <p className="text-[10px] text-[var(--foreground-muted)]">Contrôlez qui peut payer sur place</p>
+            <p className="text-[10px] text-[var(--foreground-muted)]">
+              Enregistrée en base — règles de paiement sur place
+            </p>
           </div>
         </div>
         <div className="p-4 space-y-4">
@@ -387,14 +398,16 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
       </section>
 
       {/* Cancellation Policy */}
-      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden opacity-90">
+      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-[var(--border)] flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-[var(--warning)]/10 flex items-center justify-center">
             <Clock className="h-4 w-4 text-[var(--warning)]" />
           </div>
           <div>
             <h2 className="font-bold text-white">Politique d&apos;annulation</h2>
-            <p className="text-[10px] text-[var(--foreground-muted)]">Règles pour les annulations</p>
+            <p className="text-[10px] text-[var(--foreground-muted)]">
+              Enregistrée en base — délai d&apos;annulation gratuite
+            </p>
           </div>
         </div>
         <div className="p-4 space-y-4">
@@ -418,22 +431,84 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
       </section>
 
       {/* No-show Policy */}
-      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden opacity-90">
+      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-[var(--border)] flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-[var(--danger)]/10 flex items-center justify-center">
             <AlertTriangle className="h-4 w-4 text-[var(--danger)]" />
           </div>
           <div>
             <h2 className="font-bold text-white">Politique no-show</h2>
-            <p className="text-[10px] text-[var(--foreground-muted)]">Gérez les absences non signalées</p>
+            <p className="text-[10px] text-[var(--foreground-muted)]">
+              Enregistrée en base — pénalités financières et score de confiance
+            </p>
           </div>
         </div>
         <div className="p-4 space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-white">Pénalité financière (dette club)</p>
+            <p className="text-xs text-[var(--foreground-muted)]">
+              Montant dû par le joueur absent avant de pouvoir réserver à nouveau dans votre club
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(
+                [
+                  ["full_share", "Montant total de la place"],
+                  ["percent", "Pourcentage de la place"],
+                  ["fixed", "Montant fixe (DT)"],
+                  ["none", "Aucune dette financière"],
+                ] as const
+              ).map(([mode, label]) => (
+                <label
+                  key={mode}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-xs transition-colors",
+                    settings.noShowDebtMode === mode
+                      ? "border-[var(--gold)] bg-[var(--gold)]/10 text-white"
+                      : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--gold)]/40",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="no_show_debt_mode"
+                    className="accent-[var(--gold)]"
+                    checked={settings.noShowDebtMode === mode}
+                    onChange={() => updateSetting("noShowDebtMode", mode)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {settings.noShowDebtMode === "percent" ? (
+            <SliderField
+              label="Pourcentage de la place"
+              description="Part du prix de la place facturée en cas d'absence"
+              value={settings.noShowDebtPercent}
+              min={10}
+              max={100}
+              unit="%"
+              onChange={(v) => updateSetting("noShowDebtPercent", v)}
+            />
+          ) : null}
+
+          {settings.noShowDebtMode === "fixed" ? (
+            <InputField
+              label="Montant fixe (DT)"
+              icon={Coins}
+              type="text"
+              inputMode="decimal"
+              placeholder="ex. 25"
+              value={settings.noShowDebtFixedRaw}
+              onChange={(v) => updateSetting("noShowDebtFixedRaw", v)}
+            />
+          ) : null}
+
           <SliderField
-            label="Pénalité no-show"
-            description="Points trust retirés pour un no-show"
+            label="Pénalité score de confiance"
+            description="Points retirés du score trust plateforme pour un no-show"
             value={settings.noShowPenaltyPoints}
-            min={5}
+            min={0}
             max={30}
             unit=" pts"
             onChange={(v) => updateSetting("noShowPenaltyPoints", v)}
@@ -451,7 +526,7 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
 
           <ToggleField
             label="Signalement automatique"
-            description="Marquer automatiquement no-show après la période de grâce"
+            description="Marquer automatiquement no-show après la période de grâce (bientôt disponible)"
             checked={settings.autoReportNoShow}
             onChange={(v) => updateSetting("autoReportNoShow", v)}
           />
@@ -480,12 +555,12 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
           ) : saved ? (
             <>
               <CheckCircle2 className="h-4 w-4" />
-              Informations du club enregistrées
+              Informations et règlement enregistrés
             </>
           ) : (
             <>
               <Save className="h-4 w-4" />
-              Enregistrer la fiche club
+              Enregistrer les paramètres du club
             </>
           )}
         </button>

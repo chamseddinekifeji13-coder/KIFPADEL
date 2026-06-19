@@ -1,4 +1,8 @@
 import { resolveCourtPlayerPrice } from "@/domain/rules/court-pricing";
+import {
+  type ClubFinancialPolicy,
+  parseClubFinancialPolicy,
+} from "@/domain/rules/club-financial-policy";
 import { resolveBookingDurationMinutes } from "@/modules/bookings/constants";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -30,6 +34,7 @@ export interface Club {
   created_at: string;
   racket_rental_enabled: boolean;
   racket_rental_price_per_unit: number | null;
+  financial_policy: ClubFinancialPolicy;
 }
 
 type CourtRow = {
@@ -62,6 +67,21 @@ type ClubRow = Partial<Club> & {
   opening_time?: string | null;
   closing_time?: string | null;
   is_indoor?: boolean | null;
+  racket_rental_enabled?: boolean | null;
+  racket_rental_price_per_unit?: number | null;
+  no_show_debt_mode?: string | null;
+  no_show_debt_fixed_cents?: number | null;
+  no_show_debt_percent?: number | null;
+  no_show_trust_penalty?: number | null;
+  no_show_grace_minutes?: number | null;
+  no_show_auto_report?: boolean | null;
+  free_cancellation_hours?: number | null;
+  late_cancel_penalty_enabled?: boolean | null;
+  late_cancel_trust_penalty?: number | null;
+  allow_pay_on_site?: boolean | null;
+  min_trust_for_pay_on_site?: number | null;
+  require_phone_verification?: boolean | null;
+  require_profile_complete?: boolean | null;
 };
 
 type ManagedClubMembership = {
@@ -120,6 +140,7 @@ function normalizeClub(row: ClubRow): Club {
             const n = Number(row.racket_rental_price_per_unit);
             return Number.isFinite(n) ? n : null;
           })(),
+    financial_policy: parseClubFinancialPolicy(row),
   };
 }
 

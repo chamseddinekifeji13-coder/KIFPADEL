@@ -47,6 +47,8 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
     notFound();
   }
 
+  const policy = fullClub.financial_policy;
+
   const currentSettings = {
     clubId: managed.id,
     clubName: managed.name,
@@ -64,15 +66,22 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
         ? String(fullClub.racket_rental_price_per_unit)
         : "",
 
-    allowPayOnSite: true,
-    minTrustForPayOnSite: 70,
-    requirePhoneVerification: true,
-    requireProfileComplete: true,
-    freeCancellationHours: 24,
-    lateCancelPenalty: true,
-    noShowPenaltyPoints: 18,
-    autoReportNoShow: true,
-    noShowGracePeriodMinutes: 15,
+    noShowDebtMode: policy.noShowDebtMode,
+    noShowDebtPercent: policy.noShowDebtPercent,
+    noShowDebtFixedRaw:
+      policy.noShowDebtFixedCents != null
+        ? String((policy.noShowDebtFixedCents / 100).toFixed(2)).replace(/\.00$/, "")
+        : "",
+    allowPayOnSite: policy.allowPayOnSite,
+    minTrustForPayOnSite: policy.minTrustForPayOnSite,
+    requirePhoneVerification: policy.requirePhoneVerification,
+    requireProfileComplete: policy.requireProfileComplete,
+    freeCancellationHours: policy.freeCancellationHours,
+    lateCancelPenalty: policy.lateCancelPenaltyEnabled,
+    lateCancelTrustPenalty: policy.lateCancelTrustPenalty,
+    noShowPenaltyPoints: policy.noShowTrustPenalty,
+    autoReportNoShow: policy.noShowAutoReport,
+    noShowGracePeriodMinutes: policy.noShowGraceMinutes,
   };
 
   return (

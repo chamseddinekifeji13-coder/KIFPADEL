@@ -2,14 +2,35 @@
 
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { isParticipantPaymentPending } from "@/domain/rules/booking-participant";
+import {
+  deriveNoShowDebtAmountCents,
+  parseClubFinancialPolicy,
+  resolveNoShowTrustPenalty,
+} from "@/domain/rules/club-financial-policy";
 import { trustImpactFromEvent } from "@/domain/rules/trust";
-import { addTrustEvent } from "@/modules/players/repository";
-import { createClubDebt, deriveNoShowDebtAmountCents } from "@/modules/club-debts/service";
+import { createClubDebt } from "@/modules/club-debts/service";
 import { assertClubStaffCanManage } from "@/modules/clubs/actions/club-staff-guard";
+import { addTrustEvent } from "@/modules/players/repository";
 import {
   notifyParticipantNoShow,
   notifyParticipantPaymentConfirmed,
 } from "@/modules/notifications/participant-staff-events";
+
+const CLUB_FINANCIAL_POLICY_SELECT =
+  "no_show_debt_mode, no_show_debt_fixed_cents, no_show_debt_percent, no_show_trust_penalty, no_show_grace_minutes, no_show_auto_report, free_cancellation_hours, late_cancel_penalty_enabled, late_cancel_trust_penalty, allow_pay_on_site, min_trust_for_pay_on_site, require_phone_verification, require_profile_complete";
+
+async function loadClubFinancialPolicy(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerActionClient>>,
+  clubId: string,
+) {
+  const { data } = await supabase
+    .from("clubs")
+    .select(CLUB_FINANCIAL_POLICY_SELECT)
+    .eq("id", clubId)
+    .maybeSingle();
+
+  return parseClubFinancialPolicy(data);
+}
 
 export type ActionResult =
   | { ok: true }
@@ -363,7 +384,7 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
     const bookingId = resolvedId.slice("legacy-".length);
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
-      .select("id, created_by, player_id, total_price, status")
+      .select("id, created_by, player_id, total_price, status, club_id")
       .eq("id", bookingId)
       .maybeSingle();
 
@@ -385,16 +406,36 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
       return { ok: false, error: "Erreur lors du signalement no-show." };
     }
 
-    const impact = trustImpactFromEvent("no_show");
-    try {
-      await addTrustEvent({
-        player_id: playerId,
-        kind: "no_show",
-        delta: impact.delta,
-        booking_id: bookingId,
+    const clubId = String((booking as { club_id?: string }).club_id ?? "");
+    const totalPrice = (booking as { total_price?: number | null }).total_price;
+    const policy = clubId ? await loadClubFinancialPolicy(supabase, clubId) : parseClubFinancialPolicy(null);
+    const trustDelta = resolveNoShowTrustPenalty(policy);
+
+    if (trustDelta !== 0) {
+      try {
+        await addTrustEvent({
+          player_id: playerId,
+          kind: "no_show",
+          delta: trustDelta,
+          booking_id: bookingId,
+        });
+      } catch {
+        return { ok: false, error: "Erreur lors de l'enregistrement de l'incident." };
+      }
+    }
+
+    const debtAmountCents = deriveNoShowDebtAmountCents(totalPrice, policy);
+    if (clubId && debtAmountCents != null && debtAmountCents > 0) {
+      const debt = await createClubDebt(supabase, {
+        clubId,
+        playerId,
+        bookingId,
+        reason: "no_show",
+        amountCents: debtAmountCents,
       });
-    } catch {
-      return { ok: false, error: "Erreur lors de l'enregistrement de l'incident." };
+      if (!debt.ok) {
+        console.warn("[reportParticipantNoShowAction] legacy club_debt insert failed:", debt.error);
+      }
     }
 
     return { ok: true };
@@ -425,6 +466,7 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
   }
 
   const clubId = String(bookingRow.club_id);
+  const policy = await loadClubFinancialPolicy(supabase, clubId);
 
   const { error: participantError } = await supabase
     .from("booking_participants")
@@ -435,30 +477,35 @@ export async function reportParticipantNoShowAction(participantId: string): Prom
     return { ok: false, error: "Erreur lors de la mise à jour de la place." };
   }
 
-  const impact = trustImpactFromEvent("no_show");
+  const trustDelta = resolveNoShowTrustPenalty(policy);
 
-  try {
-    await addTrustEvent({
-      player_id: playerId,
-      kind: "no_show",
-      delta: impact.delta,
-      booking_id: bookingId,
-    });
-  } catch {
-    return { ok: false, error: "Erreur lors de l'enregistrement de l'incident." };
+  if (trustDelta !== 0) {
+    try {
+      await addTrustEvent({
+        player_id: playerId,
+        kind: "no_show",
+        delta: trustDelta,
+        booking_id: bookingId,
+      });
+    } catch {
+      return { ok: false, error: "Erreur lors de l'enregistrement de l'incident." };
+    }
   }
 
-  const debt = await createClubDebt(supabase, {
-    clubId,
-    playerId,
-    bookingId,
-    participantId: resolvedId,
-    reason: "no_show",
-    amountCents: deriveNoShowDebtAmountCents(sharePrice),
-  });
+  const debtAmountCents = deriveNoShowDebtAmountCents(sharePrice, policy);
+  if (debtAmountCents != null && debtAmountCents > 0) {
+    const debt = await createClubDebt(supabase, {
+      clubId,
+      playerId,
+      bookingId,
+      participantId: resolvedId,
+      reason: "no_show",
+      amountCents: debtAmountCents,
+    });
 
-  if (!debt.ok) {
-    console.warn("[reportParticipantNoShowAction] club_debt insert failed (non-blocking):", debt.error);
+    if (!debt.ok) {
+      console.warn("[reportParticipantNoShowAction] club_debt insert failed (non-blocking):", debt.error);
+    }
   }
 
   void notifyParticipantNoShow(resolvedId).catch((err) =>
@@ -500,6 +547,7 @@ export async function reportNoShowAction(bookingId: string, playerId: string): P
 
   const clubId = String((bookingRow as { club_id: string }).club_id);
   const totalPrice = (bookingRow as { total_price?: number | null }).total_price;
+  const policy = await loadClubFinancialPolicy(supabase, clubId);
 
   const { error: bookingError } = await supabase
     .from("bookings")
@@ -510,29 +558,34 @@ export async function reportNoShowAction(bookingId: string, playerId: string): P
     return { ok: false, error: "Erreur lors de la mise à jour de la réservation." };
   }
 
-  const impact = trustImpactFromEvent("no_show");
+  const trustDelta = resolveNoShowTrustPenalty(policy);
 
-  try {
-    await addTrustEvent({
-      player_id: playerId,
-      kind: "no_show",
-      delta: impact.delta,
-      booking_id: bookingId,
-    });
-  } catch {
-    return { ok: false, error: "Erreur lors de l'enregistrement de l'incident." };
+  if (trustDelta !== 0) {
+    try {
+      await addTrustEvent({
+        player_id: playerId,
+        kind: "no_show",
+        delta: trustDelta,
+        booking_id: bookingId,
+      });
+    } catch {
+      return { ok: false, error: "Erreur lors de l'enregistrement de l'incident." };
+    }
   }
 
-  const debt = await createClubDebt(supabase, {
-    clubId,
-    playerId,
-    bookingId,
-    reason: "no_show",
-    amountCents: deriveNoShowDebtAmountCents(totalPrice),
-  });
+  const debtAmountCents = deriveNoShowDebtAmountCents(totalPrice, policy);
+  if (debtAmountCents != null && debtAmountCents > 0) {
+    const debt = await createClubDebt(supabase, {
+      clubId,
+      playerId,
+      bookingId,
+      reason: "no_show",
+      amountCents: debtAmountCents,
+    });
 
-  if (!debt.ok) {
-    console.warn("[reportNoShowAction] club_debt insert failed (non-blocking):", debt.error);
+    if (!debt.ok) {
+      console.warn("[reportNoShowAction] club_debt insert failed (non-blocking):", debt.error);
+    }
   }
 
   return { ok: true };

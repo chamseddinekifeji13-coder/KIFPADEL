@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 
+import {
+  type NoShowDebtMode,
+  parseClubFinancialPolicy,
+} from "@/domain/rules/club-financial-policy";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { sanitizeHttpsUrl } from "@/lib/url/sanitize-https-url";
 import {
@@ -13,6 +17,28 @@ import {
 import type { ActionResult } from "@/modules/clubs/actions";
 
 const STAFF_ROLES = new Set(["club_staff", "club_manager", "club_admin", "platform_admin"]);
+
+const NO_SHOW_DEBT_MODES = new Set<NoShowDebtMode>(["full_share", "percent", "fixed", "none"]);
+
+function parseBoundedInt(
+  raw: FormDataEntryValue | null | undefined,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
+  const n = Number.parseInt(String(raw ?? ""), 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function parseCheckbox(raw: FormDataEntryValue | null | undefined): boolean {
+  return String(raw ?? "") === "1";
+}
+
+function parseNoShowDebtMode(raw: FormDataEntryValue | null | undefined): NoShowDebtMode {
+  const s = String(raw ?? "").trim() as NoShowDebtMode;
+  return NO_SHOW_DEBT_MODES.has(s) ? s : "full_share";
+}
 
 const MEMBERSHIP_USER_COLUMNS = ["user_id", "player_id"] as const;
 
@@ -51,6 +77,20 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
   const logoUrlRaw = String(formData.get("logo_url") ?? "").trim();
   const logoUrl = logoUrlRaw.length > 0 ? sanitizeHttpsUrl(logoUrlRaw) : null;
 
+  const noShowDebtMode = parseNoShowDebtMode(formData.get("no_show_debt_mode"));
+  const noShowDebtPercent = parseBoundedInt(formData.get("no_show_debt_percent"), 1, 100, 100);
+  const noShowDebtFixedParsed = parsePositiveMoneyOrNull(formData.get("no_show_debt_fixed_dt"));
+  const noShowTrustPenalty = parseBoundedInt(formData.get("no_show_trust_penalty"), 0, 50, 18);
+  const noShowGraceMinutes = parseBoundedInt(formData.get("no_show_grace_minutes"), 5, 60, 15);
+  const noShowAutoReport = parseCheckbox(formData.get("no_show_auto_report"));
+  const freeCancellationHours = parseBoundedInt(formData.get("free_cancellation_hours"), 1, 72, 24);
+  const lateCancelPenaltyEnabled = parseCheckbox(formData.get("late_cancel_penalty_enabled"));
+  const lateCancelTrustPenalty = parseBoundedInt(formData.get("late_cancel_trust_penalty"), 0, 50, 10);
+  const allowPayOnSite = parseCheckbox(formData.get("allow_pay_on_site"));
+  const minTrustForPayOnSite = parseBoundedInt(formData.get("min_trust_for_pay_on_site"), 0, 100, 70);
+  const requirePhoneVerification = parseCheckbox(formData.get("require_phone_verification"));
+  const requireProfileComplete = parseCheckbox(formData.get("require_profile_complete"));
+
   if (logoUrlRaw.length > 0 && !logoUrl) {
     return {
       ok: false,
@@ -87,6 +127,30 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
     };
   }
 
+  if (noShowDebtMode === "fixed" && noShowDebtFixedParsed == null) {
+    return {
+      ok: false,
+      error: "Indiquez un montant fixe de pénalité no-show (DT) ou choisissez un autre mode.",
+    };
+  }
+
+  const policyPreview = parseClubFinancialPolicy({
+    no_show_debt_mode: noShowDebtMode,
+    no_show_debt_fixed_cents:
+      noShowDebtFixedParsed != null ? Math.round(noShowDebtFixedParsed * 100) : null,
+    no_show_debt_percent: noShowDebtPercent,
+    no_show_trust_penalty: noShowTrustPenalty,
+    no_show_grace_minutes: noShowGraceMinutes,
+    no_show_auto_report: noShowAutoReport,
+    free_cancellation_hours: freeCancellationHours,
+    late_cancel_penalty_enabled: lateCancelPenaltyEnabled,
+    late_cancel_trust_penalty: lateCancelTrustPenalty,
+    allow_pay_on_site: allowPayOnSite,
+    min_trust_for_pay_on_site: minTrustForPayOnSite,
+    require_phone_verification: requirePhoneVerification,
+    require_profile_complete: requireProfileComplete,
+  });
+
   const { error: updateError } = await supabase
     .from("clubs")
     .update({
@@ -101,6 +165,19 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
       logo_url: logoUrl,
       racket_rental_enabled: racketRentalEnabled,
       racket_rental_price_per_unit: racketRentalEnabled ? racketPriceParsed : null,
+      no_show_debt_mode: policyPreview.noShowDebtMode,
+      no_show_debt_fixed_cents: policyPreview.noShowDebtFixedCents,
+      no_show_debt_percent: policyPreview.noShowDebtPercent,
+      no_show_trust_penalty: policyPreview.noShowTrustPenalty,
+      no_show_grace_minutes: policyPreview.noShowGraceMinutes,
+      no_show_auto_report: policyPreview.noShowAutoReport,
+      free_cancellation_hours: policyPreview.freeCancellationHours,
+      late_cancel_penalty_enabled: policyPreview.lateCancelPenaltyEnabled,
+      late_cancel_trust_penalty: policyPreview.lateCancelTrustPenalty,
+      allow_pay_on_site: policyPreview.allowPayOnSite,
+      min_trust_for_pay_on_site: policyPreview.minTrustForPayOnSite,
+      require_phone_verification: policyPreview.requirePhoneVerification,
+      require_profile_complete: policyPreview.requireProfileComplete,
     })
     .eq("id", clubId);
 

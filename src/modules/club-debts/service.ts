@@ -1,5 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  deriveNoShowDebtAmountCents as deriveNoShowDebtFromPolicy,
+  type ClubFinancialPolicy,
+  DEFAULT_CLUB_FINANCIAL_POLICY,
+} from "@/domain/rules/club-financial-policy";
+
+export { deriveNoShowDebtFromPolicy as deriveNoShowDebtAmountCentsForPolicy };
+export type { ClubFinancialPolicy };
+
 export type CreateClubDebtInput = {
   clubId: string;
   playerId: string;
@@ -66,10 +75,10 @@ export async function createClubDebt(
   return { ok: true, id: String((inserted as { id: string }).id) };
 }
 
-export function deriveNoShowDebtAmountCents(sharePrice: unknown): number {
-  const n = Number(sharePrice);
-  if (Number.isFinite(n) && n > 0) {
-    return Math.round(n * 100);
-  }
-  return 5_000;
+/** @deprecated Préférer deriveNoShowDebtAmountCentsForPolicy avec la politique du club. */
+export function deriveNoShowDebtAmountCents(
+  sharePrice: unknown,
+  policy: ClubFinancialPolicy = DEFAULT_CLUB_FINANCIAL_POLICY,
+): number {
+  return deriveNoShowDebtFromPolicy(sharePrice, policy) ?? 5_000;
 }
