@@ -49,6 +49,8 @@ export function ClubShell({ children, locale, clubName, navLabels, uiLabels }: C
     { href: `${baseUrl}/settings`, label: navLabels.settings, icon: Settings },
   ];
 
+  const mobileNavItems = navItems.filter((item) => !item.href.endsWith("/tournaments"));
+
   return (
     <div className="min-h-screen bg-[var(--background)] flex">
       {/* Sidebar */}
@@ -137,8 +139,8 @@ export function ClubShell({ children, locale, clubName, navLabels, uiLabels }: C
 
       {/* Mobile Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--surface)] max-md:backdrop-blur-none md:bg-[var(--surface)]/95 md:backdrop-blur-xl md:hidden">
-        <div className="flex h-16 items-center justify-around px-2 pb-[max(env(safe-area-inset-bottom),0px)]">
-          {navItems.slice(0, 5).map((item) => {
+        <div className="flex h-16 items-center justify-between gap-0.5 px-1 pb-[max(env(safe-area-inset-bottom),0px)]">
+          {mobileNavItems.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
 
@@ -148,12 +150,12 @@ export function ClubShell({ children, locale, clubName, navLabels, uiLabels }: C
                 href={item.href}
                 prefetch={true}
                 className={cn(
-                  "tap-target flex flex-col items-center justify-center gap-1 p-2 rounded-xl min-w-[56px]",
+                  "tap-target flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl p-1",
                   active ? "text-[var(--gold)]" : "text-[var(--foreground-muted)]"
                 )}
               >
-                <Icon className="h-5 w-5" />
-                <span className="text-[9px] font-bold uppercase tracking-tight">
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className="w-full truncate text-center text-[8px] font-bold uppercase tracking-tight">
                   {item.label.split(" ")[0]}
                 </span>
               </Link>
