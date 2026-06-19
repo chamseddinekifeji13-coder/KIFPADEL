@@ -12,6 +12,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { isGoogleAuthEnabled } from "@/lib/auth/google-auth-enabled";
 import { GoogleSignInButton } from "@/components/features/auth/google-sign-in-button";
 import { signInAction } from "@/modules/auth/actions/sign-in";
+import { ResendActivationEmailButton } from "@/components/features/auth/resend-activation-email-button";
 
 type SignInPageProps = Readonly<{
   params: Promise<{ locale: string }>;
@@ -88,6 +89,17 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
       {status === "password_updated" ? (
         <Card className="bg-emerald-500/5 border-emerald-500/20">
           <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">{dictionary.auth.passwordUpdatedInfo}</p>
+        </Card>
+      ) : null}
+
+      {error === "email_not_confirmed" ? (
+        <Card className="bg-amber-50 ring-amber-100">
+          <ResendActivationEmailButton
+            locale={locale}
+            label={dictionary.auth.resendActivationCta}
+            successLabel={dictionary.auth.resendActivationSuccess}
+            errorLabel={dictionary.auth.resendActivationError}
+          />
         </Card>
       ) : null}
 

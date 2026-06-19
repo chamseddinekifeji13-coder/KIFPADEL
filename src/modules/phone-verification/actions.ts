@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { normalizeTunisiaPhoneToE164 } from "@/lib/phone/normalize-tunisia";
 import {
   getPhoneVerificationChannel,
+  isInstantPhoneVerificationAllowed,
   isOtpPhoneVerificationChannel,
 } from "@/lib/phone/verification-channel";
 import {
@@ -34,6 +35,14 @@ export async function getPhoneVerificationChannelAction(): Promise<
  * Confirmation gratuite : enregistre le numéro sans OTP (défaut produit).
  */
 export async function confirmPhoneNumberAction(localDigits: string): Promise<PhoneOtpActionResult> {
+  if (!isInstantPhoneVerificationAllowed()) {
+    return {
+      ok: false,
+      error: "La vérification par code est obligatoire. Demandez un code OTP.",
+      code: "OTP_REQUIRED",
+    };
+  }
+
   const phoneE164 = normalizeTunisiaPhoneToE164(localDigits);
   if (!phoneE164) {
     return { ok: false, error: "Numéro tunisien invalide (8 chiffres après +216).", code: "INVALID_PHONE" };

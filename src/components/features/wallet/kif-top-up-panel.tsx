@@ -33,6 +33,10 @@ export function KifTopUpPanel({ locale, packages, labels }: Props) {
     startTransition(async () => {
       const res = await requestKifTopUpAction({ locale, packageId });
       if (res.ok) {
+        if (res.checkoutUrl) {
+          window.location.href = res.checkoutUrl;
+          return;
+        }
         if (res.pendingGateway) {
           setMessage(labels.pendingGateway);
         } else {

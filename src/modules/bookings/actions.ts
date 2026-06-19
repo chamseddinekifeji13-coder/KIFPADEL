@@ -14,6 +14,7 @@ import {
   isPlayerAccessError,
 } from "@/modules/compliance/player-access";
 import {
+  isEmailConfirmed,
   isPhoneVerified,
   newAccountMustPayOnline,
 } from "@/modules/compliance/new-account-gates";
@@ -156,6 +157,15 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
   }
 
   const user = auth.user;
+
+  if (!isEmailConfirmed(user)) {
+    return {
+      ok: false,
+      error:
+        "Confirmez votre adresse e-mail via le lien reçu à l'inscription avant de réserver.",
+      code: "SERVER_ERROR",
+    };
+  }
 
   try {
     await assertPlayerCanBook(supabase, { playerId: user.id, clubId: input.clubId });

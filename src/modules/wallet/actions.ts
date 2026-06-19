@@ -5,10 +5,12 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isKifWalletAutoCompleteAllowed } from "@/lib/config/env";
 import { requireActionUser } from "@/lib/supabase/action-auth";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { createWalletTopUpCheckoutSession } from "@/modules/wallet/stripe-checkout";
+import { isStripeConfigured } from "@/lib/stripe/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type TopUpResult =
-  | { ok: true; newBalance: number; pendingGateway: boolean }
+  | { ok: true; newBalance: number; pendingGateway: boolean; checkoutUrl?: string }
   | { ok: false; error: string };
 
 async function getActionUser(supabase: SupabaseClient) {
@@ -61,6 +63,7 @@ export async function requestKifTopUpAction(input: {
 
   let newBalance = 0;
   let pendingGateway = true;
+  let checkoutUrl: string | undefined;
 
   if (isAutoCompleteTopUpEnabled()) {
     const admin = createSupabaseAdminClient();
@@ -87,10 +90,33 @@ export async function requestKifTopUpAction(input: {
 
     newBalance = Number(complete.new_balance ?? 0);
     pendingGateway = false;
+  } else if (isStripeConfigured()) {
+    const { data: pkg } = await supabase
+      .from("kif_top_up_packages")
+      .select("amount, label_fr, label_en")
+      .eq("id", packageId)
+      .maybeSingle();
+
+    const label = loc === "en" ? pkg?.label_en : pkg?.label_fr;
+    const checkout = await createWalletTopUpCheckoutSession({
+      locale: loc,
+      userId: auth.user.id,
+      userEmail: auth.user.email ?? null,
+      requestId: row.request_id,
+      amountTnd: Number(pkg?.amount ?? row.total_credit ?? 0),
+      packageLabel: label ?? "Jetons KIF",
+    });
+
+    if (!checkout.ok) {
+      return { ok: false, error: checkout.error };
+    }
+
+    checkoutUrl = checkout.checkoutUrl;
+    pendingGateway = true;
   }
 
   revalidatePath(`/${loc}/profile/wallet`);
   revalidatePath(`/${loc}/profile`);
 
-  return { ok: true, newBalance, pendingGateway };
+  return { ok: true, newBalance, pendingGateway, checkoutUrl };
 }
