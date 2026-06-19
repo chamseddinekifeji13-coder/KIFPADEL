@@ -6,11 +6,17 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchMatchById, fetchMatchResult } from "@/modules/matches/repository";
 import { playerService } from "@/modules/players/service";
 import { MatchJoinActions } from "@/components/features/matches/match-join-actions";
+import { MatchChatPanel } from "@/components/features/matches/match-chat-panel";
 import { MatchScoreForm } from "@/components/features/matches/match-score-form";
 import { formatSetScores } from "@/domain/rules/match-score";
 import { assertClubStaffCanManage } from "@/modules/clubs/actions/club-staff-guard";
 import { fetchKifWalletBalance } from "@/modules/wallet/repository";
 import { fetchMatchTeamRatings } from "@/modules/rating/repository";
+import {
+  canUserAccessMatchChat,
+  fetchMatchMessages,
+  fetchMatchParticipantNames,
+} from "@/modules/matches/messages-repository";
 import {
   isActiveMatchParticipantRow,
   resolveSharePrice,
@@ -51,16 +57,29 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
   let viewerTeam: "A" | "B" | null = null;
   let sharePrice = match.price_per_player;
   let walletBalance = 0;
+  let viewerDisplayName = "Joueur";
+  let canAccessChat = false;
+  let chatMessages: Awaited<ReturnType<typeof fetchMatchMessages>> = [];
+  let participantNames: Record<string, string> = {};
 
   if (user) {
     walletBalance = await fetchKifWalletBalance(user.id);
     const profile = await playerService.getPlayerProfile(user.id);
     viewerGender = profile?.gender ?? null;
+    viewerDisplayName = profile?.display_name ?? "Joueur";
     const myRow = match.match_participants.find((p) => p.player_id === user.id);
     if (myRow) {
       participationPhase = resolveViewerParticipationPhase(myRow);
       viewerTeam = myRow.team === "A" || myRow.team === "B" ? myRow.team : null;
       sharePrice = resolveSharePrice(myRow, match.price_per_player);
+    }
+
+    canAccessChat = await canUserAccessMatchChat(matchId);
+    if (canAccessChat) {
+      [chatMessages, participantNames] = await Promise.all([
+        fetchMatchMessages(matchId),
+        fetchMatchParticipantNames(matchId, match.created_by),
+      ]);
     }
   }
 
@@ -215,6 +234,17 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
           {locale === "en" ? "to join this match." : "pour rejoindre ce match."}
         </p>
       )}
+
+      {user && canAccessChat ? (
+        <MatchChatPanel
+          locale={locale}
+          matchId={match.id}
+          currentUserId={user.id}
+          currentUserName={viewerDisplayName}
+          initialMessages={chatMessages}
+          participantNames={participantNames}
+        />
+      ) : null}
 
       {matchResult ? (
         <section className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-2">
