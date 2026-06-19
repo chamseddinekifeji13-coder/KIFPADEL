@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link2, Share2, Users } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { buildBookingInviteUrl } from "@/modules/bookings/split-payment-repository";
+import { buildBookingInviteUrl } from "@/lib/bookings/invite-url";
 import { createBookingSplitInvitesAction } from "@/modules/bookings/actions/split-payment";
 import { shareBookingInviteLink } from "@/lib/bookings/share-invite";
 import type { BookingSplitInvite } from "@/modules/bookings/split-payment-repository";
