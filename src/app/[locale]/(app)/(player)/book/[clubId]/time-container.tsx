@@ -129,8 +129,12 @@ export function TimeContainer({
           setPaymentMethod(null);
           setRentRacket(false);
           setBookingState("idle");
-          router.refresh();
-        }, 2000);
+          if (result.bookingId) {
+            router.push(`/${locale}/bookings/${result.bookingId}/invites`);
+          } else {
+            router.refresh();
+          }
+        }, 1500);
       } else {
         setBookingState("error");
         setErrorMessage(result.error);
