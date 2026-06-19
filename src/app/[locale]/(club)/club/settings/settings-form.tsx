@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -17,9 +17,12 @@ import {
   Dumbbell,
   Coins,
   ImageIcon,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { updateClubBasicsAction } from "@/modules/clubs/actions/update-club-basics";
+import { uploadClubLogoAction } from "@/modules/clubs/actions/upload-club-logo";
 
 type Settings = {
   clubId: string;
@@ -54,10 +57,13 @@ type ClubSettingsFormProps = {
 
 export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormProps) {
   const router = useRouter();
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState(initialSettings);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
@@ -94,6 +100,36 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
 
   const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleLogoFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setUploadingLogo(true);
+    setLogoUploadError(null);
+
+    const fd = new FormData();
+    fd.set("locale", locale);
+    fd.set("club_id", settings.clubId);
+    fd.set("logo_file", file);
+
+    const result = await uploadClubLogoAction(fd);
+
+    setUploadingLogo(false);
+    event.target.value = "";
+
+    if (!result.ok) {
+      setLogoUploadError(result.error);
+      return;
+    }
+
+    updateSetting("logoUrlRaw", result.logoUrl);
+    setSaved(true);
+    router.refresh();
+    window.setTimeout(() => setSaved(false), 3000);
   };
 
   return (
@@ -172,18 +208,45 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
             />
           </div>
           <div className="space-y-3 pt-2 border-t border-[var(--border)]">
-            <InputField
-              label="URL du logo (https)"
-              icon={ImageIcon}
-              type="url"
-              placeholder="https://…/logo.png"
-              value={settings.logoUrlRaw}
-              onChange={(v) => updateSetting("logoUrlRaw", v)}
-            />
-            <p className="text-[10px] text-[var(--foreground-muted)] leading-relaxed">
-              Hébergez l&apos;image sur Supabase Storage, votre site ou un CDN. Format conseillé&nbsp;:
-              PNG/WebP, ratio 16:9 ou carré, fond sombre ou transparent.
+            <p className="text-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wider">
+              Logo du club
             </p>
+            <input
+              ref={logoFileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="sr-only"
+              onChange={handleLogoFileChange}
+            />
+            <button
+              type="button"
+              disabled={uploadingLogo}
+              onClick={() => logoFileInputRef.current?.click()}
+              className={cn(
+                "tap-target flex w-full min-h-[48px] items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--gold)]/40 bg-[var(--gold)]/5 px-4 py-3 text-sm font-bold text-[var(--gold)] transition-colors",
+                uploadingLogo
+                  ? "opacity-70 cursor-wait"
+                  : "hover:bg-[var(--gold)]/10 active:bg-[var(--gold)]/15",
+              )}
+            >
+              {uploadingLogo ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Téléversement…
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Téléverser un logo
+                </>
+              )}
+            </button>
+            <p className="text-[10px] text-[var(--foreground-muted)] leading-relaxed">
+              PNG, JPEG, WebP ou GIF — max. 2 Mo. Ratio conseillé&nbsp;: carré ou 16:9.
+            </p>
+            {logoUploadError ? (
+              <p className="text-xs text-[var(--danger)]">{logoUploadError}</p>
+            ) : null}
             {settings.logoUrlRaw.trim() ? (
               <div className="relative aspect-video max-w-sm overflow-hidden rounded-xl border border-[var(--border)] bg-black">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -197,6 +260,21 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
                 />
               </div>
             ) : null}
+            <details className="rounded-xl border border-[var(--border)] bg-[var(--background)]/50">
+              <summary className="cursor-pointer px-4 py-3 text-xs font-medium text-[var(--foreground-muted)]">
+                Ou coller une URL externe (avancé)
+              </summary>
+              <div className="space-y-2 border-t border-[var(--border)] p-4">
+                <InputField
+                  label="URL du logo (https)"
+                  icon={ImageIcon}
+                  type="url"
+                  placeholder="https://…/logo.png"
+                  value={settings.logoUrlRaw}
+                  onChange={(v) => updateSetting("logoUrlRaw", v)}
+                />
+              </div>
+            </details>
           </div>
         </div>
       </section>
