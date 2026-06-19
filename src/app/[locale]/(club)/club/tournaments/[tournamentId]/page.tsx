@@ -86,6 +86,19 @@ export default async function ClubTournamentDetailPage({ params }: Props) {
         </div>
       </header>
 
+      {tournament.status !== "draft" && tournament.status !== "cancelled" ? (
+        <p className="text-xs text-[var(--foreground-muted)]">
+          <a
+            href={`/${locale}/tournaments/${tournamentId}/display`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-[var(--gold)] hover:underline"
+          >
+            Ouvrir l’écran d’affichage (TV)
+          </a>
+        </p>
+      ) : null}
+
       <TournamentClubInvitePanel
         locale={locale}
         tournamentId={tournamentId}

@@ -220,6 +220,17 @@ export function TournamentStaffPanel({
       </div>
       <p className="text-[10px] text-[var(--foreground-muted)]">{scheduleHint(format)}</p>
 
+      {status !== "draft" && status !== "cancelled" ? (
+        <a
+          href={`/${locale}/tournaments/${tournamentId}/display`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-xs font-bold text-[var(--gold)] hover:underline"
+        >
+          Ouvrir l’écran d’affichage (TV) ↗
+        </a>
+      ) : null}
+
       {format === "americano" ? (
         <div className="space-y-2">
           <h3 className="text-xs font-bold uppercase text-[var(--foreground-muted)]">
