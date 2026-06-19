@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
-import type { Tournament, TournamentEntry, TournamentMatch, TournamentScope } from "@/domain/types/tournaments";
+import type { Tournament, TournamentEntry, TournamentMatch, TournamentScope, TournamentFormat } from "@/domain/types/tournaments";
 import type { MatchGenderType } from "@/domain/types/core";
 import {
   firstKnockoutPairingIndices,
@@ -8,6 +8,14 @@ import {
   knockoutRoundLabel,
 } from "@/domain/rules/tournament-bracket";
 import { parseSetScoresJson } from "@/domain/rules/match-score";
+import {
+  buildAmericanoRotationRounds,
+  americanoRoundLabel,
+} from "@/domain/rules/tournament-americano";
+import {
+  buildPoolMatchSchedule,
+  poolRoundLabel,
+} from "@/domain/rules/tournament-pools";
 
 type TournamentRow = Record<string, unknown>;
 type EntryRow = Record<string, unknown>;
@@ -22,13 +30,18 @@ function mapTournament(row: TournamentRow): Tournament {
     scopeRaw === "single_club"
       ? scopeRaw
       : "single_club";
+  const formatRaw = row.format;
+  const format: TournamentFormat =
+    formatRaw === "pools" || formatRaw === "americano" || formatRaw === "knockout"
+      ? formatRaw
+      : "knockout";
   return {
     id: String(row.id),
     clubId: String(row.club_id),
     createdBy: String(row.created_by),
     title: String(row.title),
     description: row.description != null ? String(row.description) : null,
-    format: "knockout",
+    format,
     tournamentScope: scope,
     scopeMetadata:
       row.scope_metadata != null && typeof row.scope_metadata === "object"
@@ -537,6 +550,266 @@ export async function createTournamentKnockoutFirstRound(args: {
 
     if (tmErr) {
       return { ok: false, error: tmErr.message };
+    }
+  }
+
+  return { ok: true };
+}
+
+export type TournamentSoloEntry = {
+  id: string;
+  tournamentId: string;
+  playerId: string;
+  status: TournamentEntry["status"];
+  americanoPoints: number;
+  createdAt: string;
+};
+
+export type TournamentSoloEntryWithName = TournamentSoloEntry & {
+  playerName: string;
+};
+
+export async function listSoloEntriesForTournament(
+  tournamentId: string,
+): Promise<TournamentSoloEntry[]> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("tournament_solo_entries")
+      .select("*")
+      .eq("tournament_id", tournamentId)
+      .order("americano_points", { ascending: false });
+
+    if (error) {
+      console.warn("[tournaments.listSoloEntriesForTournament]", error.message);
+      return [];
+    }
+
+    return (data ?? []).map((row) => ({
+      id: String((row as { id: string }).id),
+      tournamentId: String((row as { tournament_id: string }).tournament_id),
+      playerId: String((row as { player_id: string }).player_id),
+      status: (row as { status: TournamentEntry["status"] }).status,
+      americanoPoints: Number((row as { americano_points?: number }).americano_points ?? 0),
+      createdAt: String((row as { created_at: string }).created_at),
+    }));
+  } catch (err) {
+    rethrowFrameworkError(err);
+    return [];
+  }
+}
+
+export async function listSoloEntriesWithDisplayNames(
+  tournamentId: string,
+): Promise<TournamentSoloEntryWithName[]> {
+  const entries = await listSoloEntriesForTournament(tournamentId);
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const ids = entries.map((e) => e.playerId);
+  const { data: profiles } = await supabase.from("profiles").select("id, display_name").in("id", ids);
+  const nameById = new Map(
+    (profiles ?? []).map((p) => [
+      String((p as { id: string }).id),
+      String((p as { display_name?: string | null }).display_name ?? "Joueur"),
+    ]),
+  );
+
+  return entries.map((e) => ({
+    ...e,
+    playerName: nameById.get(e.playerId) ?? "Joueur",
+  }));
+}
+
+export async function playerAlreadyInAmericano(
+  tournamentId: string,
+  playerId: string,
+): Promise<boolean> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("tournament_solo_entries")
+    .select("id")
+    .eq("tournament_id", tournamentId)
+    .eq("player_id", playerId)
+    .neq("status", "withdrawn")
+    .maybeSingle();
+  return Boolean(data);
+}
+
+async function insertTournamentMatchWithPlayers(args: {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  tournament: Tournament;
+  staffUserId: string;
+  round: string;
+  position: number;
+  teamAPlayerIds: [string, string];
+  teamBPlayerIds: [string, string];
+  team1EntryId?: string | null;
+  team2EntryId?: string | null;
+  startsAt: string;
+  matchGenderType?: MatchGenderType;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const {
+    supabase,
+    tournament,
+    staffUserId,
+    round,
+    position,
+    teamAPlayerIds,
+    teamBPlayerIds,
+    team1EntryId = null,
+    team2EntryId = null,
+    startsAt,
+    matchGenderType = "all",
+  } = args;
+
+  const { data: matchRow, error: mErr } = await supabase
+    .from("matches")
+    .insert({
+      club_id: tournament.clubId,
+      created_by: staffUserId,
+      starts_at: startsAt,
+      status: "open",
+      match_gender_type: matchGenderType,
+    })
+    .select("id")
+    .single();
+
+  if (mErr || !matchRow) {
+    return { ok: false, error: mErr?.message ?? "Impossible de créer le match." };
+  }
+
+  const matchId = String((matchRow as { id: string }).id);
+
+  const { error: pErr } = await supabase.from("match_participants").insert([
+    { match_id: matchId, player_id: teamAPlayerIds[0], team: "A" },
+    { match_id: matchId, player_id: teamAPlayerIds[1], team: "A" },
+    { match_id: matchId, player_id: teamBPlayerIds[0], team: "B" },
+    { match_id: matchId, player_id: teamBPlayerIds[1], team: "B" },
+  ]);
+
+  if (pErr) {
+    return { ok: false, error: pErr.message };
+  }
+
+  const { error: tmErr } = await supabase.from("tournament_matches").insert({
+    tournament_id: tournament.id,
+    round,
+    position,
+    match_id: matchId,
+    team1_entry_id: team1EntryId,
+    team2_entry_id: team2EntryId,
+    scheduled_starts_at: startsAt,
+  });
+
+  if (tmErr) {
+    return { ok: false, error: tmErr.message };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Poules : round-robin par groupe de 4 équipes max.
+ */
+export async function createTournamentPoolMatches(args: {
+  tournament: Tournament;
+  entries: TournamentEntry[];
+  staffUserId: string;
+  matchGenderType?: MatchGenderType;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { tournament, entries, staffUserId, matchGenderType = "all" } = args;
+  const active = entries.filter((e) => e.status !== "withdrawn");
+  if (active.length < 3) {
+    return { ok: false, error: "Il faut au moins 3 équipes pour des poules." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const schedule = buildPoolMatchSchedule(active.length);
+  const startsAt = tournament.startsAt ?? new Date().toISOString();
+  let position = 0;
+
+  for (const slot of schedule) {
+    const e1 = active[slot.teamIndexA];
+    const e2 = active[slot.teamIndexB];
+    if (!e1 || !e2) {
+      continue;
+    }
+
+    const inserted = await insertTournamentMatchWithPlayers({
+      supabase,
+      tournament,
+      staffUserId,
+      round: poolRoundLabel(slot.poolLabel),
+      position,
+      teamAPlayerIds: [e1.player1Id, e1.player2Id],
+      teamBPlayerIds: [e2.player1Id, e2.player2Id],
+      team1EntryId: e1.id,
+      team2EntryId: e2.id,
+      startsAt,
+      matchGenderType,
+    });
+
+    if (!inserted.ok) {
+      return inserted;
+    }
+    position += 1;
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Américano : rotations solo, 4/8/12/16 joueurs.
+ */
+export async function createTournamentAmericanoMatches(args: {
+  tournament: Tournament;
+  soloEntries: TournamentSoloEntry[];
+  staffUserId: string;
+  matchGenderType?: MatchGenderType;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { tournament, soloEntries, staffUserId, matchGenderType = "all" } = args;
+  const active = soloEntries.filter((e) => e.status !== "withdrawn");
+  const playerIds = active.map((e) => e.playerId);
+
+  if (playerIds.length < 4 || playerIds.length % 4 !== 0) {
+    return {
+      ok: false,
+      error: "L’Américano nécessite 4, 8, 12 ou 16 joueurs inscrits.",
+    };
+  }
+
+  let rounds;
+  try {
+    rounds = buildAmericanoRotationRounds(playerIds.length);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Planning impossible." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const startsAt = tournament.startsAt ?? new Date().toISOString();
+  let position = 0;
+
+  for (const round of rounds) {
+    for (let court = 0; court < round.courts.length; court += 1) {
+      const courtMatch = round.courts[court]!;
+      const inserted = await insertTournamentMatchWithPlayers({
+        supabase,
+        tournament,
+        staffUserId,
+        round: americanoRoundLabel(round.round),
+        position,
+        teamAPlayerIds: [playerIds[courtMatch.a1]!, playerIds[courtMatch.a2]!],
+        teamBPlayerIds: [playerIds[courtMatch.b1]!, playerIds[courtMatch.b2]!],
+        startsAt,
+        matchGenderType,
+      });
+      if (!inserted.ok) {
+        return inserted;
+      }
+      position += 1;
     }
   }
 

@@ -8,9 +8,12 @@ import {
   countBracketMatches,
   getTournamentById,
   listEntriesWithDisplayNames,
+  listSoloEntriesWithDisplayNames,
   listTournamentMatchesWithResults,
 } from "@/modules/tournaments/repository";
 import { isPowerOfTwoTeamCount } from "@/domain/rules/tournament-bracket";
+import { canGeneratePoolSchedule } from "@/domain/rules/tournament-pools";
+import { isValidAmericanoPlayerCount, formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
 import { TournamentStaffPanel } from "@/app/[locale]/(club)/club/tournaments/[tournamentId]/tournament-staff-panel";
 
 type Props = { params: Promise<{ locale: string; tournamentId: string }> };
@@ -29,17 +32,24 @@ export default async function ClubTournamentDetailPage({ params }: Props) {
     notFound();
   }
 
-  const [entries, matches, bracketCount] = await Promise.all([
+  const [entries, soloEntries, matches, bracketCount] = await Promise.all([
     listEntriesWithDisplayNames(tournamentId),
+    listSoloEntriesWithDisplayNames(tournamentId),
     listTournamentMatchesWithResults(tournamentId),
     countBracketMatches(tournamentId),
   ]);
 
   const activeEntries = entries.filter((e) => e.status !== "withdrawn");
-  const canGenerateBracket =
+  const activeSolo = soloEntries.filter((e) => e.status !== "withdrawn");
+
+  const canGenerateSchedule =
     tournament.status === "registration_open" &&
     bracketCount === 0 &&
-    isPowerOfTwoTeamCount(activeEntries.length);
+    (tournament.format === "americano"
+      ? isValidAmericanoPlayerCount(activeSolo.length)
+      : tournament.format === "pools"
+        ? canGeneratePoolSchedule(activeEntries.length)
+        : isPowerOfTwoTeamCount(activeEntries.length));
 
   return (
     <div className="space-y-6">
@@ -48,7 +58,9 @@ export default async function ClubTournamentDetailPage({ params }: Props) {
       </Link>
       <header>
         <h1 className="text-2xl font-bold text-white">{tournament.title}</h1>
-        <p className="text-sm text-[var(--foreground-muted)] mt-1 uppercase tracking-wide">{tournament.status}</p>
+        <p className="text-sm text-[var(--foreground-muted)] mt-1 uppercase tracking-wide">
+          {formatTournamentFormatLabel(tournament.format, locale)} · {tournament.status}
+        </p>
         {tournament.description ? (
           <p className="text-sm text-white/80 mt-2">{tournament.description}</p>
         ) : null}
@@ -64,10 +76,12 @@ export default async function ClubTournamentDetailPage({ params }: Props) {
       <TournamentStaffPanel
         locale={locale}
         tournamentId={tournamentId}
+        format={tournament.format}
         status={tournament.status}
         entries={entries}
+        soloEntries={soloEntries}
         matches={matches}
-        canGenerateBracket={canGenerateBracket}
+        canGenerateSchedule={canGenerateSchedule}
       />
     </div>
   );

@@ -10,13 +10,20 @@ import {
 import { clubService } from "@/modules/clubs/service";
 import { getSuperAdminActor } from "@/modules/admin/actor";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TournamentStatus } from "@/domain/types/tournaments";
+import type { TournamentStatus, TournamentFormat } from "@/domain/types/tournaments";
+import { isPowerOfTwoTeamCount } from "@/domain/rules/tournament-bracket";
+import { canGeneratePoolSchedule } from "@/domain/rules/tournament-pools";
+import { isValidAmericanoPlayerCount } from "@/domain/rules/tournament-americano";
 import {
   countBracketMatches,
+  createTournamentAmericanoMatches,
   createTournamentKnockoutFirstRound,
+  createTournamentPoolMatches,
   getTournamentById,
   listEntriesForTournament,
+  listSoloEntriesForTournament,
   playerAlreadyInTournament,
+  playerAlreadyInAmericano,
 } from "@/modules/tournaments/repository";
 import { enqueueTournamentAlerts } from "@/modules/notifications/alert-outbox";
 
@@ -50,6 +57,7 @@ export async function createTournamentAction(input: {
   endsAtIso?: string | null;
   entryFeeCents?: number | null;
   initialStatus: "draft" | "registration_open";
+  format?: TournamentFormat;
 }): Promise<ActionResult<{ tournamentId: string }>> {
   const loc = input.locale?.trim() || "fr";
   const supabase = await createSupabaseServerActionClient();
@@ -64,6 +72,11 @@ export async function createTournamentAction(input: {
   const title = input.title?.trim();
   if (!title) return { ok: false, error: "Titre requis." };
 
+  const format: TournamentFormat =
+    input.format === "pools" || input.format === "americano" || input.format === "knockout"
+      ? input.format
+      : "knockout";
+
   const { data: row, error } = await supabase
     .from("tournaments")
     .insert({
@@ -75,6 +88,7 @@ export async function createTournamentAction(input: {
       ends_at: input.endsAtIso || null,
       entry_fee_cents: input.entryFeeCents ?? null,
       status: input.initialStatus,
+      format,
       tournament_scope: "single_club",
       scope_metadata: {},
     })
@@ -154,6 +168,9 @@ export async function createTournamentEntryAction(input: {
 
   const tournament = await getTournamentById(input.tournamentId);
   if (!tournament) return { ok: false, error: "Tournoi introuvable." };
+  if (tournament.format === "americano") {
+    return { ok: false, error: "Inscription solo requise pour un tournoi Américano." };
+  }
   if (tournament.status !== "registration_open") {
     return { ok: false, error: "Les inscriptions ne sont pas ouvertes." };
   }
@@ -184,7 +201,55 @@ export async function createTournamentEntryAction(input: {
   return { ok: true };
 }
 
-export async function generateKnockoutBracketAction(input: {
+export async function createTournamentSoloEntryAction(input: {
+  locale: string;
+  tournamentId: string;
+}): Promise<ActionResult> {
+  const loc = input.locale?.trim() || "fr";
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Connexion requise." };
+
+  try {
+    await assertNotSuspended(supabase, user.id);
+  } catch (e) {
+    if (isPlayerAccessError(e)) {
+      return { ok: false, error: e.message };
+    }
+    throw e;
+  }
+
+  const tournament = await getTournamentById(input.tournamentId);
+  if (!tournament) return { ok: false, error: "Tournoi introuvable." };
+  if (tournament.format !== "americano") {
+    return { ok: false, error: "Ce tournoi n’est pas au format Américano." };
+  }
+  if (tournament.status !== "registration_open") {
+    return { ok: false, error: "Les inscriptions ne sont pas ouvertes." };
+  }
+
+  const dup = await playerAlreadyInAmericano(input.tournamentId, user.id);
+  if (dup) {
+    return { ok: false, error: "Tu es déjà inscrit sur ce tournoi." };
+  }
+
+  const { error } = await supabase.from("tournament_solo_entries").insert({
+    tournament_id: input.tournamentId,
+    player_id: user.id,
+    status: "registered",
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/${loc}/tournaments/${input.tournamentId}`);
+  revalidatePath(`/${loc}/club/tournaments/${input.tournamentId}`);
+  revalidatePath(`/${loc}/profile`);
+  return { ok: true };
+}
+
+export async function generateTournamentScheduleAction(input: {
   locale: string;
   tournamentId: string;
 }): Promise<ActionResult> {
@@ -202,23 +267,58 @@ export async function generateKnockoutBracketAction(input: {
   if (!access.ok) return access;
 
   if (tournament.status !== "registration_open") {
-    return { ok: false, error: "Le tableau ne peut être généré qu’en phase d’inscriptions ouvertes." };
+    return { ok: false, error: "Le planning ne peut être généré qu’en phase d’inscriptions ouvertes." };
   }
 
   const existing = await countBracketMatches(input.tournamentId);
   if (existing > 0) {
-    return { ok: false, error: "Un tableau existe déjà pour ce tournoi." };
+    return { ok: false, error: "Un planning existe déjà pour ce tournoi." };
   }
 
-  const entries = await listEntriesForTournament(input.tournamentId);
-  const bracket = await createTournamentKnockoutFirstRound({
-    tournament,
-    entries,
-    staffUserId: user.id,
-    matchGenderType: "all",
-  });
+  let generated: { ok: true } | { ok: false; error: string };
 
-  if (!bracket.ok) return { ok: false, error: bracket.error };
+  if (tournament.format === "pools") {
+    const entries = await listEntriesForTournament(input.tournamentId);
+    const activeCount = entries.filter((e) => e.status !== "withdrawn").length;
+    if (!canGeneratePoolSchedule(activeCount)) {
+      return { ok: false, error: "Il faut au moins 3 équipes pour générer les poules." };
+    }
+    generated = await createTournamentPoolMatches({
+      tournament,
+      entries,
+      staffUserId: user.id,
+    });
+  } else if (tournament.format === "americano") {
+    const soloEntries = await listSoloEntriesForTournament(input.tournamentId);
+    const activeCount = soloEntries.filter((e) => e.status !== "withdrawn").length;
+    if (!isValidAmericanoPlayerCount(activeCount)) {
+      return {
+        ok: false,
+        error: "L’Américano nécessite 4, 8, 12 ou 16 joueurs inscrits.",
+      };
+    }
+    generated = await createTournamentAmericanoMatches({
+      tournament,
+      soloEntries,
+      staffUserId: user.id,
+    });
+  } else {
+    const entries = await listEntriesForTournament(input.tournamentId);
+    const activeCount = entries.filter((e) => e.status !== "withdrawn").length;
+    if (!isPowerOfTwoTeamCount(activeCount)) {
+      return {
+        ok: false,
+        error: "Le nombre d’équipes inscrites doit être une puissance de 2 (4, 8, 16…).",
+      };
+    }
+    generated = await createTournamentKnockoutFirstRound({
+      tournament,
+      entries,
+      staffUserId: user.id,
+    });
+  }
+
+  if (!generated.ok) return { ok: false, error: generated.error };
 
   const { error: uErr } = await supabase
     .from("tournaments")
@@ -232,6 +332,13 @@ export async function generateKnockoutBracketAction(input: {
   revalidatePath(`/${loc}/club/tournaments`);
   revalidatePath(`/${loc}/tournaments`);
   return { ok: true };
+}
+
+export async function generateKnockoutBracketAction(input: {
+  locale: string;
+  tournamentId: string;
+}): Promise<ActionResult> {
+  return generateTournamentScheduleAction(input);
 }
 
 export async function setTournamentMatchWinnerAction(input: {

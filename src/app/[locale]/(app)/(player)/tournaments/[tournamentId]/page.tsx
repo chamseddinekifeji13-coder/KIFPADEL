@@ -7,10 +7,13 @@ import {
   fetchProfilesForPartnerPick,
   getTournamentWithClub,
   listEntriesWithDisplayNames,
+  listSoloEntriesWithDisplayNames,
   listTournamentMatchesWithResults,
 } from "@/modules/tournaments/repository";
 import type { ProfilePick } from "@/modules/tournaments/repository";
+import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
 import { TournamentRegisterForm } from "@/app/[locale]/(app)/(player)/tournaments/[tournamentId]/tournament-register-form";
+import { TournamentSoloRegisterForm } from "@/app/[locale]/(app)/(player)/tournaments/[tournamentId]/tournament-solo-register-form";
 
 type Props = { params: Promise<{ locale: string; tournamentId: string }> };
 
@@ -53,15 +56,22 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
   } = await supabase.auth.getUser();
 
   const entries = await listEntriesWithDisplayNames(tournamentId);
+  const soloEntries = await listSoloEntriesWithDisplayNames(tournamentId);
   const matches = await listTournamentMatchesWithResults(tournamentId);
 
   let canRegister = false;
+  let canRegisterSolo = false;
   let partners: ProfilePick[] = [];
   if (user && tournament.status === "registration_open") {
-    const inTournament = entries.some((e) => e.player1Id === user.id || e.player2Id === user.id);
-    if (!inTournament) {
-      canRegister = true;
-      partners = await fetchProfilesForPartnerPick(user.id);
+    if (tournament.format === "americano") {
+      const inTournament = soloEntries.some((e) => e.playerId === user.id);
+      canRegisterSolo = !inTournament;
+    } else {
+      const inTournament = entries.some((e) => e.player1Id === user.id || e.player2Id === user.id);
+      if (!inTournament) {
+        canRegister = true;
+        partners = await fetchProfilesForPartnerPick(user.id);
+      }
     }
   }
 
@@ -82,14 +92,25 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
             {labels.tournamentsDetailRegionsLabel}: {regionsDisplay}
           </p>
         ) : null}
-        <p className="mt-1 text-xs font-bold uppercase text-slate-600">{statusLabel}</p>
+        <p className="mt-1 text-xs font-bold uppercase text-slate-600">
+          {formatTournamentFormatLabel(tournament.format, locale)} · {statusLabel}
+        </p>
       </header>
 
-      {user && entries.some((e) => e.player1Id === user.id || e.player2Id === user.id) ? (
+      {user &&
+      (tournament.format === "americano"
+        ? soloEntries.some((e) => e.playerId === user.id)
+        : entries.some((e) => e.player1Id === user.id || e.player2Id === user.id)) ? (
         <p className="text-sm font-medium text-emerald-700">{labels.tournamentDetailRegisteredBanner}</p>
       ) : null}
 
-      {user ? (
+      {user && tournament.format === "americano" ? (
+        <TournamentSoloRegisterForm
+          locale={locale}
+          tournamentId={tournamentId}
+          canRegister={canRegisterSolo}
+        />
+      ) : user ? (
         <TournamentRegisterForm
           locale={locale}
           tournamentId={tournamentId}
@@ -106,13 +127,22 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
       )}
 
       <section className="space-y-2">
-        <h2 className="text-sm font-bold text-slate-800">Équipes inscrites</h2>
+        <h2 className="text-sm font-bold text-slate-800">
+          {tournament.format === "americano" ? "Joueurs inscrits" : "Équipes inscrites"}
+        </h2>
         <ul className="text-sm text-slate-600 space-y-1">
-          {entries.map((e) => (
-            <li key={e.id}>
-              {e.player1Name} + {e.player2Name}
-            </li>
-          ))}
+          {tournament.format === "americano"
+            ? soloEntries.map((e) => (
+                <li key={e.id} className="flex justify-between gap-2">
+                  <span>{e.playerName}</span>
+                  <span className="font-bold text-slate-800">{e.americanoPoints} pts</span>
+                </li>
+              ))
+            : entries.map((e) => (
+                <li key={e.id}>
+                  {e.player1Name} + {e.player2Name}
+                </li>
+              ))}
         </ul>
       </section>
 

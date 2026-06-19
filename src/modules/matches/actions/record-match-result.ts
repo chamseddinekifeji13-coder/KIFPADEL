@@ -9,6 +9,7 @@ import {
 } from "@/domain/rules/match-score";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { assertClubStaffCanManage } from "@/modules/clubs/actions/club-staff-guard";
+import { applyAmericanoPointsForMatch } from "@/modules/tournaments/americano-scoring";
 
 export type RecordMatchResultInput = {
   locale: string;
@@ -117,6 +118,12 @@ export async function recordMatchResultAction(
   }
 
   await supabase.from("matches").update({ status: "played" }).eq("id", matchId);
+
+  try {
+    await applyAmericanoPointsForMatch(matchId, sets);
+  } catch (err) {
+    console.error("[recordMatchResultAction] americano points failed", err);
+  }
 
   revalidatePath(`/${locale}/matches/${matchId}`, "page");
   revalidatePath(`/${locale}/play-now`, "page");

@@ -3,16 +3,36 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
+import type { TournamentFormat } from "@/domain/types/tournaments";
 import { createTournamentAction } from "@/modules/tournaments/actions";
 
 type Props = {
   locale: string;
 };
 
+const FORMAT_OPTIONS: { value: TournamentFormat; label: string; hint: string }[] = [
+  {
+    value: "knockout",
+    label: "Élimination directe",
+    hint: "Tableau KO — 4, 8 ou 16 équipes (binômes).",
+  },
+  {
+    value: "pools",
+    label: "Poules",
+    hint: "Round-robin par groupe — minimum 3 équipes.",
+  },
+  {
+    value: "americano",
+    label: "Américano",
+    hint: "Inscription solo — 4, 8, 12 ou 16 joueurs, partenaires rotatifs.",
+  },
+];
+
 export function TournamentCreateForm({ locale }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [format, setFormat] = useState<TournamentFormat>("knockout");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [fee, setFee] = useState("");
@@ -38,6 +58,7 @@ export function TournamentCreateForm({ locale }: Props) {
         endsAtIso: endsAt ? new Date(endsAt).toISOString() : null,
         entryFeeCents: feeNum,
         initialStatus: openNow ? "registration_open" : "draft",
+        format,
       });
       if (!res.ok) {
         setError(res.error);
@@ -50,6 +71,8 @@ export function TournamentCreateForm({ locale }: Props) {
     }
   };
 
+  const selectedHint = FORMAT_OPTIONS.find((o) => o.value === format)?.hint ?? "";
+
   return (
     <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
       <h2 className="text-sm font-bold text-white">Nouveau tournoi</h2>
@@ -61,6 +84,38 @@ export function TournamentCreateForm({ locale }: Props) {
           onChange={(e) => setTitle(e.target.value)}
           className="w-full rounded-xl border border-[var(--border)] bg-black/20 px-3 py-2 text-sm text-white"
         />
+      </div>
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase text-[var(--foreground-muted)]">Format</label>
+        <div className="grid gap-2">
+          {FORMAT_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors",
+                format === option.value
+                  ? "border-[var(--gold)] bg-[var(--gold)]/10"
+                  : "border-[var(--border)] bg-black/20",
+              )}
+            >
+              <input
+                type="radio"
+                name="format"
+                value={option.value}
+                checked={format === option.value}
+                onChange={() => setFormat(option.value)}
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-bold text-white">{option.label}</span>
+                <span className="block text-[10px] text-[var(--foreground-muted)] mt-0.5">
+                  {option.hint}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="text-[10px] text-[var(--foreground-muted)]">{selectedHint}</p>
       </div>
       <div className="space-y-2">
         <label className="text-[10px] font-bold uppercase text-[var(--foreground-muted)]">Description</label>

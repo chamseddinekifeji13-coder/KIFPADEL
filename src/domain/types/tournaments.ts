@@ -1,6 +1,6 @@
 import type { UUID } from "./core";
 
-export type TournamentFormat = "knockout";
+export type TournamentFormat = "knockout" | "pools" | "americano";
 
 export type TournamentScope = "single_club" | "interclub" | "inter_region" | "platform";
 
