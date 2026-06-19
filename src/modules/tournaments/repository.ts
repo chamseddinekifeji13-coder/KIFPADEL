@@ -64,6 +64,8 @@ function mapEntry(row: EntryRow): TournamentEntry {
     teamName: row.team_name != null ? String(row.team_name) : null,
     player1Id: String(row.player1_id),
     player2Id: String(row.player2_id),
+    representingClubId:
+      row.representing_club_id != null ? String(row.representing_club_id) : null,
     status: row.status as TournamentEntry["status"],
     seed: row.seed != null ? Number(row.seed) : null,
     createdAt: String(row.created_at),
@@ -106,21 +108,159 @@ export type TournamentSummaryForProfile = {
 export async function listTournamentsForClub(clubId: string): Promise<Tournament[]> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
+
+    const { data: hosted, error: hostedError } = await supabase
       .from("tournaments")
       .select("*")
       .eq("club_id", clubId)
       .order("starts_at", { ascending: true, nullsFirst: false });
 
-    if (error) {
-      console.warn("[tournaments.listTournamentsForClub]", error.message);
-      return [];
+    if (hostedError) {
+      console.warn("[tournaments.listTournamentsForClub] hosted", hostedError.message);
     }
-    return (data ?? []).map((r) => mapTournament(r as TournamentRow));
+
+    const { data: invitedLinks, error: invitedError } = await supabase
+      .from("tournament_participating_clubs")
+      .select("tournament_id")
+      .eq("club_id", clubId)
+      .in("status", ["pending", "accepted"]);
+
+    if (invitedError) {
+      console.warn("[tournaments.listTournamentsForClub] invited", invitedError.message);
+    }
+
+    const hostedIds = new Set((hosted ?? []).map((r) => String((r as { id: string }).id)));
+    const invitedIds = (invitedLinks ?? [])
+      .map((r) => String((r as { tournament_id: string }).tournament_id))
+      .filter((id) => !hostedIds.has(id));
+
+    let invitedTournaments: TournamentRow[] = [];
+    if (invitedIds.length > 0) {
+      const { data: invitedRows, error: invitedRowsError } = await supabase
+        .from("tournaments")
+        .select("*")
+        .in("id", invitedIds);
+
+      if (invitedRowsError) {
+        console.warn("[tournaments.listTournamentsForClub] invited rows", invitedRowsError.message);
+      } else {
+        invitedTournaments = (invitedRows ?? []) as TournamentRow[];
+      }
+    }
+
+    const merged = [...(hosted ?? []), ...invitedTournaments] as TournamentRow[];
+    merged.sort((a, b) => {
+      const aTime = a.starts_at ? new Date(String(a.starts_at)).getTime() : Number.MAX_SAFE_INTEGER;
+      const bTime = b.starts_at ? new Date(String(b.starts_at)).getTime() : Number.MAX_SAFE_INTEGER;
+      return aTime - bTime;
+    });
+
+    return merged.map((r) => mapTournament(r));
   } catch (err) {
     rethrowFrameworkError(err);
     return [];
   }
+}
+
+export type ClubInviteOption = { id: string; name: string; city: string };
+
+export async function listActiveClubsForTournamentInvite(
+  excludeClubId: string,
+): Promise<ClubInviteOption[]> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("clubs")
+      .select("id, name, city")
+      .eq("is_active", true)
+      .neq("id", excludeClubId)
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.warn("[tournaments.listActiveClubsForTournamentInvite]", error.message);
+      return [];
+    }
+
+    return (data ?? []).map((row) => ({
+      id: String((row as { id: string }).id),
+      name: String((row as { name: string }).name),
+      city: String((row as { city?: string }).city ?? ""),
+    }));
+  } catch (err) {
+    rethrowFrameworkError(err);
+    return [];
+  }
+}
+
+export async function listParticipatingClubsForTournament(
+  tournamentId: string,
+): Promise<import("@/domain/rules/tournament-club-standings").TournamentParticipatingClub[]> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("tournament_participating_clubs")
+      .select("id, tournament_id, club_id, role, status, clubs(name, city)")
+      .eq("tournament_id", tournamentId)
+      .order("role", { ascending: true });
+
+    if (error) {
+      console.warn("[tournaments.listParticipatingClubsForTournament]", error.message);
+      return [];
+    }
+
+    return (data ?? []).map((raw) => {
+      const row = raw as {
+        id: string;
+        tournament_id: string;
+        club_id: string;
+        role: string;
+        status: string;
+        clubs?: { name?: string; city?: string } | { name?: string; city?: string }[] | null;
+      };
+      const club = Array.isArray(row.clubs) ? row.clubs[0] : row.clubs;
+      return {
+        id: String(row.id),
+        tournamentId: String(row.tournament_id),
+        clubId: String(row.club_id),
+        clubName: club?.name?.trim() || "Club",
+        clubCity: club?.city?.trim() || "",
+        role: row.role === "host" ? "host" : "invited",
+        status:
+          row.status === "accepted" || row.status === "declined" ? row.status : "pending",
+      };
+    });
+  } catch (err) {
+    rethrowFrameworkError(err);
+    return [];
+  }
+}
+
+export async function clubCanAccessTournament(
+  clubId: string,
+  tournament: Tournament,
+): Promise<"host" | "participant" | null> {
+  if (tournament.clubId === clubId) {
+    return "host";
+  }
+
+  const participants = await listParticipatingClubsForTournament(tournament.id);
+  const link = participants.find((p) => p.clubId === clubId && p.status !== "declined");
+  return link ? "participant" : null;
+}
+
+export async function isClubAcceptedParticipant(
+  tournamentId: string,
+  clubId: string,
+): Promise<boolean> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("tournament_participating_clubs")
+    .select("status")
+    .eq("tournament_id", tournamentId)
+    .eq("club_id", clubId)
+    .eq("status", "accepted")
+    .maybeSingle();
+  return Boolean(data);
 }
 
 export async function listDiscoverableTournaments(): Promise<TournamentWithClub[]> {
@@ -562,6 +702,7 @@ export type TournamentSoloEntry = {
   playerId: string;
   status: TournamentEntry["status"];
   americanoPoints: number;
+  representingClubId: string | null;
   createdAt: string;
 };
 
@@ -591,6 +732,10 @@ export async function listSoloEntriesForTournament(
       playerId: String((row as { player_id: string }).player_id),
       status: (row as { status: TournamentEntry["status"] }).status,
       americanoPoints: Number((row as { americano_points?: number }).americano_points ?? 0),
+      representingClubId:
+        (row as { representing_club_id?: string | null }).representing_club_id != null
+          ? String((row as { representing_club_id: string }).representing_club_id)
+          : null,
       createdAt: String((row as { created_at: string }).created_at),
     }));
   } catch (err) {

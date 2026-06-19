@@ -38,6 +38,7 @@ export type TournamentEntry = {
   teamName: string | null;
   player1Id: UUID;
   player2Id: UUID;
+  representingClubId: UUID | null;
   status: TournamentEntryStatus;
   seed: number | null;
   createdAt: string;

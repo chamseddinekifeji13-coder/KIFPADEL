@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import type { TournamentFormat } from "@/domain/types/tournaments";
+import type { ClubInviteOption } from "@/modules/tournaments/repository";
 import { createTournamentAction } from "@/modules/tournaments/actions";
 
 type Props = {
   locale: string;
+  inviteClubOptions: ClubInviteOption[];
 };
 
 const FORMAT_OPTIONS: { value: TournamentFormat; label: string; hint: string }[] = [
@@ -28,11 +30,13 @@ const FORMAT_OPTIONS: { value: TournamentFormat; label: string; hint: string }[]
   },
 ];
 
-export function TournamentCreateForm({ locale }: Props) {
+export function TournamentCreateForm({ locale, inviteClubOptions }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [format, setFormat] = useState<TournamentFormat>("knockout");
+  const [interclub, setInterclub] = useState(false);
+  const [invitedClubIds, setInvitedClubIds] = useState<string[]>([]);
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [fee, setFee] = useState("");
@@ -59,6 +63,8 @@ export function TournamentCreateForm({ locale }: Props) {
         entryFeeCents: feeNum,
         initialStatus: openNow ? "registration_open" : "draft",
         format,
+        interclub,
+        invitedClubIds: interclub ? invitedClubIds : [],
       });
       if (!res.ok) {
         setError(res.error);
@@ -116,6 +122,55 @@ export function TournamentCreateForm({ locale }: Props) {
           ))}
         </div>
         <p className="text-[10px] text-[var(--foreground-muted)]">{selectedHint}</p>
+      </div>
+      <div className="space-y-3 rounded-xl border border-[var(--border)] p-3">
+        <label className="flex items-center gap-2 text-sm font-bold text-white">
+          <input
+            type="checkbox"
+            checked={interclub}
+            onChange={(e) => {
+              setInterclub(e.target.checked);
+              if (!e.target.checked) {
+                setInvitedClubIds([]);
+              }
+            }}
+          />
+          Tournoi inter-clubs
+        </label>
+        <p className="text-[10px] text-[var(--foreground-muted)]">
+          Invitez d’autres clubs. Vous restez l’organisateur hôte (terrains et gestion).
+        </p>
+        {interclub ? (
+          <div className="max-h-40 space-y-2 overflow-y-auto">
+            {inviteClubOptions.length === 0 ? (
+              <p className="text-xs text-[var(--foreground-muted)]">Aucun autre club actif.</p>
+            ) : (
+              inviteClubOptions.map((club) => {
+                const checked = invitedClubIds.includes(club.id);
+                return (
+                  <label
+                    key={club.id}
+                    className="flex items-center gap-2 text-xs text-white cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        setInvitedClubIds((prev) =>
+                          checked ? prev.filter((id) => id !== club.id) : [...prev, club.id],
+                        );
+                      }}
+                    />
+                    <span>
+                      {club.name}
+                      {club.city ? ` · ${club.city}` : ""}
+                    </span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+        ) : null}
       </div>
       <div className="space-y-2">
         <label className="text-[10px] font-bold uppercase text-[var(--foreground-muted)]">Description</label>

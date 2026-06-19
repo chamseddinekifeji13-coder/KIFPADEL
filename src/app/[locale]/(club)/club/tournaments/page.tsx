@@ -3,7 +3,8 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
-import { listTournamentsForClub } from "@/modules/tournaments/repository";
+import { listTournamentsForClub, listActiveClubsForTournamentInvite } from "@/modules/tournaments/repository";
+import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
 import { TournamentCreateForm } from "@/app/[locale]/(club)/club/tournaments/tournament-create-form";
 import Link from "next/link";
 
@@ -26,7 +27,10 @@ export default async function ClubTournamentsPage({ params }: Props) {
     );
   }
 
-  const tournaments = await listTournamentsForClub(managed.id);
+  const [tournaments, inviteClubOptions] = await Promise.all([
+    listTournamentsForClub(managed.id),
+    listActiveClubsForTournamentInvite(managed.id),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -36,7 +40,7 @@ export default async function ClubTournamentsPage({ params }: Props) {
       </header>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <TournamentCreateForm locale={locale} />
+        <TournamentCreateForm locale={locale} inviteClubOptions={inviteClubOptions} />
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-3">
           <h2 className="text-sm font-bold text-white">{labels.tournamentsListTitle}</h2>
           {tournaments.length === 0 ? (
@@ -52,7 +56,10 @@ export default async function ClubTournamentsPage({ params }: Props) {
                     {t.title}
                   </Link>
                   <p className="text-[11px] text-[var(--foreground-muted)] uppercase tracking-wide">
-                    {t.status}
+                    {t.tournamentScope === "interclub"
+                      ? "Inter-clubs"
+                      : formatTournamentFormatLabel(t.format, locale)}{" "}
+                    · {t.status}
                     {t.startsAt ? ` · ${new Date(t.startsAt).toLocaleString(locale === "en" ? "en-GB" : "fr-FR")}` : ""}
                   </p>
                 </li>

@@ -9,13 +9,18 @@ import {
   computePoolStandings,
   parsePoolLabelFromRound,
 } from "@/domain/rules/tournament-pools";
+import {
+  computeClubStandingsFromAmericano,
+  computeClubStandingsFromTeamResults,
+} from "@/domain/rules/tournament-club-standings";
+import type { TournamentParticipatingClub } from "@/domain/rules/tournament-club-standings";
 import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
 import { MatchScoreForm } from "@/components/features/matches/match-score-form";
 import {
   generateTournamentScheduleAction,
   updateTournamentStatusAction,
 } from "@/modules/tournaments/actions";
-import type { TournamentFormat, TournamentStatus } from "@/domain/types/tournaments";
+import type { TournamentFormat, TournamentStatus, TournamentScope } from "@/domain/types/tournaments";
 import type {
   TournamentMatchWithMeta,
   TournamentEntryWithNames,
@@ -26,11 +31,14 @@ type Props = {
   locale: string;
   tournamentId: string;
   format: TournamentFormat;
+  tournamentScope: TournamentScope;
   status: TournamentStatus;
   entries: TournamentEntryWithNames[];
   soloEntries: TournamentSoloEntryWithName[];
   matches: TournamentMatchWithMeta[];
+  participatingClubs: TournamentParticipatingClub[];
   canGenerateSchedule: boolean;
+  isHost: boolean;
 };
 
 const STATUS_FLOW: TournamentStatus[] = [
@@ -66,11 +74,14 @@ export function TournamentStaffPanel({
   locale,
   tournamentId,
   format,
+  tournamentScope,
   status,
   entries,
   soloEntries,
   matches,
+  participatingClubs,
   canGenerateSchedule,
+  isHost,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -109,11 +120,70 @@ export function TournamentStaffPanel({
       ? assignTeamsToPools(activeEntries.length).map((p) => p.poolLabel)
       : [];
 
+  const clubStandings =
+    tournamentScope === "interclub"
+      ? format === "americano"
+        ? computeClubStandingsFromAmericano(
+            participatingClubs,
+            activeSolo.map((e) => ({
+              representingClubId: e.representingClubId,
+              americanoPoints: e.americanoPoints,
+            })),
+          )
+        : computeClubStandingsFromTeamResults(
+            participatingClubs,
+            activeEntries.map((e) => ({ id: e.id, representingClubId: e.representingClubId })),
+            matches.map((m) => ({
+              team1EntryId: m.team1EntryId,
+              team2EntryId: m.team2EntryId,
+              winnerTeam: m.winnerTeam,
+            })),
+          )
+      : [];
+
   return (
     <div className="space-y-4">
       <p className="text-xs font-bold uppercase tracking-wide text-[var(--gold)]">
         Format : {formatTournamentFormatLabel(format, locale)}
+        {tournamentScope === "interclub" ? " · Inter-clubs" : ""}
       </p>
+
+      {tournamentScope === "interclub" ? (
+        <div className="rounded-xl border border-[var(--border)] p-3 space-y-2">
+          <h3 className="text-xs font-bold uppercase text-[var(--foreground-muted)]">Clubs participants</h3>
+          <ul className="text-sm text-white space-y-1">
+            {participatingClubs.map((club) => (
+              <li key={club.id} className="flex justify-between gap-2">
+                <span>
+                  {club.clubName}
+                  {club.role === "host" ? " (hôte)" : ""}
+                </span>
+                <span className="text-[10px] uppercase text-[var(--foreground-muted)]">{club.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {clubStandings.length > 0 ? (
+        <div className="rounded-xl border border-[var(--border)] p-3 space-y-2">
+          <h3 className="text-xs font-bold uppercase text-[var(--foreground-muted)]">Classement par club</h3>
+          <ul className="text-sm text-white space-y-1">
+            {clubStandings.map((row, index) => (
+              <li key={row.clubId} className="flex justify-between gap-2">
+                <span>
+                  {index + 1}. {row.clubName}
+                </span>
+                <span className="text-[var(--gold)] font-bold">
+                  {format === "americano"
+                    ? `${row.americanoPoints} pts`
+                    : `${row.wins}V · ${row.losses}D`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {error ? <p className="text-xs font-semibold text-rose-400">{error}</p> : null}
 
@@ -128,19 +198,25 @@ export function TournamentStaffPanel({
             Statut → {ns}
           </button>
         ) : null}
-        <button
-          type="button"
-          disabled={!canGenerateSchedule || pending !== null}
-          onClick={onGenerate}
-          className={cn(
-            "rounded-xl px-4 py-2 text-xs font-bold",
-            canGenerateSchedule && !pending
-              ? "bg-[var(--gold)] text-black"
-              : "bg-white/5 text-white/40",
-          )}
-        >
-          {pending === "gen" ? "…" : generateButtonLabel(format)}
-        </button>
+        {isHost ? (
+          <button
+            type="button"
+            disabled={!canGenerateSchedule || pending !== null}
+            onClick={onGenerate}
+            className={cn(
+              "rounded-xl px-4 py-2 text-xs font-bold",
+              canGenerateSchedule && !pending
+                ? "bg-[var(--gold)] text-black"
+                : "bg-white/5 text-white/40",
+            )}
+          >
+            {pending === "gen" ? "…" : generateButtonLabel(format)}
+          </button>
+        ) : (
+          <p className="text-xs text-[var(--foreground-muted)]">
+            Seul le club hôte génère le planning et saisit les scores.
+          </p>
+        )}
       </div>
       <p className="text-[10px] text-[var(--foreground-muted)]">{scheduleHint(format)}</p>
 
@@ -264,7 +340,7 @@ export function TournamentStaffPanel({
                         </p>
                       ) : null}
                     </div>
-                  ) : m.matchId ? (
+                  ) : m.matchId && isHost ? (
                     <div className="mt-3 border-t border-[var(--border)] pt-3">
                       <MatchScoreForm locale={locale} matchId={m.matchId} tournamentId={tournamentId} />
                     </div>
