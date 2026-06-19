@@ -15,6 +15,18 @@ import { isPowerOfTwoTeamCount } from "@/domain/rules/tournament-bracket";
 import { canGeneratePoolSchedule } from "@/domain/rules/tournament-pools";
 import { isValidAmericanoPlayerCount } from "@/domain/rules/tournament-americano";
 import {
+  filterItemsByCategory,
+  listCategoriesForSchedule,
+  normalizeTournamentCategories,
+  parseTournamentCategories,
+  resolveRegistrationCategory,
+  tournamentCategoryLabel,
+  validateSoloPlayerForCategory,
+  validateTeamForCategory,
+  type TournamentCategory,
+} from "@/domain/rules/tournament-categories";
+import type { Gender } from "@/domain/types/core";
+import {
   countBracketMatches,
   createTournamentAmericanoMatches,
   createTournamentKnockoutFirstRound,
@@ -103,6 +115,7 @@ export async function createTournamentAction(input: {
   format?: TournamentFormat;
   interclub?: boolean;
   invitedClubIds?: string[];
+  categories?: TournamentCategory[];
 }): Promise<ActionResult<{ tournamentId: string }>> {
   const loc = input.locale?.trim() || "fr";
   const supabase = await createSupabaseServerActionClient();
@@ -124,6 +137,7 @@ export async function createTournamentAction(input: {
 
   const interclub = input.interclub === true;
   const invitedClubIds = [...new Set((input.invitedClubIds ?? []).filter((id) => id && id !== managed.id))];
+  const categories = normalizeTournamentCategories(input.categories ?? []);
 
   const { data: row, error } = await supabase
     .from("tournaments")
@@ -139,6 +153,7 @@ export async function createTournamentAction(input: {
       format,
       tournament_scope: interclub ? "interclub" : "single_club",
       scope_metadata: interclub ? { host_club_name: managed.name } : {},
+      settings: categories.length > 0 ? { categories } : {},
     })
     .select("id")
     .single();
@@ -255,11 +270,31 @@ export async function updateTournamentStatusAction(input: {
   return { ok: true };
 }
 
+async function loadProfileGenders(
+  supabase: SupabaseClient,
+  playerIds: string[],
+): Promise<Map<string, Gender | null>> {
+  if (playerIds.length === 0) {
+    return new Map();
+  }
+  const { data } = await supabase.from("profiles").select("id, gender").in("id", playerIds);
+  const out = new Map<string, Gender | null>();
+  for (const row of data ?? []) {
+    const g = (row as { gender?: string | null }).gender;
+    out.set(
+      String((row as { id: string }).id),
+      g === "male" || g === "female" ? g : null,
+    );
+  }
+  return out;
+}
+
 export async function createTournamentEntryAction(input: {
   locale: string;
   tournamentId: string;
   partnerPlayerId: string;
   teamName?: string | null;
+  category?: TournamentCategory;
 }): Promise<ActionResult> {
   const loc = input.locale?.trim() || "fr";
   const supabase = await createSupabaseServerActionClient();
@@ -306,6 +341,25 @@ export async function createTournamentEntryAction(input: {
     return interclubGuard;
   }
 
+  const configured = parseTournamentCategories(tournament.settings);
+  const categoryResolved = resolveRegistrationCategory(configured, input.category ?? null);
+  if (!categoryResolved.ok) {
+    return { ok: false, error: categoryResolved.error };
+  }
+  const entryCategory = categoryResolved.category;
+
+  if (entryCategory) {
+    const genders = await loadProfileGenders(supabase, [user.id, partnerId]);
+    const g1 = genders.get(user.id) ?? null;
+    const g2 = genders.get(partnerId) ?? null;
+    if (!validateTeamForCategory(g1, g2, entryCategory)) {
+      return {
+        ok: false,
+        error: `Cette équipe ne correspond pas à la catégorie ${tournamentCategoryLabel(entryCategory, loc)}.`,
+      };
+    }
+  }
+
   const { error } = await supabase.from("tournament_entries").insert({
     tournament_id: input.tournamentId,
     player1_id: user.id,
@@ -313,6 +367,7 @@ export async function createTournamentEntryAction(input: {
     team_name: input.teamName?.trim() || null,
     status: "registered",
     representing_club_id: representingClubId,
+    category: entryCategory,
   });
 
   if (error) return { ok: false, error: error.message };
@@ -326,6 +381,7 @@ export async function createTournamentEntryAction(input: {
 export async function createTournamentSoloEntryAction(input: {
   locale: string;
   tournamentId: string;
+  category?: TournamentCategory;
 }): Promise<ActionResult> {
   const loc = input.locale?.trim() || "fr";
   const supabase = await createSupabaseServerActionClient();
@@ -367,11 +423,30 @@ export async function createTournamentSoloEntryAction(input: {
     return interclubGuard;
   }
 
+  const configured = parseTournamentCategories(tournament.settings);
+  const categoryResolved = resolveRegistrationCategory(configured, input.category ?? null);
+  if (!categoryResolved.ok) {
+    return { ok: false, error: categoryResolved.error };
+  }
+  const entryCategory = categoryResolved.category;
+
+  if (entryCategory) {
+    const genders = await loadProfileGenders(supabase, [user.id]);
+    const gender = genders.get(user.id) ?? null;
+    if (!validateSoloPlayerForCategory(gender, entryCategory)) {
+      return {
+        ok: false,
+        error: `Tu ne peux pas t’inscrire en catégorie ${tournamentCategoryLabel(entryCategory, loc)}.`,
+      };
+    }
+  }
+
   const { error } = await supabase.from("tournament_solo_entries").insert({
     tournament_id: input.tournamentId,
     player_id: user.id,
     status: "registered",
     representing_club_id: representingClubId,
+    category: entryCategory,
   });
 
   if (error) return { ok: false, error: error.message };
@@ -380,6 +455,68 @@ export async function createTournamentSoloEntryAction(input: {
   revalidatePath(`/${loc}/club/tournaments/${input.tournamentId}`);
   revalidatePath(`/${loc}/profile`);
   return { ok: true };
+}
+
+async function generateScheduleForCategory(
+  tournament: NonNullable<Awaited<ReturnType<typeof getTournamentById>>>,
+  category: TournamentCategory | null,
+  entries: Awaited<ReturnType<typeof listEntriesForTournament>>,
+  soloEntries: Awaited<ReturnType<typeof listSoloEntriesForTournament>>,
+  staffUserId: string,
+  locale: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const label = tournamentCategoryLabel(category, locale);
+  const catEntries = filterItemsByCategory(
+    entries.filter((e) => e.status !== "withdrawn"),
+    category,
+  );
+  const catSolo = filterItemsByCategory(
+    soloEntries.filter((e) => e.status !== "withdrawn"),
+    category,
+  );
+
+  if (tournament.format === "pools") {
+    if (!canGeneratePoolSchedule(catEntries.length)) {
+      return {
+        ok: false,
+        error: `${label} : il faut au moins 3 équipes pour générer les poules.`,
+      };
+    }
+    return createTournamentPoolMatches({
+      tournament,
+      entries: catEntries,
+      staffUserId,
+      category,
+    });
+  }
+
+  if (tournament.format === "americano") {
+    if (!isValidAmericanoPlayerCount(catSolo.length)) {
+      return {
+        ok: false,
+        error: `${label} : l’Américano nécessite 4, 8, 12 ou 16 joueurs inscrits.`,
+      };
+    }
+    return createTournamentAmericanoMatches({
+      tournament,
+      soloEntries: catSolo,
+      staffUserId,
+      category,
+    });
+  }
+
+  if (!isPowerOfTwoTeamCount(catEntries.length)) {
+    return {
+      ok: false,
+      error: `${label} : le nombre d’équipes doit être une puissance de 2 (4, 8, 16…).`,
+    };
+  }
+  return createTournamentKnockoutFirstRound({
+    tournament,
+    entries: catEntries,
+    staffUserId,
+    category,
+  });
 }
 
 export async function generateTournamentScheduleAction(input: {
@@ -408,50 +545,28 @@ export async function generateTournamentScheduleAction(input: {
     return { ok: false, error: "Un planning existe déjà pour ce tournoi." };
   }
 
-  let generated: { ok: true } | { ok: false; error: string };
+  const entries = await listEntriesForTournament(input.tournamentId);
+  const soloEntries = await listSoloEntriesForTournament(input.tournamentId);
+  const configured = parseTournamentCategories(tournament.settings);
+  const categories = listCategoriesForSchedule(configured, entries, soloEntries);
 
-  if (tournament.format === "pools") {
-    const entries = await listEntriesForTournament(input.tournamentId);
-    const activeCount = entries.filter((e) => e.status !== "withdrawn").length;
-    if (!canGeneratePoolSchedule(activeCount)) {
-      return { ok: false, error: "Il faut au moins 3 équipes pour générer les poules." };
-    }
-    generated = await createTournamentPoolMatches({
-      tournament,
-      entries,
-      staffUserId: user.id,
-    });
-  } else if (tournament.format === "americano") {
-    const soloEntries = await listSoloEntriesForTournament(input.tournamentId);
-    const activeCount = soloEntries.filter((e) => e.status !== "withdrawn").length;
-    if (!isValidAmericanoPlayerCount(activeCount)) {
-      return {
-        ok: false,
-        error: "L’Américano nécessite 4, 8, 12 ou 16 joueurs inscrits.",
-      };
-    }
-    generated = await createTournamentAmericanoMatches({
-      tournament,
-      soloEntries,
-      staffUserId: user.id,
-    });
-  } else {
-    const entries = await listEntriesForTournament(input.tournamentId);
-    const activeCount = entries.filter((e) => e.status !== "withdrawn").length;
-    if (!isPowerOfTwoTeamCount(activeCount)) {
-      return {
-        ok: false,
-        error: "Le nombre d’équipes inscrites doit être une puissance de 2 (4, 8, 16…).",
-      };
-    }
-    generated = await createTournamentKnockoutFirstRound({
-      tournament,
-      entries,
-      staffUserId: user.id,
-    });
+  if (categories.length === 0) {
+    return { ok: false, error: "Aucune inscription pour générer le planning." };
   }
 
-  if (!generated.ok) return { ok: false, error: generated.error };
+  for (const category of categories) {
+    const generated = await generateScheduleForCategory(
+      tournament,
+      category,
+      entries,
+      soloEntries,
+      user.id,
+      loc,
+    );
+    if (!generated.ok) {
+      return generated;
+    }
+  }
 
   const { error: uErr } = await supabase
     .from("tournaments")
@@ -462,6 +577,7 @@ export async function generateTournamentScheduleAction(input: {
 
   revalidatePath(`/${loc}/club/tournaments/${input.tournamentId}`);
   revalidatePath(`/${loc}/tournaments/${input.tournamentId}`);
+  revalidatePath(`/${loc}/tournaments/${input.tournamentId}/display`);
   revalidatePath(`/${loc}/club/tournaments`);
   revalidatePath(`/${loc}/tournaments`);
   return { ok: true };

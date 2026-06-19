@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { createTournamentEntryAction } from "@/modules/tournaments/actions";
+import { tournamentCategoryLabel, type TournamentCategory } from "@/domain/rules/tournament-categories";
 import type { ProfilePick } from "@/modules/tournaments/repository";
 
 type Props = {
@@ -11,11 +12,21 @@ type Props = {
   tournamentId: string;
   partners: ProfilePick[];
   canRegister: boolean;
+  categories: TournamentCategory[];
 };
 
-export function TournamentRegisterForm({ locale, tournamentId, partners, canRegister }: Props) {
+export function TournamentRegisterForm({
+  locale,
+  tournamentId,
+  partners,
+  canRegister,
+  categories,
+}: Props) {
   const router = useRouter();
   const [partnerId, setPartnerId] = useState("");
+  const [category, setCategory] = useState<TournamentCategory | "">(
+    categories.length === 1 ? categories[0]! : "",
+  );
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -23,12 +34,17 @@ export function TournamentRegisterForm({ locale, tournamentId, partners, canRegi
     e.preventDefault();
     setError("");
     if (!canRegister) return;
+    if (categories.length > 1 && !category) {
+      setError("Choisis une catégorie.");
+      return;
+    }
     setPending(true);
     try {
       const res = await createTournamentEntryAction({
         locale,
         tournamentId,
         partnerPlayerId: partnerId,
+        category: category || undefined,
       });
       if (!res.ok) {
         setError(res.error);
@@ -52,9 +68,27 @@ export function TournamentRegisterForm({ locale, tournamentId, partners, canRegi
     <form onSubmit={onSubmit} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
       <h3 className="text-sm font-bold text-slate-900">S&apos;inscrire en équipe</h3>
       <p className="text-xs text-slate-500">
-        Tu seras enregistré comme joueur 1 ; choisis ton partenaire (joueur 2). V1 : sans confirmation du
-        partenaire côté app.
+        Tu seras enregistré comme joueur 1 ; choisis ton partenaire (joueur 2).
       </p>
+      {categories.length > 1 ? (
+        <select
+          required
+          value={category}
+          onChange={(e) => setCategory(e.target.value as TournamentCategory)}
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+        >
+          <option value="">— Catégorie —</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {tournamentCategoryLabel(cat, locale)}
+            </option>
+          ))}
+        </select>
+      ) : categories.length === 1 ? (
+        <p className="text-xs font-semibold text-slate-700">
+          Catégorie : {tournamentCategoryLabel(categories[0]!, locale)}
+        </p>
+      ) : null}
       <select
         required
         value={partnerId}

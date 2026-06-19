@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import type { TournamentFormat } from "@/domain/types/tournaments";
+import type { TournamentCategory } from "@/domain/rules/tournament-categories";
 import type { ClubInviteOption } from "@/modules/tournaments/repository";
 import { createTournamentAction } from "@/modules/tournaments/actions";
 
@@ -30,6 +31,12 @@ const FORMAT_OPTIONS: { value: TournamentFormat; label: string; hint: string }[]
   },
 ];
 
+const CATEGORY_OPTIONS: { value: TournamentCategory; label: string }[] = [
+  { value: "men_only", label: "Masculin" },
+  { value: "women_only", label: "Féminin" },
+  { value: "mixed", label: "Mixte" },
+];
+
 export function TournamentCreateForm({ locale, inviteClubOptions }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -37,6 +44,7 @@ export function TournamentCreateForm({ locale, inviteClubOptions }: Props) {
   const [format, setFormat] = useState<TournamentFormat>("knockout");
   const [interclub, setInterclub] = useState(false);
   const [invitedClubIds, setInvitedClubIds] = useState<string[]>([]);
+  const [categories, setCategories] = useState<TournamentCategory[]>([]);
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [fee, setFee] = useState("");
@@ -65,6 +73,7 @@ export function TournamentCreateForm({ locale, inviteClubOptions }: Props) {
         format,
         interclub,
         invitedClubIds: interclub ? invitedClubIds : [],
+        categories,
       });
       if (!res.ok) {
         setError(res.error);
@@ -122,6 +131,36 @@ export function TournamentCreateForm({ locale, inviteClubOptions }: Props) {
           ))}
         </div>
         <p className="text-[10px] text-[var(--foreground-muted)]">{selectedHint}</p>
+      </div>
+      <div className="space-y-3 rounded-xl border border-[var(--border)] p-3">
+        <p className="text-[10px] font-bold uppercase text-[var(--foreground-muted)]">Catégories</p>
+        <p className="text-[10px] text-[var(--foreground-muted)]">
+          Cochez une ou plusieurs catégories. Si aucune n’est cochée, le tournoi reste ouvert à tous.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {CATEGORY_OPTIONS.map((option) => {
+            const checked = categories.includes(option.value);
+            return (
+              <label
+                key={option.value}
+                className="flex items-center gap-2 text-xs text-white cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => {
+                    setCategories((prev) =>
+                      checked
+                        ? prev.filter((c) => c !== option.value)
+                        : [...prev, option.value],
+                    );
+                  }}
+                />
+                {option.label}
+              </label>
+            );
+          })}
+        </div>
       </div>
       <div className="space-y-3 rounded-xl border border-[var(--border)] p-3">
         <label className="flex items-center gap-2 text-sm font-bold text-white">

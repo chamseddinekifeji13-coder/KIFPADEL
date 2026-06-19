@@ -3,6 +3,10 @@ import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 import type { Tournament, TournamentEntry, TournamentMatch, TournamentScope, TournamentFormat } from "@/domain/types/tournaments";
 import type { MatchGenderType } from "@/domain/types/core";
 import {
+  tournamentCategoryToMatchGenderType,
+  type TournamentCategory,
+} from "@/domain/rules/tournament-categories";
+import {
   firstKnockoutPairingIndices,
   isPowerOfTwoTeamCount,
   knockoutRoundLabel,
@@ -66,10 +70,18 @@ function mapEntry(row: EntryRow): TournamentEntry {
     player2Id: String(row.player2_id),
     representingClubId:
       row.representing_club_id != null ? String(row.representing_club_id) : null,
+    category: parseCategoryColumn(row.category),
     status: row.status as TournamentEntry["status"],
     seed: row.seed != null ? Number(row.seed) : null,
     createdAt: String(row.created_at),
   };
+}
+
+function parseCategoryColumn(raw: unknown): TournamentCategory | null {
+  if (raw === "men_only" || raw === "women_only" || raw === "mixed") {
+    return raw;
+  }
+  return null;
 }
 
 function mapTournamentMatch(row: TournamentMatchRow): TournamentMatch {
@@ -81,6 +93,7 @@ function mapTournamentMatch(row: TournamentMatchRow): TournamentMatch {
     matchId: row.match_id != null ? String(row.match_id) : null,
     team1EntryId: row.team1_entry_id != null ? String(row.team1_entry_id) : null,
     team2EntryId: row.team2_entry_id != null ? String(row.team2_entry_id) : null,
+    category: parseCategoryColumn(row.category),
     scheduledStartsAt: row.scheduled_starts_at != null ? String(row.scheduled_starts_at) : null,
     courtId: row.court_id != null ? String(row.court_id) : null,
     createdAt: String(row.created_at),
@@ -608,8 +621,17 @@ export async function createTournamentKnockoutFirstRound(args: {
   entries: TournamentEntry[];
   staffUserId: string;
   matchGenderType?: MatchGenderType;
+  category?: TournamentCategory | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { tournament, entries, staffUserId, matchGenderType = "all" } = args;
+  const {
+    tournament,
+    entries,
+    staffUserId,
+    matchGenderType: matchGenderTypeArg,
+    category = null,
+  } = args;
+  const matchGenderType =
+    matchGenderTypeArg ?? tournamentCategoryToMatchGenderType(category);
 
   const active = entries.filter((e) => e.status !== "withdrawn");
   if (!isPowerOfTwoTeamCount(active.length)) {
@@ -686,6 +708,7 @@ export async function createTournamentKnockoutFirstRound(args: {
       team1_entry_id: e1.id,
       team2_entry_id: e2.id,
       scheduled_starts_at: startsAt,
+      category,
     });
 
     if (tmErr) {
@@ -703,6 +726,7 @@ export type TournamentSoloEntry = {
   status: TournamentEntry["status"];
   americanoPoints: number;
   representingClubId: string | null;
+  category: TournamentCategory | null;
   createdAt: string;
 };
 
@@ -736,6 +760,7 @@ export async function listSoloEntriesForTournament(
         (row as { representing_club_id?: string | null }).representing_club_id != null
           ? String((row as { representing_club_id: string }).representing_club_id)
           : null,
+      category: parseCategoryColumn((row as { category?: unknown }).category),
       createdAt: String((row as { created_at: string }).created_at),
     }));
   } catch (err) {
@@ -795,6 +820,7 @@ async function insertTournamentMatchWithPlayers(args: {
   team2EntryId?: string | null;
   startsAt: string;
   matchGenderType?: MatchGenderType;
+  category?: TournamentCategory | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const {
     supabase,
@@ -808,6 +834,7 @@ async function insertTournamentMatchWithPlayers(args: {
     team2EntryId = null,
     startsAt,
     matchGenderType = "all",
+    category = null,
   } = args;
 
   const { data: matchRow, error: mErr } = await supabase
@@ -847,6 +874,7 @@ async function insertTournamentMatchWithPlayers(args: {
     team1_entry_id: team1EntryId,
     team2_entry_id: team2EntryId,
     scheduled_starts_at: startsAt,
+    category,
   });
 
   if (tmErr) {
@@ -864,8 +892,17 @@ export async function createTournamentPoolMatches(args: {
   entries: TournamentEntry[];
   staffUserId: string;
   matchGenderType?: MatchGenderType;
+  category?: TournamentCategory | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { tournament, entries, staffUserId, matchGenderType = "all" } = args;
+  const {
+    tournament,
+    entries,
+    staffUserId,
+    matchGenderType: matchGenderTypeArg,
+    category = null,
+  } = args;
+  const matchGenderType =
+    matchGenderTypeArg ?? tournamentCategoryToMatchGenderType(category);
   const active = entries.filter((e) => e.status !== "withdrawn");
   if (active.length < 3) {
     return { ok: false, error: "Il faut au moins 3 équipes pour des poules." };
@@ -895,6 +932,7 @@ export async function createTournamentPoolMatches(args: {
       team2EntryId: e2.id,
       startsAt,
       matchGenderType,
+      category,
     });
 
     if (!inserted.ok) {
@@ -914,8 +952,17 @@ export async function createTournamentAmericanoMatches(args: {
   soloEntries: TournamentSoloEntry[];
   staffUserId: string;
   matchGenderType?: MatchGenderType;
+  category?: TournamentCategory | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { tournament, soloEntries, staffUserId, matchGenderType = "all" } = args;
+  const {
+    tournament,
+    soloEntries,
+    staffUserId,
+    matchGenderType: matchGenderTypeArg,
+    category = null,
+  } = args;
+  const matchGenderType =
+    matchGenderTypeArg ?? tournamentCategoryToMatchGenderType(category);
   const active = soloEntries.filter((e) => e.status !== "withdrawn");
   const playerIds = active.map((e) => e.playerId);
 
@@ -950,6 +997,7 @@ export async function createTournamentAmericanoMatches(args: {
         teamBPlayerIds: [playerIds[courtMatch.b1]!, playerIds[courtMatch.b2]!],
         startsAt,
         matchGenderType,
+        category,
       });
       if (!inserted.ok) {
         return inserted;

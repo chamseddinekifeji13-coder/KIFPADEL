@@ -9,6 +9,13 @@ import {
   computeClubStandingsFromTeamResults,
 } from "@/domain/rules/tournament-club-standings";
 import type { TournamentParticipatingClub } from "@/domain/rules/tournament-club-standings";
+import {
+  filterItemsByCategory,
+  hasMultipleDisplayCategories,
+  listDisplayCategories,
+  tournamentCategoryLabel,
+  type TournamentCategory,
+} from "@/domain/rules/tournament-categories";
 import type { TournamentFormat } from "@/domain/types/tournaments";
 
 export type DisplayMatch = {
@@ -165,6 +172,81 @@ export function buildPoolDisplayBlocks(
       secondary: `${row.losses}D`,
     })),
   }));
+}
+
+export type DisplayCategorySection = {
+  category: TournamentCategory | null;
+  label: string;
+  matches: DisplayMatch[];
+  americanoStandings: DisplayStandingRow[];
+  poolBlocks: DisplayPoolBlock[];
+};
+
+export function buildDisplayCategorySections(args: {
+  locale: string;
+  format: TournamentFormat;
+  configuredCategories: TournamentCategory[];
+  entries: {
+    id: string;
+    player1Name: string;
+    player2Name: string;
+    representingClubId: string | null;
+    category: TournamentCategory | null;
+    status: string;
+  }[];
+  soloEntries: {
+    id: string;
+    playerName: string;
+    americanoPoints: number;
+    representingClubId: string | null;
+    category: TournamentCategory | null;
+    status: string;
+  }[];
+  matches: {
+    id: string;
+    round: string;
+    position: number;
+    team1EntryId: string | null;
+    team2EntryId: string | null;
+    winnerTeam: "A" | "B" | null;
+    setScores: { a: number; b: number }[] | null;
+    category: TournamentCategory | null;
+  }[];
+}): { sections: DisplayCategorySection[]; multiCategory: boolean } {
+  const activeEntries = args.entries.filter((e) => e.status !== "withdrawn");
+  const activeSolo = args.soloEntries.filter((e) => e.status !== "withdrawn");
+  const displayCategories = listDisplayCategories(
+    args.configuredCategories,
+    activeEntries,
+    args.matches,
+    activeSolo,
+  );
+
+  const sections = displayCategories.map((category) => {
+    const catEntries = filterItemsByCategory(activeEntries, category);
+    const catSolo = filterItemsByCategory(activeSolo, category);
+    const catMatches = filterItemsByCategory(args.matches, category);
+
+    return {
+      category,
+      label: tournamentCategoryLabel(category, args.locale),
+      matches: buildDisplayMatchRows(
+        args.format,
+        args.locale,
+        catEntries,
+        catSolo,
+        catMatches,
+      ),
+      americanoStandings:
+        args.format === "americano" ? buildAmericanoDisplayStandings(catSolo) : [],
+      poolBlocks: args.format === "pools" ? buildPoolDisplayBlocks(catEntries, catMatches) : [],
+    };
+  });
+
+  return {
+    sections,
+    multiCategory: hasMultipleDisplayCategories(displayCategories),
+  };
 }
 
 export function buildClubDisplayStandings(

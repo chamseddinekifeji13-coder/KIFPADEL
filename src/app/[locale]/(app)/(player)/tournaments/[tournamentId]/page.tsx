@@ -12,6 +12,7 @@ import {
 } from "@/modules/tournaments/repository";
 import type { ProfilePick } from "@/modules/tournaments/repository";
 import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
+import { parseTournamentCategories, tournamentCategoryLabel } from "@/domain/rules/tournament-categories";
 import { TournamentRegisterForm } from "@/app/[locale]/(app)/(player)/tournaments/[tournamentId]/tournament-register-form";
 import { TournamentSoloRegisterForm } from "@/app/[locale]/(app)/(player)/tournaments/[tournamentId]/tournament-solo-register-form";
 
@@ -58,6 +59,7 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
   const entries = await listEntriesWithDisplayNames(tournamentId);
   const soloEntries = await listSoloEntriesWithDisplayNames(tournamentId);
   const matches = await listTournamentMatchesWithResults(tournamentId);
+  const configuredCategories = parseTournamentCategories(tournament.settings);
 
   let canRegister = false;
   let canRegisterSolo = false;
@@ -94,6 +96,9 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
         ) : null}
         <p className="mt-1 text-xs font-bold uppercase text-slate-600">
           {formatTournamentFormatLabel(tournament.format, locale)} · {statusLabel}
+          {configuredCategories.length > 0
+            ? ` · ${configuredCategories.map((c) => tournamentCategoryLabel(c, locale)).join(", ")}`
+            : ""}
         </p>
       </header>
 
@@ -109,6 +114,7 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
           locale={locale}
           tournamentId={tournamentId}
           canRegister={canRegisterSolo}
+          categories={configuredCategories}
         />
       ) : user ? (
         <TournamentRegisterForm
@@ -116,6 +122,7 @@ export default async function PlayerTournamentDetailPage({ params }: Props) {
           tournamentId={tournamentId}
           partners={partners}
           canRegister={canRegister}
+          categories={configuredCategories}
         />
       ) : (
         <p className="text-sm text-slate-600">

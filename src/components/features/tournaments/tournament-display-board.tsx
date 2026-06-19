@@ -6,6 +6,7 @@ import { formatSetScores } from "@/domain/rules/match-score";
 import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
 import { formatRoundLabel } from "@/domain/rules/tournament-display";
 import type {
+  DisplayCategorySection,
   DisplayMatch,
   DisplayPoolBlock,
   DisplayStandingRow,
@@ -22,9 +23,8 @@ type Props = {
   format: TournamentFormat;
   tournamentScope: TournamentScope;
   status: TournamentStatus;
-  matches: DisplayMatch[];
-  americanoStandings: DisplayStandingRow[];
-  poolBlocks: DisplayPoolBlock[];
+  sections: DisplayCategorySection[];
+  multiCategory: boolean;
   clubStandings: DisplayStandingRow[];
   serverTimeIso: string;
 };
@@ -114,13 +114,7 @@ function MatchCard({
   );
 }
 
-function StandingsTable({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: DisplayStandingRow[];
-}) {
+function StandingsTable({ title, rows }: { title: string; rows: DisplayStandingRow[] }) {
   if (rows.length === 0) {
     return null;
   }
@@ -151,13 +145,94 @@ function StandingsTable({
   );
 }
 
+function CategoryContent({
+  section,
+  locale,
+  format,
+}: {
+  section: DisplayCategorySection;
+  locale: string;
+  format: TournamentFormat;
+}) {
+  const pendingMatches = section.matches.filter((m) => !m.winnerTeam);
+  const completedMatches = section.matches.filter((m) => m.winnerTeam);
+
+  return (
+    <>
+      {pendingMatches.length > 0 ? (
+        <section className="mb-8">
+          <h2 className="mb-4 text-sm font-black uppercase tracking-widest text-emerald-400">
+            {locale === "en" ? "Live matches" : "Matchs en cours"}
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {pendingMatches.map((match) => (
+              <MatchCard key={match.id} match={match} locale={locale} large />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <div className="grid flex-1 gap-6 xl:grid-cols-12">
+        <div className="space-y-6 xl:col-span-5">
+          {format === "americano" && section.americanoStandings.length > 0 ? (
+            <StandingsTable
+              title={locale === "en" ? "Player ranking" : "Classement joueurs"}
+              rows={section.americanoStandings}
+            />
+          ) : null}
+
+          {section.poolBlocks.map((block: DisplayPoolBlock) => (
+            <StandingsTable
+              key={block.poolLabel}
+              title={
+                locale === "en"
+                  ? `Pool ${block.poolLabel} standings`
+                  : `Classement poule ${block.poolLabel}`
+              }
+              rows={block.rows}
+            />
+          ))}
+        </div>
+
+        <div className="xl:col-span-7">
+          <section>
+            <h2 className="mb-4 text-sm font-black uppercase tracking-widest text-white/50">
+              {locale === "en" ? "Results" : "Résultats"}
+            </h2>
+            {section.matches.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-white/40">
+                {locale === "en"
+                  ? "Nothing scheduled in this category yet."
+                  : "Rien de programmé dans cette catégorie pour l’instant."}
+              </p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {[...pendingMatches, ...completedMatches].map((match) => (
+                  <MatchCard key={match.id} match={match} locale={locale} />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function TournamentDisplayBoard(props: Props) {
   const router = useRouter();
   const [lastRefreshIso, setLastRefreshIso] = useState(props.serverTimeIso);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     setLastRefreshIso(props.serverTimeIso);
   }, [props.serverTimeIso]);
+
+  useEffect(() => {
+    if (activeIndex >= props.sections.length) {
+      setActiveIndex(0);
+    }
+  }, [activeIndex, props.sections.length]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -167,6 +242,16 @@ export function TournamentDisplayBoard(props: Props) {
     return () => window.clearInterval(id);
   }, [router]);
 
+  useEffect(() => {
+    if (!props.multiCategory || props.sections.length <= 1) {
+      return;
+    }
+    const rotate = window.setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % props.sections.length);
+    }, 45_000);
+    return () => window.clearInterval(rotate);
+  }, [props.multiCategory, props.sections.length]);
+
   const isEn = props.locale === "en";
   const scopeSuffix =
     props.tournamentScope === "interclub"
@@ -175,14 +260,13 @@ export function TournamentDisplayBoard(props: Props) {
         : " · Inter-clubs"
       : "";
 
-  const pendingMatches = useMemo(
-    () => props.matches.filter((m) => !m.winnerTeam),
-    [props.matches],
+  const activeSection = props.sections[activeIndex] ?? props.sections[0];
+
+  const allMatches = useMemo(
+    () => props.sections.flatMap((section) => section.matches),
+    [props.sections],
   );
-  const completedMatches = useMemo(
-    () => props.matches.filter((m) => m.winnerTeam),
-    [props.matches],
-  );
+  const globalPending = useMemo(() => allMatches.filter((m) => !m.winnerTeam), [allMatches]);
 
   return (
     <div className="flex min-h-screen flex-col px-4 py-6 md:px-8 md:py-8">
@@ -215,65 +299,54 @@ export function TournamentDisplayBoard(props: Props) {
         </div>
       </header>
 
-      {pendingMatches.length > 0 ? (
+      {props.clubStandings.length > 0 ? (
+        <div className="mb-6">
+          <StandingsTable
+            title={isEn ? "Club ranking" : "Classement par club"}
+            rows={props.clubStandings}
+          />
+        </div>
+      ) : null}
+
+      {props.multiCategory ? (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {props.sections.map((section, index) => (
+            <button
+              key={section.label}
+              type="button"
+              onClick={() => setActiveIndex(index)}
+              className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-widest transition-colors ${
+                index === activeIndex
+                  ? "bg-[var(--gold)] text-black"
+                  : "bg-white/10 text-white/70 hover:bg-white/15"
+              }`}
+            >
+              {section.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {!props.multiCategory && globalPending.length > 0 ? (
         <section className="mb-8">
           <h2 className="mb-4 text-sm font-black uppercase tracking-widest text-emerald-400">
             {isEn ? "Live matches" : "Matchs en cours"}
           </h2>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {pendingMatches.map((match) => (
+            {globalPending.map((match) => (
               <MatchCard key={match.id} match={match} locale={props.locale} large />
             ))}
           </div>
         </section>
       ) : null}
 
-      <div className="grid flex-1 gap-6 xl:grid-cols-12">
-        <div className="space-y-6 xl:col-span-5">
-          {props.clubStandings.length > 0 ? (
-            <StandingsTable
-              title={isEn ? "Club ranking" : "Classement par club"}
-              rows={props.clubStandings}
-            />
-          ) : null}
-
-          {props.format === "americano" && props.americanoStandings.length > 0 ? (
-            <StandingsTable
-              title={isEn ? "Player ranking" : "Classement joueurs"}
-              rows={props.americanoStandings}
-            />
-          ) : null}
-
-          {props.poolBlocks.map((block) => (
-            <StandingsTable
-              key={block.poolLabel}
-              title={
-                isEn ? `Pool ${block.poolLabel} standings` : `Classement poule ${block.poolLabel}`
-              }
-              rows={block.rows}
-            />
-          ))}
-        </div>
-
-        <div className="xl:col-span-7">
-          <section>
-            <h2 className="mb-4 text-sm font-black uppercase tracking-widest text-white/50">
-              {isEn ? "Results" : "Résultats"}
-            </h2>
-            {props.matches.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-white/40">
-                {isEn ? "Schedule not generated yet." : "Le planning n’a pas encore été généré."}
-              </p>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {[...pendingMatches, ...completedMatches].map((match) => (
-                  <MatchCard key={match.id} match={match} locale={props.locale} />
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-      </div>
+      {activeSection ? (
+        <CategoryContent section={activeSection} locale={props.locale} format={props.format} />
+      ) : (
+        <p className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-white/40">
+          {isEn ? "Schedule not generated yet." : "Le planning n’a pas encore été généré."}
+        </p>
+      )}
     </div>
   );
 }

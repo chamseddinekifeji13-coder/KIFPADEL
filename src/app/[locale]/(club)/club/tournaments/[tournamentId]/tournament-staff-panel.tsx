@@ -15,6 +15,7 @@ import {
 } from "@/domain/rules/tournament-club-standings";
 import type { TournamentParticipatingClub } from "@/domain/rules/tournament-club-standings";
 import { formatTournamentFormatLabel } from "@/domain/rules/tournament-americano";
+import { tournamentCategoryLabel, filterItemsByCategory, listDisplayCategories, type TournamentCategory } from "@/domain/rules/tournament-categories";
 import { MatchScoreForm } from "@/components/features/matches/match-score-form";
 import {
   generateTournamentScheduleAction,
@@ -37,6 +38,7 @@ type Props = {
   soloEntries: TournamentSoloEntryWithName[];
   matches: TournamentMatchWithMeta[];
   participatingClubs: TournamentParticipatingClub[];
+  configuredCategories: TournamentCategory[];
   canGenerateSchedule: boolean;
   isHost: boolean;
 };
@@ -80,6 +82,7 @@ export function TournamentStaffPanel({
   soloEntries,
   matches,
   participatingClubs,
+  configuredCategories,
   canGenerateSchedule,
   isHost,
 }: Props) {
@@ -115,10 +118,12 @@ export function TournamentStaffPanel({
     router.refresh();
   };
 
-  const poolLabels =
-    format === "pools"
-      ? assignTeamsToPools(activeEntries.length).map((p) => p.poolLabel)
-      : [];
+  const displayCategories = listDisplayCategories(
+    configuredCategories,
+    activeEntries,
+    matches,
+    activeSolo,
+  );
 
   const clubStandings =
     tournamentScope === "interclub"
@@ -239,7 +244,14 @@ export function TournamentStaffPanel({
           <ul className="text-sm text-white space-y-1">
             {activeSolo.map((e) => (
               <li key={e.id} className="flex justify-between gap-2">
-                <span>{e.playerName}</span>
+                <span>
+                  {e.playerName}
+                  {e.category ? (
+                    <span className="ml-2 text-[10px] uppercase text-[var(--foreground-muted)]">
+                      {tournamentCategoryLabel(e.category, locale)}
+                    </span>
+                  ) : null}
+                </span>
                 <span className="text-[var(--gold)] font-bold">{e.americanoPoints} pts</span>
               </li>
             ))}
@@ -254,6 +266,11 @@ export function TournamentStaffPanel({
             {activeEntries.map((e) => (
               <li key={e.id}>
                 {e.player1Name} + {e.player2Name}
+                {e.category ? (
+                  <span className="ml-2 text-[10px] uppercase text-[var(--foreground-muted)]">
+                    {tournamentCategoryLabel(e.category, locale)}
+                  </span>
+                ) : null}
                 {e.seed != null ? ` · seed ${e.seed}` : ""}
               </li>
             ))}
@@ -261,43 +278,60 @@ export function TournamentStaffPanel({
         </div>
       )}
 
-      {format === "pools" && poolLabels.length > 0 ? (
+      {format === "pools" ? (
         <div className="space-y-4">
-          {poolLabels.map((poolLabel) => {
-            const standings = computePoolStandings(
-              activeEntries.map((e) => ({
-                id: e.id,
-                label: `${e.player1Name} / ${e.player2Name}`,
-              })),
-              matches.map((m) => ({
-                poolLabel: parsePoolLabelFromRound(m.round) ?? "",
-                team1EntryId: m.team1EntryId,
-                team2EntryId: m.team2EntryId,
-                winnerTeam: m.winnerTeam,
-              })),
-              poolLabel,
-            );
+          {displayCategories.map((category) => {
+            const catEntries = filterItemsByCategory(activeEntries, category);
+            const catMatches = filterItemsByCategory(matches, category);
+            const labels = assignTeamsToPools(catEntries.length).map((p) => p.poolLabel);
+            if (labels.length === 0) {
+              return null;
+            }
             return (
-              <div key={poolLabel} className="rounded-xl border border-[var(--border)] p-3">
-                <h4 className="text-xs font-bold uppercase text-[var(--gold)] mb-2">
-                  Poule {poolLabel}
-                </h4>
-                {standings.length === 0 ? (
-                  <p className="text-xs text-[var(--foreground-muted)]">Pas encore de résultats.</p>
-                ) : (
-                  <ul className="text-xs text-white space-y-1">
-                    {standings.map((row, index) => (
-                      <li key={row.entryId} className="flex justify-between">
-                        <span>
-                          {index + 1}. {row.label}
-                        </span>
-                        <span className="text-[var(--foreground-muted)]">
-                          {row.wins}V · {row.losses}D
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+              <div key={category ?? "open"} className="space-y-3">
+                {displayCategories.length > 1 ? (
+                  <h4 className="text-xs font-bold uppercase text-[var(--gold)]">
+                    {tournamentCategoryLabel(category, locale)}
+                  </h4>
+                ) : null}
+                {labels.map((poolLabel) => {
+                  const standings = computePoolStandings(
+                    catEntries.map((e) => ({
+                      id: e.id,
+                      label: `${e.player1Name} / ${e.player2Name}`,
+                    })),
+                    catMatches.map((m) => ({
+                      poolLabel: parsePoolLabelFromRound(m.round) ?? "",
+                      team1EntryId: m.team1EntryId,
+                      team2EntryId: m.team2EntryId,
+                      winnerTeam: m.winnerTeam,
+                    })),
+                    poolLabel,
+                  );
+                  return (
+                    <div key={`${category ?? "open"}-${poolLabel}`} className="rounded-xl border border-[var(--border)] p-3">
+                      <h4 className="text-xs font-bold uppercase text-[var(--gold)] mb-2">
+                        Poule {poolLabel}
+                      </h4>
+                      {standings.length === 0 ? (
+                        <p className="text-xs text-[var(--foreground-muted)]">Pas encore de résultats.</p>
+                      ) : (
+                        <ul className="text-xs text-white space-y-1">
+                          {standings.map((row, index) => (
+                            <li key={row.entryId} className="flex justify-between">
+                              <span>
+                                {index + 1}. {row.label}
+                              </span>
+                              <span className="text-[var(--foreground-muted)]">
+                                {row.wins}V · {row.losses}D
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -324,6 +358,7 @@ export function TournamentStaffPanel({
                   className="rounded-xl border border-[var(--border)] bg-black/20 p-3 text-sm text-white"
                 >
                   <p className="text-[10px] font-bold uppercase text-[var(--gold)]">
+                    {m.category ? `${tournamentCategoryLabel(m.category, locale)} · ` : ""}
                     {poolLabel ? `Poule ${poolLabel}` : americanoRound ?? m.round} · #{m.position + 1}
                   </p>
                   {format !== "americano" ? (

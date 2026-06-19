@@ -3,11 +3,10 @@ import type { Metadata } from "next";
 import { isLocale, type Locale } from "@/i18n/config";
 import { TournamentDisplayBoard } from "@/components/features/tournaments/tournament-display-board";
 import {
-  buildAmericanoDisplayStandings,
   buildClubDisplayStandings,
-  buildDisplayMatchRows,
-  buildPoolDisplayBlocks,
+  buildDisplayCategorySections,
 } from "@/domain/rules/tournament-display";
+import { parseTournamentCategories } from "@/domain/rules/tournament-categories";
 import {
   getTournamentWithClub,
   listEntriesWithDisplayNames,
@@ -47,6 +46,8 @@ export default async function TournamentDisplayPage({ params }: Props) {
     notFound();
   }
 
+  const configuredCategories = parseTournamentCategories(tournament.settings);
+
   const [entries, soloEntries, matches, participatingClubs] = await Promise.all([
     listEntriesWithDisplayNames(tournamentId),
     listSoloEntriesWithDisplayNames(tournamentId),
@@ -57,19 +58,14 @@ export default async function TournamentDisplayPage({ params }: Props) {
   const activeEntries = entries.filter((e) => e.status !== "withdrawn");
   const activeSolo = soloEntries.filter((e) => e.status !== "withdrawn");
 
-  const displayMatches = buildDisplayMatchRows(
-    tournament.format,
+  const { sections, multiCategory } = buildDisplayCategorySections({
     locale,
-    activeEntries,
-    activeSolo,
+    format: tournament.format,
+    configuredCategories,
+    entries,
+    soloEntries,
     matches,
-  );
-
-  const americanoStandings =
-    tournament.format === "americano" ? buildAmericanoDisplayStandings(activeSolo) : [];
-
-  const poolBlocks =
-    tournament.format === "pools" ? buildPoolDisplayBlocks(activeEntries, matches) : [];
+  });
 
   const clubStandings =
     tournament.tournamentScope === "interclub"
@@ -94,9 +90,8 @@ export default async function TournamentDisplayPage({ params }: Props) {
       format={tournament.format}
       tournamentScope={tournament.tournamentScope}
       status={tournament.status}
-      matches={displayMatches}
-      americanoStandings={americanoStandings}
-      poolBlocks={poolBlocks}
+      sections={sections}
+      multiCategory={multiCategory}
       clubStandings={clubStandings}
       serverTimeIso={new Date().toISOString()}
     />

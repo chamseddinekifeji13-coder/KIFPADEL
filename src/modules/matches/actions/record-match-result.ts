@@ -132,6 +132,7 @@ export async function recordMatchResultAction(
   if (input.tournamentId) {
     revalidatePath(`/${locale}/club/tournaments/${input.tournamentId}`, "page");
     revalidatePath(`/${locale}/tournaments/${input.tournamentId}`, "page");
+    revalidatePath(`/${locale}/tournaments/${input.tournamentId}/display`, "page");
   }
 
   if (clubId) {

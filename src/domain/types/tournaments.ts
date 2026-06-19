@@ -1,4 +1,5 @@
 import type { UUID } from "./core";
+import type { TournamentCategory } from "@/domain/rules/tournament-categories";
 
 export type TournamentFormat = "knockout" | "pools" | "americano";
 
@@ -39,6 +40,7 @@ export type TournamentEntry = {
   player1Id: UUID;
   player2Id: UUID;
   representingClubId: UUID | null;
+  category: TournamentCategory | null;
   status: TournamentEntryStatus;
   seed: number | null;
   createdAt: string;
@@ -52,6 +54,7 @@ export type TournamentMatch = {
   matchId: string | null;
   team1EntryId: string | null;
   team2EntryId: string | null;
+  category: TournamentCategory | null;
   scheduledStartsAt: string | null;
   courtId: string | null;
   createdAt: string;
