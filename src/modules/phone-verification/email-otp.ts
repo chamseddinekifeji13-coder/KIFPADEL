@@ -1,15 +1,19 @@
 import { sendTransactionalEmail } from "@/modules/notifications/email-resend";
+import { buildOtpEmailContent } from "@/modules/notifications/kifpadel-email-template";
+import type { EmailLocale } from "@/modules/notifications/kifpadel-email-template";
 
 type SendResult = { ok: true } | { ok: false; error: string };
 
-export async function sendEmailOtpMessage(email: string, code: string): Promise<SendResult> {
-  const subject = "Code de vérification Kifpadel";
-  const text = `Votre code Kifpadel : ${code}\n\nValable ${process.env.PHONE_OTP_EXPIRY_MINUTES ?? "10"} minutes.`;
-  const html = `
-    <p>Votre code de vérification Kifpadel :</p>
-    <p style="font-size:28px;font-weight:bold;font-family:monospace">${code}</p>
-    <p style="color:#666;font-size:13px">Ne partagez ce code avec personne.</p>
-  `;
+export async function sendEmailOtpMessage(
+  email: string,
+  code: string,
+  options?: { recipientName?: string | null; locale?: EmailLocale },
+): Promise<SendResult> {
+  const { subject, html, text } = buildOtpEmailContent({
+    code,
+    locale: options?.locale,
+    recipientName: options?.recipientName,
+  });
 
   const result = await sendTransactionalEmail({ to: email, subject, html, text });
 

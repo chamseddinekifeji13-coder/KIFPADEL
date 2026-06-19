@@ -2,6 +2,13 @@ import { sendTransactionalEmail } from "@/modules/notifications/email-resend";
 import { loadParticipantNotificationContext } from "@/modules/notifications/participant-context";
 import { getNotificationChannels, getWhatsAppTemplateLanguage } from "@/modules/notifications/shared";
 import { sendWhatsAppTemplate } from "@/modules/notifications/whatsapp";
+import {
+  buildDetailListHtml,
+  buildGreeting,
+  buildKifpadelEmailHtml,
+  escapeHtml,
+} from "@/modules/notifications/kifpadel-email-template";
+import { publicEnv } from "@/lib/config/env";
 
 function paymentConfirmedTemplate(): string {
   return process.env.WHATSAPP_PAYMENT_CONFIRMED_TEMPLATE?.trim() ?? "kifpadel_payment_confirmed";
@@ -9,6 +16,26 @@ function paymentConfirmedTemplate(): string {
 
 function noShowPlayerTemplate(): string {
   return process.env.WHATSAPP_NO_SHOW_PLAYER_TEMPLATE?.trim() ?? "kifpadel_no_show_player";
+}
+
+function bookingDetailsHtml(
+  locale: "fr" | "en",
+  ctx: {
+    clubName: string;
+    dateLine: string;
+    timeRange: string;
+    courtLabel: string;
+    seat: string;
+    amount: string;
+  },
+): string {
+  return buildDetailListHtml([
+    { label: locale === "en" ? "Club" : "Club", value: ctx.clubName },
+    { label: locale === "en" ? "Schedule" : "Créneau", value: `${ctx.dateLine} · ${ctx.timeRange}` },
+    { label: locale === "en" ? "Court" : "Terrain", value: ctx.courtLabel },
+    { label: locale === "en" ? "Seat" : "Place", value: `${ctx.seat}/4` },
+    { label: locale === "en" ? "Amount" : "Montant", value: `${ctx.amount} DT` },
+  ]);
 }
 
 /**
@@ -31,10 +58,22 @@ export async function notifyParticipantPaymentConfirmed(participantId: string): 
 
   const subject =
     locale === "en" ? `Payment received — ${clubName}` : `Encaissement confirmé — ${clubName}`;
-  const html =
-    locale === "en"
-      ? `<p>Hi ${playerName},</p><p><strong>${clubName}</strong> confirmed your payment for:</p><ul><li>${dateLine} ${timeRange}</li><li>Court: ${courtLabel}</li><li>Seat ${seat}/4</li><li>${amount} DT</li></ul><p>Enjoy your game!<br/>Kifpadel</p>`
-      : `<p>Bonjour ${playerName},</p><p><strong>${clubName}</strong> a confirmé votre encaissement pour :</p><ul><li>${dateLine} ${timeRange}</li><li>Terrain : ${courtLabel}</li><li>Place ${seat}/4</li><li>${amount} DT</li></ul><p>Bon match !<br/>Kifpadel</p>`;
+
+  const details = bookingDetailsHtml(locale, { clubName, dateLine, timeRange, courtLabel, seat, amount });
+  const html = buildKifpadelEmailHtml({
+    locale,
+    title: locale === "en" ? "Payment confirmed" : "Encaissement confirmé",
+    preheader: `${clubName} · ${amount} DT`,
+    greetingLine: buildGreeting(locale, playerName),
+    bodyHtml:
+      locale === "en"
+        ? `<p style="margin:0 0 8px;"><strong style="color:#f5f5f5;">${escapeHtml(clubName)}</strong> confirmed your payment:</p>${details}<p style="margin:16px 0 0;">Enjoy your game!</p>`
+        : `<p style="margin:0 0 8px;"><strong style="color:#f5f5f5;">${escapeHtml(clubName)}</strong> a confirmé votre encaissement :</p>${details}<p style="margin:16px 0 0;">Bon match !</p>`,
+    cta: {
+      label: locale === "en" ? "My bookings" : "Mes réservations",
+      href: `${publicEnv.siteUrl}/${locale}/bookings`,
+    },
+  });
 
   if (channels.whatsapp && playerPhone) {
     const wa = await sendWhatsAppTemplate(
@@ -76,10 +115,22 @@ export async function notifyParticipantNoShow(participantId: string): Promise<vo
 
   const subject =
     locale === "en" ? `No-show recorded — ${clubName}` : `No-show enregistré — ${clubName}`;
-  const html =
-    locale === "en"
-      ? `<p>Hi ${playerName},</p><p><strong>${clubName}</strong> recorded a no-show for your booking:</p><ul><li>${dateLine} ${timeRange}</li><li>Court: ${courtLabel}</li><li>Seat ${seat}/4</li><li>${amount} DT</li></ul><p>This may affect your trust score and club debt. Contact the club if you disagree.<br/>Kifpadel</p>`
-      : `<p>Bonjour ${playerName},</p><p><strong>${clubName}</strong> a enregistré un no-show pour votre réservation :</p><ul><li>${dateLine} ${timeRange}</li><li>Terrain : ${courtLabel}</li><li>Place ${seat}/4</li><li>${amount} DT</li></ul><p>Cela peut impacter votre score de confiance et une dette club. Contactez le club en cas d'erreur.<br/>Kifpadel</p>`;
+
+  const details = bookingDetailsHtml(locale, { clubName, dateLine, timeRange, courtLabel, seat, amount });
+  const html = buildKifpadelEmailHtml({
+    locale,
+    title: locale === "en" ? "No-show recorded" : "No-show enregistré",
+    preheader: `${clubName} · ${dateLine}`,
+    greetingLine: buildGreeting(locale, playerName),
+    bodyHtml:
+      locale === "en"
+        ? `<p style="margin:0 0 8px;"><strong style="color:#f5f5f5;">${escapeHtml(clubName)}</strong> recorded a no-show for your booking:</p>${details}<p style="margin:16px 0 0;">This may affect your trust score. Contact the club if you disagree.</p>`
+        : `<p style="margin:0 0 8px;"><strong style="color:#f5f5f5;">${escapeHtml(clubName)}</strong> a enregistré un no-show pour votre réservation :</p>${details}<p style="margin:16px 0 0;">Cela peut impacter votre score de confiance. Contactez le club en cas d'erreur.</p>`,
+    cta: {
+      label: locale === "en" ? "Contact support" : "Contacter le support",
+      href: `${publicEnv.siteUrl}/${locale}/support`,
+    },
+  });
 
   if (channels.whatsapp && playerPhone) {
     const wa = await sendWhatsAppTemplate(

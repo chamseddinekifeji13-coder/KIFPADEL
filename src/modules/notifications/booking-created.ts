@@ -3,6 +3,12 @@ import { resolveWhatsAppTarget } from "@/lib/phone/resolve-whatsapp-target";
 import { publicEnv } from "@/lib/config/env";
 import { sendTransactionalEmail } from "@/modules/notifications/email-resend";
 import {
+  buildDetailListHtml,
+  buildGreeting,
+  buildKifpadelEmailHtml,
+  escapeHtml,
+} from "@/modules/notifications/kifpadel-email-template";
+import {
   formatAmountDt,
   formatBookingSchedule,
   formatPaymentMethodLabel,
@@ -92,19 +98,57 @@ export async function notifyBookingCreated(input: NotifyBookingCreatedInput): Pr
       locale === "en"
         ? `Booking confirmed — ${clubName}`
         : `Réservation confirmée — ${clubName}`;
-    const playerHtml =
-      locale === "en"
-        ? `<p>Hi ${playerName},</p><p>Your booking at <strong>${clubName}</strong> is registered.</p><ul><li>${dateLine}</li><li>${timeRange}</li><li>Court: ${courtLabel}</li><li>Seat ${seat}/4</li><li>${amount} DT — ${paymentLabel}</li></ul><p>See you on court!<br/>Kifpadel</p>`
-        : `<p>Bonjour ${playerName},</p><p>Votre réservation à <strong>${clubName}</strong> est enregistrée.</p><ul><li>${dateLine}</li><li>${timeRange}</li><li>Terrain : ${courtLabel}</li><li>Place ${seat}/4</li><li>${amount} DT — ${paymentLabel}</li></ul><p>À bientôt sur le terrain !<br/>Kifpadel</p>`;
+
+    const playerDetails = buildDetailListHtml([
+      { label: locale === "en" ? "Club" : "Club", value: clubName },
+      { label: locale === "en" ? "Date" : "Date", value: dateLine },
+      { label: locale === "en" ? "Time" : "Horaire", value: timeRange },
+      { label: locale === "en" ? "Court" : "Terrain", value: courtLabel },
+      { label: locale === "en" ? "Seat" : "Place", value: `${seat}/4` },
+      { label: locale === "en" ? "Amount" : "Montant", value: `${amount} DT — ${paymentLabel}` },
+    ]);
+
+    const playerHtml = buildKifpadelEmailHtml({
+      locale,
+      title: locale === "en" ? "Booking confirmed" : "Réservation confirmée",
+      preheader: `${clubName} · ${dateLine} ${timeRange}`,
+      greetingLine: buildGreeting(locale, playerName),
+      bodyHtml:
+        locale === "en"
+          ? `<p style="margin:0 0 8px;">Your booking at <strong style="color:#f5f5f5;">${escapeHtml(clubName)}</strong> is registered.</p>${playerDetails}<p style="margin:16px 0 0;">See you on court!</p>`
+          : `<p style="margin:0 0 8px;">Votre réservation à <strong style="color:#f5f5f5;">${escapeHtml(clubName)}</strong> est enregistrée.</p>${playerDetails}<p style="margin:16px 0 0;">À bientôt sur le terrain !</p>`,
+      cta: {
+        label: locale === "en" ? "View my bookings" : "Voir mes réservations",
+        href: `${publicEnv.siteUrl}/${locale}/bookings`,
+      },
+    });
 
     const clubSubject =
       locale === "en"
         ? `New booking — ${playerName}`
         : `Nouvelle réservation — ${playerName}`;
-    const clubHtml =
-      locale === "en"
-        ? `<p>New booking on Kifpadel:</p><ul><li>Player: ${playerName}</li><li>${dateLine} ${timeRange}</li><li>Court: ${courtLabel}</li><li>Seat ${seat}/4</li><li>${amount} DT (${paymentLabel})</li></ul><p>Manage slots in your club dashboard.</p>`
-        : `<p>Nouvelle réservation Kifpadel :</p><ul><li>Joueur : ${playerName}</li><li>${dateLine} ${timeRange}</li><li>Terrain : ${courtLabel}</li><li>Place ${seat}/4</li><li>${amount} DT (${paymentLabel})</li></ul><p>Gérez les créneaux dans votre espace club.</p>`;
+
+    const clubDetails = buildDetailListHtml([
+      { label: locale === "en" ? "Player" : "Joueur", value: playerName },
+      { label: locale === "en" ? "Date" : "Date", value: `${dateLine} · ${timeRange}` },
+      { label: locale === "en" ? "Court" : "Terrain", value: courtLabel },
+      { label: locale === "en" ? "Seat" : "Place", value: `${seat}/4` },
+      { label: locale === "en" ? "Amount" : "Montant", value: `${amount} DT (${paymentLabel})` },
+    ]);
+
+    const clubHtml = buildKifpadelEmailHtml({
+      locale,
+      title: locale === "en" ? "New booking" : "Nouvelle réservation",
+      preheader: `${playerName} · ${dateLine}`,
+      bodyHtml:
+        locale === "en"
+          ? `<p style="margin:0 0 8px;">A player booked a slot on Kifpadel:</p>${clubDetails}<p style="margin:16px 0 0;">Manage slots in your club dashboard.</p>`
+          : `<p style="margin:0 0 8px;">Un joueur a réservé un créneau sur Kifpadel :</p>${clubDetails}<p style="margin:16px 0 0;">Gérez les créneaux dans votre espace club.</p>`,
+      cta: {
+        label: locale === "en" ? "Club dashboard" : "Espace club",
+        href: `${publicEnv.siteUrl}/${locale}/club`,
+      },
+    });
 
     if (channels.whatsapp && playerPhone) {
       const wa = await sendWhatsAppTemplate(

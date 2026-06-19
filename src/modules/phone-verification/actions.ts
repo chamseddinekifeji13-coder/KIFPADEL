@@ -128,7 +128,15 @@ export async function sendPhoneOtpAction(localDigits: string): Promise<PhoneOtpA
       return { ok: false, error: "Aucune adresse e-mail sur ce compte.", code: "NO_EMAIL" };
     }
 
-    const sent = await sendEmailOtpMessage(email, code);
+    const { data: profileRow } = await admin
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const sent = await sendEmailOtpMessage(email, code, {
+      recipientName: profileRow?.display_name ?? null,
+    });
     if (!sent.ok) {
       return { ok: false, error: sent.error, code: "EMAIL_SEND_FAILED" };
     }

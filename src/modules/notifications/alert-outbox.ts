@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { publicEnv } from "@/lib/config/env";
 import { sendTransactionalEmail } from "@/modules/notifications/email-resend";
+import { buildKifpadelEmailHtml, escapeHtml } from "@/modules/notifications/kifpadel-email-template";
 import { getWhatsAppTemplateLanguage } from "@/modules/notifications/shared";
 import { sendWhatsAppTemplate } from "@/modules/notifications/whatsapp";
 
@@ -71,10 +72,16 @@ async function processOneOutboxRow(
     if (!email) {
       errorMessage = "no_email";
     } else {
+      const bodyParts = row.body.split("|").map((p) => p.trim()).filter(Boolean);
+      const bodyHtml = bodyParts.map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`).join("");
       const em = await sendTransactionalEmail({
         to: email,
         subject: row.title,
-        html: `<p>${row.body.replace(/\|/g, "</p><p>")}</p><p>Kifpadel</p>`,
+        html: buildKifpadelEmailHtml({
+          title: row.title,
+          preheader: bodyParts[0] ?? row.title,
+          bodyHtml: bodyHtml || `<p style="margin:0;">${escapeHtml(row.body)}</p>`,
+        }),
       });
       ok = em.ok;
       if (!em.ok) errorMessage = em.error;
