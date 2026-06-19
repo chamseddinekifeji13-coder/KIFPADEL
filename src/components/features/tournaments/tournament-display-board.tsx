@@ -12,6 +12,8 @@ import type {
   DisplayStandingRow,
 } from "@/domain/rules/tournament-display";
 import type { TournamentFormat, TournamentScope, TournamentStatus } from "@/domain/types/tournaments";
+import { TournamentDisplaySponsorsBar } from "@/components/features/tournaments/tournament-display-sponsors-bar";
+import type { SponsorRow } from "@/modules/sponsors/repository";
 
 const REFRESH_MS = 30_000;
 
@@ -26,6 +28,8 @@ type Props = {
   sections: DisplayCategorySection[];
   multiCategory: boolean;
   clubStandings: DisplayStandingRow[];
+  sponsors: SponsorRow[];
+  sponsorsTitle: string;
   serverTimeIso: string;
 };
 
@@ -269,7 +273,12 @@ export function TournamentDisplayBoard(props: Props) {
   const globalPending = useMemo(() => allMatches.filter((m) => !m.winnerTeam), [allMatches]);
 
   return (
-    <div className="flex min-h-screen flex-col px-4 py-6 md:px-8 md:py-8">
+    <>
+      <div
+        className={`flex min-h-screen flex-col px-4 py-6 md:px-8 md:py-8 ${
+          props.sponsors.length > 0 ? "pb-36" : ""
+        }`}
+      >
       <header className="mb-6 border-b border-white/10 pb-5 md:mb-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -347,6 +356,13 @@ export function TournamentDisplayBoard(props: Props) {
           {isEn ? "Schedule not generated yet." : "Le planning n’a pas encore été généré."}
         </p>
       )}
-    </div>
+      </div>
+
+      <TournamentDisplaySponsorsBar
+        sponsors={props.sponsors}
+        title={props.sponsorsTitle}
+        variant="tv"
+      />
+    </>
   );
 }

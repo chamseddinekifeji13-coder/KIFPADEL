@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getDictionary } from "@/i18n/get-dictionary";
 import { TournamentDisplayBoard } from "@/components/features/tournaments/tournament-display-board";
 import {
   buildClubDisplayStandings,
@@ -14,6 +15,7 @@ import {
   listSoloEntriesWithDisplayNames,
   listTournamentMatchesWithResults,
 } from "@/modules/tournaments/repository";
+import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +50,14 @@ export default async function TournamentDisplayPage({ params }: Props) {
 
   const configuredCategories = parseTournamentCategories(tournament.settings);
 
-  const [entries, soloEntries, matches, participatingClubs] = await Promise.all([
+  const dictionary = await getDictionary(locale as Locale);
+
+  const [entries, soloEntries, matches, participatingClubs, sponsors] = await Promise.all([
     listEntriesWithDisplayNames(tournamentId),
     listSoloEntriesWithDisplayNames(tournamentId),
     listTournamentMatchesWithResults(tournamentId),
     listParticipatingClubsForTournament(tournamentId),
+    listActiveSponsorsForPublic(),
   ]);
 
   const activeEntries = entries.filter((e) => e.status !== "withdrawn");
@@ -93,6 +98,8 @@ export default async function TournamentDisplayPage({ params }: Props) {
       sections={sections}
       multiCategory={multiCategory}
       clubStandings={clubStandings}
+      sponsors={sponsors}
+      sponsorsTitle={dictionary.common.sponsorsPartnersTitle}
       serverTimeIso={new Date().toISOString()}
     />
   );
