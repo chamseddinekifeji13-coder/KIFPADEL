@@ -1,8 +1,24 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateRatingUpdate, leagueFromRating } from "../../src/domain/rules/rating";
+import {
+  calculateRatingUpdate,
+  DEFAULT_ELO_K_FACTOR,
+  leagueFromRating,
+  previewTeamEloImpact,
+} from "../../src/domain/rules/rating";
 
 describe("rating rules", () => {
+  it("uses K=32 by default (aligned with SQL trigger)", () => {
+    const update = calculateRatingUpdate({
+      averageWinnerRating: 1200,
+      averageLoserRating: 1200,
+    });
+
+    expect(DEFAULT_ELO_K_FACTOR).toBe(32);
+    expect(update.winnerDelta).toBe(16);
+    expect(update.loserDelta).toBe(-16);
+  });
+
   it("increases winner rating and decreases loser rating", () => {
     const update = calculateRatingUpdate({
       averageWinnerRating: 1200,
@@ -11,6 +27,12 @@ describe("rating rules", () => {
 
     expect(update.winnerDelta).toBeGreaterThan(0);
     expect(update.loserDelta).toBeLessThan(0);
+  });
+
+  it("previews team deltas from match winner", () => {
+    const impact = previewTeamEloImpact(1300, 1100, "B");
+    expect(impact.teamBDelta).toBeGreaterThan(0);
+    expect(impact.teamADelta).toBeLessThan(0);
   });
 
   it("maps rating to P category", () => {

@@ -1,7 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   categoryFromRating,
-  normalizePlayerCategoryId,
   playerCategoryLabel,
   type PlayerCategoryId,
 } from "@/domain/rules/player-category";
@@ -47,8 +46,7 @@ type ProfileRow = {
   created_at?: string;
 };
 
-function resolvePlayerCategory(row: ProfileRow, sportRating: number): PlayerCategoryId {
-  if (row.league) return normalizePlayerCategoryId(row.league);
+function resolvePlayerCategory(_row: ProfileRow, sportRating: number): PlayerCategoryId {
   return categoryFromRating(sportRating);
 }
 

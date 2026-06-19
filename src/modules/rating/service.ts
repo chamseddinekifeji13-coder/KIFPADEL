@@ -1,4 +1,10 @@
-import { calculateRatingUpdate, leagueFromRating } from "@/domain/rules/rating";
+import {
+  calculateRatingUpdate,
+  leagueFromRating,
+  previewTeamEloImpact,
+} from "@/domain/rules/rating";
+
+export { calculateRatingUpdate, leagueFromRating, previewTeamEloImpact };
 
 export function previewRatingUpdate(avgWinner: number, avgLoser: number) {
   const delta = calculateRatingUpdate({

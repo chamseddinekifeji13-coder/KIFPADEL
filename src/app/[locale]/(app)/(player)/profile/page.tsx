@@ -27,6 +27,11 @@ import {
   Shield,
 } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
+import { RatingHistoryPanel } from "@/components/features/players/rating-history-panel";
+import {
+  fetchPlayerMatchStats,
+  fetchPlayerRatingEvents,
+} from "@/modules/rating/repository";
 import { SponsorPartnersStrip } from "@/components/features/sponsors/sponsor-partners-strip";
 import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
 
@@ -65,7 +70,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     .maybeSingle();
   const phoneVerified = Boolean(phoneRow?.phone_verified_at);
 
-  const [topRivals, bookings, recentTournaments, managedClub, superAdminActor, sponsors] =
+  const [topRivals, bookings, recentTournaments, managedClub, superAdminActor, sponsors, ratingEvents, matchStats] =
     await Promise.all([
     playerService.getTopRivals(user.id, 3),
     fetchBookingsForPlayer(user.id, 20),
@@ -73,6 +78,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     clubService.getManagedClub(user.id),
     getSuperAdminActor(supabase),
     listActiveSponsorsForPublic(),
+    fetchPlayerRatingEvents(user.id, 10),
+    fetchPlayerMatchStats(user.id),
   ]);
   const completedCount = bookings.filter((booking) => booking.status === "completed").length;
   const cancelledCount = bookings.filter((booking) => booking.status === "cancelled").length;
@@ -166,6 +173,15 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           sportRating={profile.sport_rating} 
           currentLeague={profile.league} 
         />
+      </Card>
+
+      <Card className="p-6 space-y-4 bg-[var(--surface)] border-[var(--border)]">
+        <SectionTitle
+          title="Historique ELO"
+          icon={<History className="h-4 w-4" />}
+          className="bg-transparent p-0"
+        />
+        <RatingHistoryPanel locale={locale} events={ratingEvents} stats={matchStats} />
       </Card>
 
       {/* Stats Quick Links */}

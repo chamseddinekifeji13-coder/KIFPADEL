@@ -10,6 +10,7 @@ import { MatchScoreForm } from "@/components/features/matches/match-score-form";
 import { formatSetScores } from "@/domain/rules/match-score";
 import { assertClubStaffCanManage } from "@/modules/clubs/actions/club-staff-guard";
 import { fetchKifWalletBalance } from "@/modules/wallet/repository";
+import { fetchMatchTeamRatings } from "@/modules/rating/repository";
 import {
   isActiveMatchParticipantRow,
   resolveSharePrice,
@@ -69,6 +70,7 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
 
   const matchResult = await fetchMatchResult(matchId);
   let canRecordResult = false;
+  let teamRatings: { teamA: number; teamB: number } | null = null;
 
   if (user && !matchResult && match.status !== "played") {
     if (match.created_by === user.id) {
@@ -78,6 +80,10 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
     } else if (match.club_id) {
       const staffGuard = await assertClubStaffCanManage(supabase, match.club_id, user.id);
       canRecordResult = staffGuard.ok;
+    }
+
+    if (canRecordResult) {
+      teamRatings = await fetchMatchTeamRatings(matchId);
     }
   }
 
@@ -233,7 +239,7 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
           <h2 className="text-sm font-bold text-white">
             {locale === "en" ? "Enter the score" : "Saisir le score"}
           </h2>
-          <MatchScoreForm locale={locale} matchId={match.id} />
+          <MatchScoreForm locale={locale} matchId={match.id} teamRatings={teamRatings} />
         </section>
       ) : null}
     </div>
