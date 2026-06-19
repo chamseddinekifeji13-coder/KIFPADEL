@@ -7,6 +7,7 @@ import {
   isPowerOfTwoTeamCount,
   knockoutRoundLabel,
 } from "@/domain/rules/tournament-bracket";
+import { parseSetScoresJson } from "@/domain/rules/match-score";
 
 type TournamentRow = Record<string, unknown>;
 type EntryRow = Record<string, unknown>;
@@ -78,6 +79,7 @@ export type TournamentWithClub = Tournament & {
 
 export type TournamentMatchWithMeta = TournamentMatch & {
   winnerTeam: "A" | "B" | null;
+  setScores: { a: number; b: number }[] | null;
 };
 
 export type TournamentSummaryForProfile = {
@@ -223,16 +225,23 @@ export async function listTournamentMatchesWithResults(
 
     const rows = (data ?? []) as TournamentMatchRow[];
     const matchIds = rows.map((r) => r.match_id).filter(Boolean) as string[];
-    const resultsByMatch = new Map<string, "A" | "B">();
+    const resultsByMatch = new Map<string, { winner: "A" | "B"; sets: { a: number; b: number }[] | null }>();
     if (matchIds.length > 0) {
       const { data: resRows, error: rErr } = await supabase
         .from("match_results")
-        .select("match_id, winner_team")
+        .select("match_id, winner_team, set_scores")
         .in("match_id", matchIds);
       if (!rErr && resRows) {
-        for (const r of resRows as { match_id: string; winner_team: string }[]) {
+        for (const r of resRows as {
+          match_id: string;
+          winner_team: string;
+          set_scores?: unknown;
+        }[]) {
           if (r.winner_team === "A" || r.winner_team === "B") {
-            resultsByMatch.set(r.match_id, r.winner_team);
+            resultsByMatch.set(r.match_id, {
+              winner: r.winner_team,
+              sets: parseSetScoresJson(r.set_scores),
+            });
           }
         }
       }
@@ -240,10 +249,11 @@ export async function listTournamentMatchesWithResults(
 
     return rows.map((row) => {
       const m = mapTournamentMatch(row);
-      const w = m.matchId ? resultsByMatch.get(m.matchId) : undefined;
+      const result = m.matchId ? resultsByMatch.get(m.matchId) : undefined;
       return {
         ...m,
-        winnerTeam: w ?? null,
+        winnerTeam: result?.winner ?? null,
+        setScores: result?.sets ?? null,
       };
     });
   } catch (err) {

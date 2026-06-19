@@ -10,6 +10,7 @@ import {
   matchGenderTypesVisibleToViewer,
 } from "@/domain/rules/match-gender";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
+import { parseSetScoresJson } from "@/domain/rules/match-score";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -381,6 +382,41 @@ export async function fetchMatchById(matchId: string): Promise<MatchWithDetails 
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[matches.fetchMatchById] unexpected error", err);
+    return null;
+  }
+}
+
+export type MatchResultRecord = {
+  matchId: string;
+  winnerTeam: "A" | "B";
+  setScores: { a: number; b: number }[] | null;
+};
+
+export async function fetchMatchResult(matchId: string): Promise<MatchResultRecord | null> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("match_results")
+      .select("match_id, winner_team, set_scores")
+      .eq("match_id", matchId)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    const winner = (data as { winner_team?: string }).winner_team;
+    if (winner !== "A" && winner !== "B") {
+      return null;
+    }
+
+    return {
+      matchId: String((data as { match_id: string }).match_id),
+      winnerTeam: winner,
+      setScores: parseSetScoresJson((data as { set_scores?: unknown }).set_scores),
+    };
+  } catch (err) {
+    rethrowFrameworkError(err);
     return null;
   }
 }

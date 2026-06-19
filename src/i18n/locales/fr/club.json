@@ -55,6 +55,8 @@
   "navBookings": "Réservations",
   "navPlayers": "Joueurs",
   "navTournaments": "Tournois",
+  "dashboardTournamentsCta": "Gérer",
+  "dashboardTournamentsHint": "Créez un tournoi, générez le tableau et saisissez les scores set par set. Le classement ELO des joueurs est mis à jour automatiquement.",
   "tournamentsPageTitle": "Tournois",
   "tournamentsPageSubtitle": "Créez un tableau simple à élimination directe, gérez les équipes et validez les vainqueurs (ELO inchangé côté trigger).",
   "tournamentsListTitle": "Vos tournois",

@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { formatSetScores } from "@/domain/rules/match-score";
+import { MatchScoreForm } from "@/components/features/matches/match-score-form";
 import {
   generateKnockoutBracketAction,
-  setTournamentMatchWinnerAction,
   updateTournamentStatusAction,
 } from "@/modules/tournaments/actions";
 import type { TournamentStatus } from "@/domain/types/tournaments";
@@ -71,18 +72,6 @@ export function TournamentStaffPanel({
     router.refresh();
   };
 
-  const onWinner = async (matchId: string, winnerTeam: "A" | "B") => {
-    setError("");
-    setPending(matchId + winnerTeam);
-    const res = await setTournamentMatchWinnerAction({ locale, tournamentId, matchId, winnerTeam });
-    setPending(null);
-    if (!res.ok) {
-      setError(res.error);
-      return;
-    }
-    router.refresh();
-  };
-
   return (
     <div className="space-y-4">
       {error ? <p className="text-xs font-semibold text-rose-400">{error}</p> : null}
@@ -116,8 +105,8 @@ export function TournamentStaffPanel({
         </button>
       </div>
       <p className="text-[10px] text-[var(--foreground-muted)]">
-        V1 : nombre d’équipes = puissance de 2 (4, 8, 16…). Une seule phase de poules KO est créée ; phases
-        suivantes : TODO.
+        V1 : nombre d’équipes = puissance de 2 (4, 8, 16…). Une seule phase de poules KO est créée ;
+        phases suivantes : TODO.
       </p>
 
       <div className="space-y-2">
@@ -158,25 +147,17 @@ export function TournamentStaffPanel({
                     {e2 ? `${e2.player1Name} / ${e2.player2Name}` : "—"}
                   </p>
                   {m.winnerTeam ? (
-                    <p className="mt-2 text-emerald-400 font-bold">Vainqueur : équipe {m.winnerTeam}</p>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-emerald-400 font-bold">Vainqueur : équipe {m.winnerTeam}</p>
+                      {m.setScores?.length ? (
+                        <p className="text-xs text-[var(--foreground-muted)]">
+                          Score : {formatSetScores(m.setScores)}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : m.matchId ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        disabled={pending !== null}
-                        onClick={() => onWinner(m.matchId!, "A")}
-                        className="rounded-lg bg-white/10 px-3 py-1 text-xs font-bold hover:bg-white/20"
-                      >
-                        Gagnant A
-                      </button>
-                      <button
-                        type="button"
-                        disabled={pending !== null}
-                        onClick={() => onWinner(m.matchId!, "B")}
-                        className="rounded-lg bg-white/10 px-3 py-1 text-xs font-bold hover:bg-white/20"
-                      >
-                        Gagnant B
-                      </button>
+                    <div className="mt-3 border-t border-[var(--border)] pt-3">
+                      <MatchScoreForm locale={locale} matchId={m.matchId} tournamentId={tournamentId} />
                     </div>
                   ) : null}
                 </li>

@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   XCircle,
   ChevronRight,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -300,6 +301,29 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
           </div>
         </section>
       </div>
+
+      <section className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-xl shadow-black/10">
+        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-[var(--gold)]/10 flex items-center justify-center">
+              <Trophy className="h-4 w-4 text-[var(--gold)]" />
+            </div>
+            <div>
+              <h2 className="font-bold text-white text-sm">{labels.tournamentsPageTitle}</h2>
+              <p className="text-[10px] text-[var(--foreground-muted)]">{labels.tournamentsPageSubtitle}</p>
+            </div>
+          </div>
+          <Link
+            href={`/${locale}/club/tournaments`}
+            className="text-[10px] font-bold uppercase tracking-wider text-[var(--gold)] hover:underline shrink-0"
+          >
+            {labels.dashboardTournamentsCta}
+          </Link>
+        </div>
+        <div className="p-4 text-sm text-[var(--foreground-muted)]">
+          {labels.dashboardTournamentsHint}
+        </div>
+      </section>
 
       {/* Payment Methods Summary */}
       <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl shadow-black/10 sm:p-6">

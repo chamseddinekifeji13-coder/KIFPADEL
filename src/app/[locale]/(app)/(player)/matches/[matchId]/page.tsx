@@ -3,9 +3,12 @@ import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { fetchMatchById } from "@/modules/matches/repository";
+import { fetchMatchById, fetchMatchResult } from "@/modules/matches/repository";
 import { playerService } from "@/modules/players/service";
 import { MatchJoinActions } from "@/components/features/matches/match-join-actions";
+import { MatchScoreForm } from "@/components/features/matches/match-score-form";
+import { formatSetScores } from "@/domain/rules/match-score";
+import { assertClubStaffCanManage } from "@/modules/clubs/actions/club-staff-guard";
 import { fetchKifWalletBalance } from "@/modules/wallet/repository";
 import {
   isActiveMatchParticipantRow,
@@ -63,6 +66,20 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
   const activeParticipants = match.match_participants.filter((p) => isActiveMatchParticipantRow(p));
   const teamA = activeParticipants.filter((p) => p.team === "A");
   const teamB = activeParticipants.filter((p) => p.team === "B");
+
+  const matchResult = await fetchMatchResult(matchId);
+  let canRecordResult = false;
+
+  if (user && !matchResult && match.status !== "played") {
+    if (match.created_by === user.id) {
+      canRecordResult = true;
+    } else if (activeParticipants.some((participant) => participant.player_id === user.id)) {
+      canRecordResult = true;
+    } else if (match.club_id) {
+      const staffGuard = await assertClubStaffCanManage(supabase, match.club_id, user.id);
+      canRecordResult = staffGuard.ok;
+    }
+  }
 
   const typeLabels: Record<string, string> = {
     all: labels.matchTypeLabelAll,
@@ -192,6 +209,33 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
           {locale === "en" ? "to join this match." : "pour rejoindre ce match."}
         </p>
       )}
+
+      {matchResult ? (
+        <section className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-2">
+          <h2 className="text-sm font-bold text-emerald-100">
+            {locale === "en" ? "Final score" : "Score final"}
+          </h2>
+          <p className="text-sm text-white">
+            {locale === "en" ? "Winner" : "Vainqueur"} :{" "}
+            <span className="font-bold text-emerald-300">Équipe {matchResult.winnerTeam}</span>
+          </p>
+          {matchResult.setScores?.length ? (
+            <p className="text-xs text-white/70">{formatSetScores(matchResult.setScores)}</p>
+          ) : null}
+          <p className="text-[10px] text-white/50">
+            {locale === "en"
+              ? "ELO updated for all players."
+              : "Le classement ELO des joueurs a été mis à jour."}
+          </p>
+        </section>
+      ) : canRecordResult ? (
+        <section className="rounded-2xl border border-white/10 p-4 space-y-3 bg-surface-elevated">
+          <h2 className="text-sm font-bold text-white">
+            {locale === "en" ? "Enter the score" : "Saisir le score"}
+          </h2>
+          <MatchScoreForm locale={locale} matchId={match.id} />
+        </section>
+      ) : null}
     </div>
   );
 }
