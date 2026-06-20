@@ -7,6 +7,7 @@ import { formatTunisiaLocalDisplay } from "@/lib/phone/normalize-tunisia";
 import { normalizeTunisiaPhoneToE164 } from "@/lib/phone/normalize-tunisia";
 import { publicEnv } from "@/lib/config/env";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import { sendActivationEmailViaResend } from "@/modules/auth/send-activation-email";
 
 function digitsOnly(raw: string): string {
   return raw.replace(/\D/g, "");
@@ -87,6 +88,15 @@ export async function signUpAction(formData: FormData) {
   }
 
   const userId = data.user?.id;
+  const needsEmailConfirm = Boolean(data.user && !data.user.email_confirmed_at);
+
+  if (needsEmailConfirm) {
+    const mailed = await sendActivationEmailViaResend({ email, locale });
+    if (!mailed.ok) {
+      console.error("[signUpAction] activation email via Resend failed", mailed.error);
+    }
+  }
+
   if (userId) {
     try {
       const admin = createSupabaseAdminClient();
