@@ -185,26 +185,50 @@ export async function verifyPhoneOtpAction(
 
   const admin = createSupabaseAdminClient();
 
-  const { data: challenge, error: readErr } = await admin
+  const { data: profileRow } = await admin
+    .from("profiles")
+    .select("phone_verified_at")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileRow?.phone_verified_at) {
+    return { ok: true };
+  }
+
+  const { data: challengeRows, error: readErr } = await admin
     .from("phone_verification_challenges")
     .select("id, code_hash, expires_at, attempts, verified_at")
     .eq("user_id", user.id)
     .eq("phone_e164", phoneE164)
     .is("verified_at", null)
+    .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  const challenge = challengeRows?.[0];
 
   if (readErr || !challenge) {
+    const { data: recovered } = await admin
+      .from("phone_verification_challenges")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("phone_e164", phoneE164)
+      .not("verified_at", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recovered?.id) {
+      const applied = await applyVerifiedPhoneToProfile(supabase, user.id, phoneE164);
+      if (applied.ok) {
+        return { ok: true };
+      }
+    }
+
+    if (readErr) {
+      console.error("[verifyPhoneOtpAction] challenge read", readErr.message);
+    }
     return { ok: false, error: "Aucun code actif. Demandez un nouveau code.", code: "NO_CHALLENGE" };
-  }
-
-  if (challenge.verified_at) {
-    return { ok: false, error: "Ce code a déjà été utilisé.", code: "ALREADY_USED" };
-  }
-
-  if (new Date(challenge.expires_at).getTime() < Date.now()) {
-    return { ok: false, error: "Code expiré. Demandez un nouveau code.", code: "EXPIRED" };
   }
 
   if ((challenge.attempts ?? 0) >= OTP_MAX_ATTEMPTS) {
@@ -223,17 +247,15 @@ export async function verifyPhoneOtpAction(
     return { ok: false, error: "Code incorrect.", code: "WRONG_CODE" };
   }
 
-  const nowIso = new Date().toISOString();
-
-  await admin
-    .from("phone_verification_challenges")
-    .update({ verified_at: nowIso })
-    .eq("id", challenge.id);
-
   const applied = await applyVerifiedPhoneToProfile(supabase, user.id, phoneE164);
   if (!applied.ok) {
     return applied;
   }
+
+  await admin
+    .from("phone_verification_challenges")
+    .update({ verified_at: new Date().toISOString() })
+    .eq("id", challenge.id);
 
   return { ok: true };
 }
