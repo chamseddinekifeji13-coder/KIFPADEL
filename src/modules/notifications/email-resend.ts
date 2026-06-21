@@ -1,7 +1,16 @@
 export type EmailSendResult = { ok: true } | { ok: false; error: string };
 
+/** Vercel CLI / PowerShell peuvent injecter des \\r\\n dans les secrets — casse l'auth Resend. */
+function cleanEnvSecret(value: string | undefined): string {
+  return value?.replace(/[\r\n\u0000-\u001F\u007F]+/g, "").trim() ?? "";
+}
+
+function cleanEnvLine(value: string | undefined): string {
+  return value?.replace(/[\r\n]+/g, "").trim() ?? "";
+}
+
 export function isResendConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim());
+  return Boolean(cleanEnvSecret(process.env.RESEND_API_KEY) && cleanEnvLine(process.env.RESEND_FROM_EMAIL));
 }
 
 export async function sendTransactionalEmail(input: {
@@ -10,8 +19,8 @@ export async function sendTransactionalEmail(input: {
   html: string;
   text?: string;
 }): Promise<EmailSendResult> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const fromRaw = process.env.RESEND_FROM_EMAIL?.trim();
+  const apiKey = cleanEnvSecret(process.env.RESEND_API_KEY);
+  const fromRaw = cleanEnvLine(process.env.RESEND_FROM_EMAIL);
   const from =
     fromRaw && !fromRaw.includes("<") ? `Kifpadel <${fromRaw}>` : fromRaw;
 

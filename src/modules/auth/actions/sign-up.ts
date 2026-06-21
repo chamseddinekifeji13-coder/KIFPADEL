@@ -94,6 +94,7 @@ export async function signUpAction(formData: FormData) {
     const mailed = await sendActivationEmailViaResend({ email, locale });
     if (!mailed.ok) {
       console.error("[signUpAction] activation email via Resend failed", mailed.error);
+      redirect(`/${locale}/auth/sign-in?status=check_email&email_warning=send_failed`);
     }
   }
 
