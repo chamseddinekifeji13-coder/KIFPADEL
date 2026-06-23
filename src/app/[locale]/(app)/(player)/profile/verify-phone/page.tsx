@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { PhoneVerificationForm } from "@/components/features/phone/phone-verification-form";
+import { buildAccountVerifiedCelebrationLabels } from "@/components/features/players/account-verified-celebration-labels";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
@@ -27,7 +28,7 @@ export default async function VerifyPhonePage({ params, searchParams }: VerifyPh
   const supabase = await createSupabaseServerClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("phone, phone_verified_at")
+    .select("phone, phone_verified_at, display_name")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -39,9 +40,15 @@ export default async function VerifyPhonePage({ params, searchParams }: VerifyPh
     "";
   const phoneVerified = Boolean(profile?.phone_verified_at);
   const verificationChannel = getPhoneVerificationChannel();
+  const playerName = profile?.display_name?.trim() || "Joueur";
 
   const safeNext =
     nextPath && nextPath.startsWith(`/${locale}/`) ? nextPath : `/${locale}/book`;
+  const successRedirect = `/${locale}/profile?verified=1`;
+
+  if (phoneVerified) {
+    redirect(safeNext);
+  }
 
   return (
     <section className="space-y-4 pb-24">
@@ -63,11 +70,14 @@ export default async function VerifyPhonePage({ params, searchParams }: VerifyPh
           channel={verificationChannel}
           initialPhone={initialPhone}
           initialVerified={phoneVerified}
-          redirectOnSuccess={phoneVerified ? undefined : safeNext}
+          redirectOnSuccess={successRedirect}
           labels={{
             title: labels.verifyPhoneFormTitle,
             subtitle: labels.verifyPhoneFormSubtitle,
             verifiedTitle: labels.verifyPhoneVerifiedTitle,
+            verifiedCelebrationTitle: buildAccountVerifiedCelebrationLabels(labels, playerName).title,
+            verifiedCelebrationBody: labels.accountVerifiedBody,
+            redirectingHint: labels.accountVerifiedRedirecting,
             phoneLabel: labels.verifyPhoneFieldLabel,
             sendCode: labels.verifyPhoneSendCode,
             sending: labels.verifyPhoneSending,

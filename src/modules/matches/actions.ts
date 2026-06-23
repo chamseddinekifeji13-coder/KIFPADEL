@@ -364,6 +364,172 @@ export async function joinOpenMatchAction(input: {
 }
 
 /**
+ * Change d'équipe tant que la participation est en attente de confirmation.
+ */
+export async function switchMatchTeamAction(input: {
+  locale: string;
+  matchId: string;
+  team: "A" | "B";
+}): Promise<JoinOpenMatchResult> {
+  const loc = input.locale?.trim() || "fr";
+  const { matchId, team } = input;
+
+  if (!matchId?.trim() || (team !== "A" && team !== "B")) {
+    return { ok: false, error: "Données invalides." };
+  }
+
+  const supabase = await createSupabaseServerActionClient();
+  const auth = await getActionUser(supabase);
+
+  if ("error" in auth) {
+    return { ok: false, error: auth.error };
+  }
+
+  const user = auth.user;
+
+  try {
+    await assertNotSuspended(supabase, user.id);
+  } catch (e) {
+    if (isPlayerAccessError(e)) {
+      return { ok: false, error: e.message };
+    }
+    throw e;
+  }
+
+  const { data: myRow, error: myRowError } = await supabase
+    .from("match_participants")
+    .select("team, status, payment_method")
+    .eq("match_id", matchId)
+    .eq("player_id", user.id)
+    .maybeSingle();
+
+  if (myRowError || !myRow) {
+    return { ok: false, error: "Participation introuvable." };
+  }
+
+  const phase = resolveViewerParticipationPhase({
+    player_id: user.id,
+    team: String(myRow.team ?? ""),
+    status: myRow.status as string,
+    payment_method: myRow.payment_method as string,
+  });
+
+  if (phase === "confirmed") {
+    return { ok: false, error: "Participation déjà confirmée — impossible de changer d'équipe." };
+  }
+  if (phase !== "pending") {
+    return { ok: false, error: "Rejoins d'abord le match pour choisir une équipe." };
+  }
+
+  const currentTeam = myRow.team === "A" || myRow.team === "B" ? myRow.team : null;
+  if (currentTeam === team) {
+    return { ok: true, team, status: "pending" };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("gender")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const viewerGender: Gender | null =
+    profile?.gender === "male" || profile?.gender === "female" ? profile.gender : null;
+
+  const { data: match, error: matchError } = await supabase
+    .from("matches")
+    .select("id, status, match_gender_type")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (matchError || !match) {
+    return { ok: false, error: "Match introuvable." };
+  }
+
+  if (match.status !== "open") {
+    return { ok: false, error: "Ce match n'est plus ouvert." };
+  }
+
+  const matchType = parseMatchGenderType(match.match_gender_type as string);
+
+  const { data: participantRows, error: participantsError } = await supabase
+    .from("match_participants")
+    .select("player_id, team, status, payment_method")
+    .eq("match_id", matchId);
+
+  if (participantsError) {
+    return { ok: false, error: "Impossible de lire les participants du match." };
+  }
+
+  const participants = (participantRows ?? []) as {
+    player_id: string;
+    team: string;
+    status?: string | null;
+    payment_method?: string | null;
+  }[];
+  const activeParticipants = participants.filter((p) => isActiveMatchParticipantRow(p));
+  const teamMembers = activeParticipants.filter((p) => p.team === team);
+
+  if (teamMembers.length >= 2) {
+    return { ok: false, error: "Cette équipe est complète." };
+  }
+
+  const { data: genderRows, error: rpcError } = await supabase.rpc("match_participant_genders", {
+    p_match_id: matchId,
+  });
+
+  if (rpcError) {
+    return { ok: false, error: "Impossible de vérifier la composition du match." };
+  }
+
+  const genderByPlayer = new Map<string, Gender | null>();
+  for (const row of (genderRows ?? []) as { player_id: string; gender: string | null }[]) {
+    if (row.gender === "male" || row.gender === "female") {
+      genderByPlayer.set(row.player_id, row.gender);
+    } else {
+      genderByPlayer.set(row.player_id, null);
+    }
+  }
+
+  const existingTeamGenders = teamMembers.map((m) => genderByPlayer.get(m.player_id) ?? null);
+
+  if (matchType !== "all" && existingTeamGenders.some((g) => g === null)) {
+    return {
+      ok: false,
+      error:
+        "Un joueur sur cette équipe n'a pas indiqué son genre : impossible de valider le match pour le moment.",
+    };
+  }
+
+  if (
+    !isValidTeamCompositionAfterJoin({
+      existingTeamGenders,
+      newPlayerGender: viewerGender,
+      matchType,
+    })
+  ) {
+    return {
+      ok: false,
+      error: "Impossible de rejoindre cette équipe : la composition genre ne respecte pas les règles du match.",
+    };
+  }
+
+  const { error: updateError } = await supabase
+    .from("match_participants")
+    .update({ team })
+    .eq("match_id", matchId)
+    .eq("player_id", user.id)
+    .eq("status", "pending");
+
+  if (updateError) {
+    return { ok: false, error: updateError.message || "Changement d'équipe refusé." };
+  }
+
+  revalidatePath(`/${loc}/play-now`);
+  revalidatePath(`/${loc}/matches/${matchId}`);
+  return { ok: true, team, status: "pending" };
+}
+
+/**
  * Confirme la participation après engagement de paiement envers le club.
  */
 export async function confirmMatchParticipationAction(input: {

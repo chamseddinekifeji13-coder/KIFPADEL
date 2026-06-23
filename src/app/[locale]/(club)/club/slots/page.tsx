@@ -3,6 +3,9 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound } from "next/navigation";
 import { SlotsManager } from "./slots-manager";
+import { ClubBookingInvitesPanel } from "@/components/features/club/club-booking-invites-panel";
+import type { ClubBookingSlotSummary } from "@/components/features/club/club-booking-invites-panel";
+import { fetchBookingSplitInvites } from "@/modules/bookings/split-payment-repository";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
 import { fetchCourtsByClub } from "@/modules/clubs/repository";
@@ -104,6 +107,37 @@ export default async function ClubSlotsPage({ params, searchParams }: ClubSlotsP
     };
   });
 
+  const bookingIdSet = [...new Set(bookings.map((b) => b.bookingId))];
+  const invitesByBooking = new Map(
+    await Promise.all(
+      bookingIdSet.map(async (bookingId) => {
+        const invites = await fetchBookingSplitInvites(bookingId);
+        return [bookingId, invites] as const;
+      }),
+    ),
+  );
+
+  const inviteSlotSummaries: ClubBookingSlotSummary[] = [];
+  for (const bookingId of bookingIdSet) {
+    const rows = bookings.filter((b) => b.bookingId === bookingId);
+    const first = rows[0];
+    if (!first) continue;
+    const activeSeats = rows.length;
+    const pendingInvites = (invitesByBooking.get(bookingId) ?? []).filter(
+      (inv) => inv.status === "pending",
+    ).length;
+    if (activeSeats + pendingInvites >= 4) continue;
+    inviteSlotSummaries.push({
+      bookingId,
+      court: first.court,
+      time: first.time,
+      endTime: first.endTime,
+      sharePrice: first.amount,
+      activeSeats,
+      pendingInvites,
+    });
+  }
+
   const courts = courtsRows.map((court) => court.label);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -125,6 +159,21 @@ export default async function ClubSlotsPage({ params, searchParams }: ClubSlotsP
           <p className="text-[var(--foreground-muted)] text-sm mt-1">{labels.slotsHeaderSubtitle}</p>
         </div>
       </div>
+
+      {inviteSlotSummaries.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-bold text-white">Invitations joueurs (résa téléphone)</h2>
+          {inviteSlotSummaries.map((slot) => (
+            <ClubBookingInvitesPanel
+              key={slot.bookingId}
+              locale={locale}
+              clubName={managedClub.name}
+              slot={slot}
+              existingInvites={invitesByBooking.get(slot.bookingId) ?? []}
+            />
+          ))}
+        </section>
+      ) : null}
 
       <SlotsManager
         bookings={bookings}

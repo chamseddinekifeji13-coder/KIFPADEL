@@ -6,6 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchMatchById, fetchMatchResult } from "@/modules/matches/repository";
 import { playerService } from "@/modules/players/service";
 import { MatchJoinActions } from "@/components/features/matches/match-join-actions";
+import { MatchShareInvitePanel } from "@/components/features/matches/match-share-invite-panel";
+import { MatchTeamsRoster } from "@/components/features/matches/match-teams-roster";
 import { MatchChatPanel } from "@/components/features/matches/match-chat-panel";
 import { MatchScoreForm } from "@/components/features/matches/match-score-form";
 import { formatSetScores } from "@/domain/rules/match-score";
@@ -22,6 +24,9 @@ import {
   resolveSharePrice,
   resolveViewerParticipationPhase,
 } from "@/domain/rules/match-participant";
+import { fetchMatchParticipantProfiles } from "@/modules/matches/participant-profiles";
+import { clubService } from "@/modules/clubs/service";
+import { isRacketRentalOfferedByClub } from "@/modules/bookings/racket-rental-pipeline";
 
 type MatchDetailsPageProps = {
   params: Promise<{ locale: string; matchId: string }>;
@@ -86,6 +91,16 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
   const activeParticipants = match.match_participants.filter((p) => isActiveMatchParticipantRow(p));
   const teamA = activeParticipants.filter((p) => p.team === "A");
   const teamB = activeParticipants.filter((p) => p.team === "B");
+  const participantProfiles = await fetchMatchParticipantProfiles(match.id);
+
+  const clubDetails = match.club_id
+    ? await clubService.getClubDetails(match.club_id).catch(() => null)
+    : null;
+  const racketOffered = clubDetails ? isRacketRentalOfferedByClub(clubDetails) : false;
+  const racketUnitPrice =
+    racketOffered && clubDetails?.racket_rental_price_per_unit != null
+      ? Number(clubDetails.racket_rental_price_per_unit)
+      : 0;
 
   const matchResult = await fetchMatchResult(matchId);
   let canRecordResult = false;
@@ -140,7 +155,7 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
 
   return (
     <div className="flex-1 p-4 space-y-6 max-w-lg mx-auto">
-      <Link href={`/${locale}/play-now`} className="text-sm text-sky-400 font-medium">
+      <Link href={`/${locale}/play-now`} className="text-sm text-[var(--gold)] font-medium">
         ← {labels.playNowTitle}
       </Link>
 
@@ -193,42 +208,47 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
         ) : null}
       </header>
 
-      <section className="rounded-2xl border border-white/10 p-4 space-y-3 bg-surface-elevated">
-        <h2 className="text-sm font-bold text-white">
-          {locale === "en" ? "Teams" : "Équipes"}
-        </h2>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="font-bold text-white mb-1">A</p>
-            <p className="text-white/60">{teamA.length} / 2 joueurs</p>
-          </div>
-          <div>
-            <p className="font-bold text-white mb-1">B</p>
-            <p className="text-white/60">{teamB.length} / 2 joueurs</p>
-          </div>
-        </div>
-      </section>
+      <MatchTeamsRoster
+        locale={locale}
+        participants={participantProfiles}
+        viewerId={user?.id ?? null}
+      />
 
       {user ? (
-        <MatchJoinActions
-          locale={locale}
-          matchId={match.id}
-          matchType={match.match_gender_type}
-          viewerGender={viewerGender}
-          participationPhase={participationPhase}
-          viewerTeam={viewerTeam}
-          sharePrice={sharePrice}
-          clubName={match.clubName}
-          walletBalance={walletBalance}
-          walletHref={`/${locale}/profile/wallet`}
-          isOpen={match.status === "open"}
-          teamACount={teamA.length}
-          teamBCount={teamB.length}
-          labels={joinLabels}
-        />
+        <>
+          <MatchJoinActions
+            locale={locale}
+            matchId={match.id}
+            matchType={match.match_gender_type}
+            viewerGender={viewerGender}
+            viewerId={user.id}
+            participationPhase={participationPhase}
+            viewerTeam={viewerTeam}
+            sharePrice={sharePrice}
+            clubName={match.clubName}
+            walletBalance={walletBalance}
+            walletHref={`/${locale}/profile/wallet`}
+            isOpen={match.status === "open"}
+            teamACount={teamA.length}
+            teamBCount={teamB.length}
+            participants={participantProfiles}
+            racketUnitPrice={racketUnitPrice}
+            labels={joinLabels}
+          />
+          {participationPhase === "confirmed" &&
+          match.status === "open" &&
+          teamA.length + teamB.length < 4 ? (
+            <MatchShareInvitePanel
+              locale={locale}
+              matchId={match.id}
+              clubName={match.clubName}
+              spotsLeft={4 - teamA.length - teamB.length}
+            />
+          ) : null}
+        </>
       ) : (
         <p className="text-sm text-white/70">
-          <Link href={`/${locale}/auth/sign-in`} className="text-sky-400 font-bold underline">
+          <Link href={`/${locale}/auth/sign-in`} className="text-[var(--gold)] font-bold underline">
             {locale === "en" ? "Sign in" : "Connecte-toi"}
           </Link>{" "}
           {locale === "en" ? "to join this match." : "pour rejoindre ce match."}

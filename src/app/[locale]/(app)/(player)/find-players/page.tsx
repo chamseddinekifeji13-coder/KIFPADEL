@@ -6,14 +6,20 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { playerService } from "@/modules/players/service";
 import { Player } from "@/modules/players/repository";
+import { FindPlayersBookingInviteSection } from "@/components/features/bookings/find-players-booking-invite-section";
+import { FindPlayersBookingInviteBanner } from "@/components/features/bookings/find-players-booking-invite-banner";
+import { fetchBookingSplitInvites } from "@/modules/bookings/split-payment-repository";
 import { PlayerCard } from "@/components/features/players/player-card";
 import { playerCategoryBadgeVariant } from "@/domain/rules/player-category";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 
-import { Search, Filter, Users } from "lucide-react";
+import { Search, Filter, Users, ArrowLeft } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
+import { cn } from "@/lib/utils/cn";
+import { bookingInvitesPath } from "@/lib/booking-paths";
+import Link from "next/link";
 
 type FindPlayersPageProps = {
   params: Promise<{ locale: string }>;
@@ -42,11 +48,49 @@ export default async function FindPlayersPage({
 
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : undefined;
+  const bookingId = typeof sp.bookingId === "string" ? sp.bookingId.trim() : "";
+  const matchId = typeof sp.matchId === "string" ? sp.matchId.trim() : "";
+  const clubName = typeof sp.clubName === "string" ? sp.clubName.trim() : "";
+  const sharePriceRaw = typeof sp.sharePrice === "string" ? Number(sp.sharePrice) : 0;
+  const sharePrice = Number.isFinite(sharePriceRaw) && sharePriceRaw > 0 ? sharePriceRaw : 0;
+  const inviteId = typeof sp.inviteId === "string" ? sp.inviteId.trim() : "";
+  let bookingInvite =
+    bookingId && clubName && sharePrice > 0
+      ? { bookingId, clubName, sharePrice, inviteId: inviteId || undefined, pendingInviteIds: [] as string[] }
+      : undefined;
+
+  let totalPendingInvites = 0;
+  let pendingInviteIds: string[] = [];
+  if (bookingInvite) {
+    const invites = await fetchBookingSplitInvites(bookingId);
+    const pending = invites.filter((inv) => inv.status === "pending");
+    pendingInviteIds = pending.map((inv) => inv.inviteId);
+    totalPendingInvites = pending.length;
+    if (totalPendingInvites === 0) totalPendingInvites = 1;
+    bookingInvite = {
+      ...bookingInvite,
+      pendingInviteIds,
+    };
+  }
   const dictionary = await getDictionary(locale as Locale);
   const labels = dictionary.player;
   const user = await requireUser({ locale, redirectPath: "find-players" });
-  const title = labels.findPlayersTitle;
-  const subtitle = labels.findPlayersSubtitle;
+  const inInviteFlow = Boolean(bookingInvite);
+  const inMatchFlow = Boolean(matchId && clubName);
+  const title = inInviteFlow
+    ? labels.bookingInviteFindPlayersTitle
+    : inMatchFlow
+      ? locale === "en"
+        ? "Invite to match"
+        : "Inviter au match"
+      : labels.findPlayersTitle;
+  const subtitle = inInviteFlow
+    ? labels.bookingInviteFindPlayersSubtitle
+    : inMatchFlow
+      ? locale === "en"
+        ? `Share the match link for ${clubName} with a player below.`
+        : `Partagez le lien du match chez ${clubName} avec un joueur ci-dessous.`
+      : labels.findPlayersSubtitle;
 
   // Fetch real data from Supabase with heavy protection
   let players: Player[] = [];
@@ -61,16 +105,72 @@ export default async function FindPlayersPage({
   }
 
   return (
-    <div className="flex-1 p-4 space-y-6">
+    <div
+      className={cn(
+        "flex-1 p-4 space-y-6 pb-24",
+        inInviteFlow && "max-w-lg mx-auto",
+        inMatchFlow && !inInviteFlow && "max-w-lg mx-auto",
+      )}
+    >
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1
+          className={cn(
+            "text-2xl font-bold tracking-tight",
+            inInviteFlow ? "text-white" : inMatchFlow ? "text-white" : "text-slate-900",
+          )}
+        >
           {title}
         </h1>
-        <p className="text-sm text-slate-500">{subtitle}</p>
+        <p
+          className={cn(
+            "text-sm",
+            inInviteFlow || inMatchFlow
+              ? "text-[var(--foreground-muted)]"
+              : "text-slate-500",
+          )}
+        >
+          {subtitle}
+        </p>
       </header>
+
+      {inInviteFlow && bookingInvite ? (
+        <Link
+          href={bookingInvitesPath(locale, bookingInvite.bookingId)}
+          className="inline-flex items-center gap-1 text-sm text-[var(--gold)] font-medium"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {labels.bookingInviteBackLink}
+        </Link>
+      ) : null}
+
+      {inMatchFlow && matchId ? (
+        <Link
+          href={`/${locale}/matches/${matchId}`}
+          className="inline-flex items-center gap-1 text-sm text-[var(--gold)] font-medium"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {locale === "en" ? "Back to match" : "Retour au match"}
+        </Link>
+      ) : null}
 
       <div className="relative">
         <form action="" role="search">
+          {bookingInvite ? (
+            <>
+              <input type="hidden" name="bookingId" value={bookingInvite.bookingId} />
+              <input type="hidden" name="clubName" value={bookingInvite.clubName} />
+              <input type="hidden" name="sharePrice" value={String(bookingInvite.sharePrice)} />
+              {bookingInvite.inviteId ? (
+                <input type="hidden" name="inviteId" value={bookingInvite.inviteId} />
+              ) : null}
+            </>
+          ) : null}
+          {inMatchFlow && matchId && clubName ? (
+            <>
+              <input type="hidden" name="matchId" value={matchId} />
+              <input type="hidden" name="clubName" value={clubName} />
+            </>
+          ) : null}
           <label htmlFor="find-players-search" className="sr-only">
             {labels.findPlayersSearchLabel}
           </label>
@@ -85,10 +185,27 @@ export default async function FindPlayersPage({
             defaultValue={q}
             placeholder={labels.findPlayersSearchPlaceholder}
             aria-label={labels.findPlayersSearchLabel}
-            className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm min-h-11"
+            className={cn(
+              "w-full rounded-xl py-3 pl-10 pr-4 text-sm transition-all shadow-sm min-h-11 focus:outline-none focus:ring-2",
+              inInviteFlow || inMatchFlow
+                ? "bg-[var(--surface)] border border-[var(--border)] text-white focus:ring-[var(--gold)]/20 focus:border-[var(--gold)]"
+                : "bg-white border border-slate-200 focus:ring-sky-500/20 focus:border-sky-500",
+            )}
           />
         </form>
       </div>
+
+      {bookingInvite ? (
+        <FindPlayersBookingInviteBanner
+          locale={locale}
+          bookingId={bookingInvite.bookingId}
+          clubName={bookingInvite.clubName}
+          sharePrice={bookingInvite.sharePrice}
+          inviteId={bookingInvite.inviteId}
+          totalPendingInvites={totalPendingInvites}
+          pendingInviteIds={bookingInvite.pendingInviteIds}
+        />
+      ) : null}
 
       <div className="flex items-center justify-between">
         <SectionTitle
@@ -98,7 +215,12 @@ export default async function FindPlayersPage({
         <button
           type="button"
           aria-label={labels.filtersLabel}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 px-3 rounded-lg bg-slate-100 min-h-11"
+          className={cn(
+            "inline-flex items-center gap-1.5 text-xs font-bold px-3 rounded-lg min-h-11",
+            inInviteFlow || inMatchFlow
+              ? "text-[var(--foreground-muted)] bg-white/10"
+              : "text-slate-500 bg-slate-100",
+          )}
         >
           <Filter className="h-3 w-3" aria-hidden="true" />
           {labels.filtersLabel}
@@ -106,7 +228,7 @@ export default async function FindPlayersPage({
       </div>
 
       {/* Recommended list */}
-      {!q && players.length > 3 && (
+      {!q && players.length > 3 && !inInviteFlow && !inMatchFlow ? (
         <section className="space-y-4">
            <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest px-1">
              ⭐ {labels.topRatedLabel}
@@ -130,11 +252,35 @@ export default async function FindPlayersPage({
              ))}
            </div>
         </section>
-      )}
+      ) : null}
 
       {players.length === 0 ? (
-        <div className="py-12 text-center text-slate-500 italic">
+        <div
+          className={cn(
+            "py-12 text-center italic",
+            inInviteFlow || inMatchFlow ? "text-[var(--foreground-muted)]" : "text-slate-500",
+          )}
+        >
           {q ? `${labels.noPlayersForQueryPrefix} "${q}".` : labels.noPlayersAvailable}
+        </div>
+      ) : bookingInvite ? (
+        <FindPlayersBookingInviteSection
+          locale={locale}
+          players={players}
+          bookingInvite={bookingInvite}
+          totalPendingInvites={totalPendingInvites}
+          showBanner={false}
+        />
+      ) : inMatchFlow && matchId && clubName ? (
+        <div className="grid gap-3">
+          {players.map((player) => (
+            <PlayerCard
+              key={player.id}
+              locale={locale}
+              player={player}
+              matchInvite={{ matchId, clubName }}
+            />
+          ))}
         </div>
       ) : (
         <div className="grid gap-3">

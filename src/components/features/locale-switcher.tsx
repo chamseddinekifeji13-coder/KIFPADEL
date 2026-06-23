@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { LOCALES } from "@/i18n/config";
+import { cn } from "@/lib/utils/cn";
 
 type LocaleSwitcherProps = {
   currentLocale: string;
@@ -22,17 +23,24 @@ export function LocaleSwitcher({ currentLocale }: LocaleSwitcherProps) {
   };
 
   return (
-    <div className="inline-flex rounded-full bg-slate-100 p-1 text-xs font-medium">
+    <div
+      className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--background)] p-1 text-[10px] font-bold uppercase tracking-wider"
+      role="group"
+      aria-label="Language"
+    >
       {LOCALES.map((locale) => {
         const isActive = locale === currentLocale;
         return (
           <Link
             key={locale}
             href={getLocaleHref(locale)}
-            className={[
-              "rounded-full px-3 py-1 transition",
-              isActive ? "bg-white text-slate-900 shadow-sm" : "text-slate-500",
-            ].join(" ")}
+            aria-current={isActive ? "true" : undefined}
+            className={cn(
+              "min-w-[2.5rem] rounded-full border px-3 py-1 text-center transition-colors touch-manipulation",
+              isActive
+                ? "border-[var(--gold)] bg-[var(--gold)]/10 text-[var(--gold)]"
+                : "border-transparent text-[var(--foreground-muted)] hover:text-white",
+            )}
           >
             {locale.toUpperCase()}
           </Link>

@@ -3,9 +3,18 @@ import { notFound, redirect } from "next/navigation";
 import { isLocale } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BookingInviteAcceptForm } from "@/components/features/bookings/booking-invite-accept-form";
-import { fetchBookingInvitePublic } from "@/modules/bookings/split-payment-repository";
+import {
+  fetchBookingInvitePublic,
+  fetchProfilePaymentGateFields,
+} from "@/modules/bookings/split-payment-repository";
 import { fetchKifWalletBalance } from "@/modules/wallet/repository";
-import { reliabilityFromTrustScore } from "@/domain/rules/trust";
+import { clubService } from "@/modules/clubs/service";
+import { isRacketRentalOfferedByClub } from "@/modules/bookings/racket-rental-pipeline";
+import {
+  isConfirmedPlayer,
+  isNewAccountForGates,
+  mustUseWalletForBooking,
+} from "@/modules/compliance/new-account-gates";
 
 type Props = {
   params: Promise<{ locale: string; inviteId: string }>;
@@ -41,15 +50,38 @@ export default async function BookingInvitePage({ params, searchParams }: Props)
   }
 
   const walletBalance = await fetchKifWalletBalance(user.id);
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("trust_score")
-    .eq("id", user.id)
-    .maybeSingle();
+  const [guestProfile, inviterProfile] = await Promise.all([
+    fetchProfilePaymentGateFields(user.id),
+    fetchProfilePaymentGateFields(invite.invitedByUserId),
+  ]);
 
-  const trustScore = Number((profile as { trust_score?: number } | null)?.trust_score ?? 70);
-  const reliability = reliabilityFromTrustScore(trustScore);
-  const isRestricted = reliability === "restricted" || reliability === "blacklisted";
+  const inviterIsConfirmed = inviterProfile ? isConfirmedPlayer(inviterProfile) : false;
+  const invitedByClub = invite.inviteSource === "club";
+  const isRestricted = mustUseWalletForBooking(
+    {
+      trust_score: guestProfile?.trust_score ?? 70,
+      created_at: guestProfile?.created_at,
+      phone_verified_at: guestProfile?.phone_verified_at,
+    },
+    { inviterIsConfirmed, invitedByClub },
+  );
+
+  let racketUnitPrice = 0;
+  try {
+    const supabaseForClub = await createSupabaseServerClient();
+    const { data: bookingRow } = await supabaseForClub
+      .from("bookings")
+      .select("club_id")
+      .eq("id", invite.bookingId)
+      .maybeSingle();
+    if (bookingRow?.club_id) {
+      const club = await clubService.getClubDetails(String(bookingRow.club_id)).catch(() => null);
+      if (club && isRacketRentalOfferedByClub(club)) {
+        racketUnitPrice = Number(club.racket_rental_price_per_unit ?? 0);
+      }
+    }
+  } catch {
+  }
 
   return (
     <div className="flex-1 p-4 space-y-6 max-w-lg mx-auto pb-20">
@@ -65,6 +97,19 @@ export default async function BookingInvitePage({ params, searchParams }: Props)
             {new Date(invite.startsAt).toLocaleString(locale === "en" ? "en-GB" : "fr-FR")}
           </p>
         ) : null}
+        {invitedByClub ? (
+          <p className="text-xs text-emerald-300/90">
+            {locale === "en"
+              ? "Invitation from the club — you may pay at the club (no KIF tokens required)."
+              : "Invitation du club — vous pouvez payer sur place (sans Jetons KIF)."}
+          </p>
+        ) : inviterIsConfirmed && guestProfile && isNewAccountForGates(guestProfile) ? (
+          <p className="text-xs text-emerald-300/90">
+            {locale === "en"
+              ? "Your partner is a verified player — you may pay at the club."
+              : "Votre partenaire est un joueur confirmé — vous pouvez payer sur place."}
+          </p>
+        ) : null}
       </header>
 
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
@@ -74,6 +119,8 @@ export default async function BookingInvitePage({ params, searchParams }: Props)
           token={token.trim()}
           walletBalance={walletBalance}
           isRestricted={isRestricted}
+          defaultPaymentMethod={invitedByClub ? "on_site" : undefined}
+          racketUnitPrice={racketUnitPrice}
         />
       </section>
 

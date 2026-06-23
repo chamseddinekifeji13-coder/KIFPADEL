@@ -29,7 +29,7 @@ export async function shareMatchInviteLink(
     }
   }
 
-  window.prompt("Copie ce lien et envoie-le à ton partenaire :", url);
+  window.prompt("Copiez ce lien et envoyez-le à votre partenaire :", url);
 }
 
 function shouldTryNativeShare(url: string): boolean {

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getDictionary } from "@/i18n/get-dictionary";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BookingSplitInvitesPanel } from "@/components/features/bookings/booking-split-invites-panel";
 import { fetchBookingSplitInvites } from "@/modules/bookings/split-payment-repository";
 import { isBookingParticipantActive } from "@/domain/rules/booking-participant";
+import { playerBookingsPath } from "@/lib/booking-paths";
 
 type Props = {
   params: Promise<{ locale: string; bookingId: string }>;
@@ -13,6 +15,9 @@ type Props = {
 export default async function BookingSplitInvitesPage({ params }: Props) {
   const { locale, bookingId } = await params;
   if (!isLocale(locale)) notFound();
+
+  const dictionary = await getDictionary(locale as Locale);
+  const labels = dictionary.player;
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -56,6 +61,7 @@ export default async function BookingSplitInvitesPage({ params }: Props) {
   const existingInvites = await fetchBookingSplitInvites(bookingId);
   const pendingInviteCount = existingInvites.filter((inv) => inv.status === "pending").length;
   const emptySeats = Math.max(0, 4 - activeCount - pendingInviteCount);
+  const partnerTargetCount = emptySeats + pendingInviteCount;
 
   const clubs = (booking as { clubs?: { name?: string } | { name?: string }[] | null }).clubs;
   const clubName = Array.isArray(clubs)
@@ -68,12 +74,15 @@ export default async function BookingSplitInvitesPage({ params }: Props) {
 
   return (
     <div className="flex-1 p-4 space-y-6 max-w-lg mx-auto pb-20">
-      <Link href={`/${locale}/bookings`} className="text-sm text-[var(--gold)] font-medium">
-        ← Mes réservations
+      <Link
+        href={playerBookingsPath(locale)}
+        className="text-sm text-[var(--gold)] font-medium"
+      >
+        ← {labels.bookingInviteBackLink}
       </Link>
 
       <header className="space-y-1">
-        <h1 className="text-xl font-bold text-white">Inviter vos partenaires</h1>
+        <h1 className="text-xl font-bold text-white">{labels.bookingInvitePageTitle}</h1>
         <p className="text-sm text-[var(--foreground-muted)]">
           {clubName ?? "Club"} ·{" "}
           {new Date(String((booking as { starts_at: string }).starts_at)).toLocaleString(
@@ -90,6 +99,7 @@ export default async function BookingSplitInvitesPage({ params }: Props) {
           sharePrice={sharePrice}
           existingInvites={existingInvites}
           emptySeats={emptySeats}
+          partnerTargetCount={partnerTargetCount}
         />
       </section>
     </div>

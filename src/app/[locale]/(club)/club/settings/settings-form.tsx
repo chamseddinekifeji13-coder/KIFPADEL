@@ -183,6 +183,12 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
             value={settings.address}
             onChange={(v) => updateSetting("address", v)}
           />
+          <p className="text-[10px] leading-relaxed text-[var(--foreground-muted)] -mt-2">
+            Pour un itinéraire GPS exact : ouvrez Google Maps sur l&apos;entrée du club → appui long →
+            copiez les coordonnées (ex.{" "}
+            <span className="font-mono text-white/80">35.8256, 10.6084</span>) et collez-les ici. Sinon,
+            indiquez l&apos;adresse complète telle qu&apos;elle apparaît sur Google Maps.
+          </p>
           <div className="grid grid-cols-2 gap-4">
             <NumberField
               label="Terrains couverts"

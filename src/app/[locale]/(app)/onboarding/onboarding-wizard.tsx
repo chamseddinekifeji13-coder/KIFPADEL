@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
 import {
   User,
   Phone,
@@ -20,6 +19,10 @@ import { completeOnboardingAction } from "@/modules/onboarding/actions";
 import { PLAYER_CATEGORIES } from "@/domain/rules/player-category";
 import { PhoneVerificationForm } from "@/components/features/phone/phone-verification-form";
 import type { PhoneVerificationChannel } from "@/lib/phone/verification-channel";
+import {
+  ProfileAvatarUploader,
+  type ProfileAvatarUploaderLabels,
+} from "@/components/features/players/profile-avatar-uploader";
 
 const ONBOARDING_ERROR_MESSAGES: Record<string, string> = {
   missing_name: "Indique un nom d'affichage (au moins 2 caractères).",
@@ -33,6 +36,10 @@ type OnboardingWizardProps = {
   initialStep?: Step;
   initialPhoneVerified?: boolean;
   verificationChannel?: PhoneVerificationChannel;
+  initialAvatarUrl?: string | null;
+  initialDisplayName?: string;
+  initialUrlError?: string;
+  avatarLabels: ProfileAvatarUploaderLabels;
 };
 
 type Step = "profile" | "phone" | "level" | "trust";
@@ -53,23 +60,24 @@ export function OnboardingWizard({
   initialStep = "profile",
   initialPhoneVerified = false,
   verificationChannel = "instant",
+  initialAvatarUrl = null,
+  initialDisplayName = "",
+  initialUrlError,
+  avatarLabels,
 }: OnboardingWizardProps) {
   const [step, setStep] = useState<Step>(initialStep);
   const [loading, setLoading] = useState(false);
   
   // Form state
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState(initialDisplayName);
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState(() =>
     initialPhone.replace(/\D/g, "").replace(/^216/, "").slice(-8),
   );
   const [phoneVerified, setPhoneVerified] = useState(initialPhoneVerified);
-  const searchParams = useSearchParams();
-  const rawUrlError = searchParams.get("error");
-  const urlError =
-    rawUrlError
-      ? (ONBOARDING_ERROR_MESSAGES[rawUrlError] ?? decodeURIComponent(rawUrlError))
-      : null;
+  const urlError = initialUrlError
+    ? (ONBOARDING_ERROR_MESSAGES[initialUrlError] ?? decodeURIComponent(initialUrlError))
+    : null;
   const [level, setLevel] = useState("");
   const [gender, setGender] = useState<"" | "male" | "female">("");
 
@@ -163,6 +171,7 @@ export function OnboardingWizard({
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
         {step === "profile" && (
           <ProfileStep
+            locale={locale}
             displayName={displayName}
             setDisplayName={setDisplayName}
             city={city}
@@ -170,6 +179,8 @@ export function OnboardingWizard({
             cities={CITIES}
             gender={gender}
             setGender={setGender}
+            initialAvatarUrl={initialAvatarUrl}
+            avatarLabels={avatarLabels}
           />
         )}
 
@@ -185,6 +196,7 @@ export function OnboardingWizard({
             labels={{
               title: "Numéro de téléphone",
               subtitle: "Étape obligatoire pour réserver un terrain",
+              emailCodeHint: "Consultez votre boîte e-mail (adresse du compte).",
             }}
           />
         )}
@@ -244,6 +256,7 @@ export function OnboardingWizard({
 
 // Profile Step
 function ProfileStep({
+  locale,
   displayName,
   setDisplayName,
   city,
@@ -251,7 +264,10 @@ function ProfileStep({
   cities,
   gender,
   setGender,
+  initialAvatarUrl,
+  avatarLabels,
 }: {
+  locale: string;
   displayName: string;
   setDisplayName: (v: string) => void;
   city: string;
@@ -259,6 +275,8 @@ function ProfileStep({
   cities: string[];
   gender: "" | "male" | "female";
   setGender: (v: "" | "male" | "female") => void;
+  initialAvatarUrl: string | null;
+  avatarLabels: ProfileAvatarUploaderLabels;
 }) {
   return (
     <div className="space-y-6">
@@ -271,6 +289,13 @@ function ProfileStep({
           <p className="text-xs text-[var(--foreground-muted)]">Comment veux-tu être appelé ?</p>
         </div>
       </div>
+
+      <ProfileAvatarUploader
+        locale={locale}
+        displayName={displayName || "Joueur"}
+        avatarUrl={initialAvatarUrl}
+        labels={avatarLabels}
+      />
 
       <div className="space-y-4">
         <div className="space-y-2">

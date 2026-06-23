@@ -5,7 +5,7 @@
  * - Stale-while-revalidate for immutable Next static chunks.
  */
 
-const CACHE_NAME = "kifpadel-static-v6";
+const CACHE_NAME = "kifpadel-static-v7";
 const PRECACHE_URLS = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",

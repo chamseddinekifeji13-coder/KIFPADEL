@@ -45,6 +45,7 @@ export type BookingResult =
         | "BLACKLISTED"
         | "RESTRICTED_REQUIRES_ONLINE"
         | "SLOT_TAKEN"
+        | "SLOT_PAST"
         | "UNAUTHORIZED"
         | "SERVER_ERROR"
         | "PLAYER_SUSPENDED"
@@ -119,11 +120,27 @@ function mapBookingRpcFailure(row: BookingRpcRow | null): BookingResult {
     };
   }
   if (code === "INSERT_FAILED") {
+    const raw = row?.error_message?.toLowerCase() ?? "";
     console.error("Booking RPC insert failed:", row?.error_message);
+    if (raw.includes("enum booking_status") && raw.includes("expired")) {
+      return {
+        ok: false,
+        error:
+          "Réservation temporairement indisponible (mise à jour serveur en cours). Réessayez dans quelques minutes ou contactez le support.",
+        code: "SERVER_ERROR",
+      };
+    }
+    if (raw.includes("exclusion") || raw.includes("overlap") || raw.includes("slot")) {
+      return {
+        ok: false,
+        error: "Ce créneau vient d'être pris. Choisissez un autre horaire ou terrain.",
+        code: "SLOT_TAKEN",
+      };
+    }
     return {
       ok: false,
       error:
-        "Impossible d'enregistrer la réservation (contrainte base de données). Réessayez ou choisissez un autre créneau.",
+        "Impossible d'enregistrer la réservation. Réessayez ou choisissez un autre créneau.",
       code: "SERVER_ERROR",
     };
   }
@@ -200,6 +217,14 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     };
   }
 
+  if (new Date(input.startsAt).getTime() < Date.now()) {
+    return {
+      ok: false,
+      error: "Ce créneau est déjà passé. Choisissez un horaire à venir.",
+      code: "SLOT_PAST",
+    };
+  }
+
   const reliability = reliabilityFromTrustScore(profile.trust_score ?? 70);
 
   if (reliability === "blacklisted") {
@@ -222,7 +247,7 @@ export async function createBookingAction(input: CreateBookingInput): Promise<Bo
     return {
       ok: false,
       error:
-        "Compte récent : le paiement sur place est disponible après quelques réservations honorées. Choisissez le paiement en ligne.",
+        "Compte récent : le paiement sur place est disponible après quelques réservations honorées, ou si un joueur confirmé vous invite sur ce créneau. Utilisez les Jetons KIF.",
       code: "RESTRICTED_REQUIRES_ONLINE",
     };
   }

@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
+import type { ProfileGateInput } from "@/modules/compliance/new-account-gates";
 
 export type BookingSplitInvite = {
   inviteId: string;
@@ -8,6 +9,7 @@ export type BookingSplitInvite = {
   sharePrice: number;
   expiresAt: string;
   status: string;
+  inviteSource?: "player" | "club";
 };
 
 export type BookingInvitePublic = {
@@ -21,14 +23,35 @@ export type BookingInvitePublic = {
   startsAt: string;
   endsAt: string;
   isExpired: boolean;
+  invitedByUserId: string;
+  inviteSource: "player" | "club";
 };
+
+export async function fetchProfilePaymentGateFields(
+  userId: string,
+): Promise<ProfileGateInput | null> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("trust_score, created_at, phone_verified_at")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return data as ProfileGateInput;
+  } catch (err) {
+    rethrowFrameworkError(err);
+    return null;
+  }
+}
 
 export async function fetchBookingSplitInvites(bookingId: string): Promise<BookingSplitInvite[]> {
   try {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("booking_participant_invites")
-      .select("id, seat_index, share_price, expires_at, status")
+      .select("id, seat_index, share_price, expires_at, status, invite_source")
       .eq("booking_id", bookingId)
       .order("seat_index", { ascending: true });
 
@@ -44,6 +67,7 @@ export async function fetchBookingSplitInvites(bookingId: string): Promise<Booki
       sharePrice: Number((row as { share_price: number }).share_price),
       expiresAt: String((row as { expires_at: string }).expires_at),
       status: String((row as { status: string }).status),
+      inviteSource: (row as { invite_source?: string }).invite_source === "club" ? "club" : "player",
     }));
   } catch (err) {
     rethrowFrameworkError(err);
@@ -59,7 +83,7 @@ export async function fetchBookingInvitePublic(
     const { data, error } = await supabase
       .from("booking_participant_invites")
       .select(
-        "id, booking_id, seat_index, share_price, expires_at, status, bookings(id, starts_at, ends_at, club_id, clubs(name))",
+        "id, booking_id, seat_index, share_price, expires_at, status, invited_by, invite_source, bookings(id, starts_at, ends_at, club_id, clubs(name))",
       )
       .eq("id", inviteId)
       .maybeSingle();
@@ -75,6 +99,8 @@ export async function fetchBookingInvitePublic(
       share_price: number;
       expires_at: string;
       status: string;
+      invited_by: string;
+      invite_source?: string | null;
       bookings:
         | {
             starts_at?: string;
@@ -109,6 +135,8 @@ export async function fetchBookingInvitePublic(
       startsAt: String(booking?.starts_at ?? ""),
       endsAt: String(booking?.ends_at ?? ""),
       isExpired: status !== "pending" || new Date(expiresAt).getTime() <= Date.now(),
+      invitedByUserId: String(row.invited_by),
+      inviteSource: row.invite_source === "club" ? "club" : "player",
     };
   } catch (err) {
     rethrowFrameworkError(err);

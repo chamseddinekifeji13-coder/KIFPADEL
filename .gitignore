@@ -50,3 +50,5 @@ sync-env.cjs
 
 server_log.txt
 logs/
+
+.vercel

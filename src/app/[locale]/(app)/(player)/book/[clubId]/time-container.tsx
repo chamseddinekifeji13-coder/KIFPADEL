@@ -11,6 +11,7 @@ import { createBookingAction } from "@/modules/bookings/actions";
 import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { ChevronRight, ShieldAlert } from "lucide-react";
+import { mustUseWalletForBooking } from "@/modules/compliance/new-account-gates";
 
 interface TimeContainerProps {
   slots: TimeSlot[];
@@ -22,6 +23,7 @@ interface TimeContainerProps {
   racketPricePerUnit?: number;
   playerTrustScore?: number;
   playerReliability?: string;
+  playerCreatedAt?: string | null;
   walletBalance?: number;
   locale?: string;
 }
@@ -36,6 +38,7 @@ export function TimeContainer({
   racketPricePerUnit = 0,
   playerTrustScore = 70,
   playerReliability = "healthy",
+  playerCreatedAt = null,
   walletBalance = 0,
   locale = "fr",
 }: TimeContainerProps) {
@@ -76,11 +79,36 @@ export function TimeContainer({
     [playerSharePrice, racketUnit, racketQty, date],
   );
 
-  const isRestricted = playerReliability === "restricted" || playerTrustScore < 45;
-  const isBlacklisted = playerReliability === "blacklisted" || playerTrustScore < 25;
+  const isRestricted = mustUseWalletForBooking({
+    trust_score: playerTrustScore,
+    created_at: playerCreatedAt,
+  });
+  const isBlacklisted =
+    playerReliability === "blacklisted" || playerTrustScore < 25;
 
+  useEffect(() => {
+    if (isRestricted && paymentMethod === "on_site") {
+      setPaymentMethod("wallet");
+    }
+  }, [isRestricted, paymentMethod]);
+
+  useEffect(() => {
+    if (!selectedSlot) {
+      setPaymentMethod(null);
+      return;
+    }
+    if (isRestricted) {
+      setPaymentMethod(walletBalance >= totalPrice ? "wallet" : null);
+      return;
+    }
+    setPaymentMethod("on_site");
+  }, [selectedSlot, isRestricted, walletBalance, totalPrice]);
+
+  const walletInsufficient =
+    paymentMethod === "wallet" && totalPrice > 0 && walletBalance < totalPrice;
+  const canReserve = Boolean(paymentMethod) && !walletInsufficient && !isPending;
   const handleBookingClick = () => {
-    if (isBlacklisted) return;
+    if (isBlacklisted || walletInsufficient) return;
     if (isRestricted && paymentMethod !== "wallet") {
       setPaymentMethod("wallet");
     }
@@ -218,14 +246,18 @@ export function TimeContainer({
               locale={locale}
             />
 
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-4">
               <div className="flex flex-col min-w-0">
                 <span className="text-[10px] uppercase font-bold text-[var(--foreground-muted)]">
-                  Votre part
+                  {locale === "en" ? "Your share" : "Votre part"}
                 </span>
                 <span className="text-sm font-bold text-white truncate">
                   {slotTime} • {selectedSlotData?.courtLabel} •{" "}
-                  {new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                  {new Date(date).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", {
+                    day: "numeric",
+                    month: "short",
+                  })}
                 </span>
                 <span className="text-xs text-[var(--foreground-muted)]">
                   {basePrice} DT créneau
@@ -236,14 +268,22 @@ export function TimeContainer({
               <button
                 type="button"
                 onClick={() => {
-                  if (paymentMethod && !isPending) handleBookingClick();
+                  if (canReserve) handleBookingClick();
                 }}
-                disabled={!paymentMethod || isPending}
+                disabled={!canReserve}
                 className="flex-1 min-h-[48px] bg-[var(--gold)] hover:bg-[var(--gold-dark)] disabled:bg-[var(--border)] disabled:text-[var(--foreground-muted)] text-black h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:active:scale-100 touch-manipulation cursor-pointer select-none"
               >
-                Réserver • {totalPrice} DT
+                {locale === "en" ? "Book" : "Réserver"} • {totalPrice} DT
                 <ChevronRight className="h-4 w-4" />
               </button>
+              </div>
+              {walletInsufficient ? (
+                <p className="text-[10px] text-amber-300 text-center">
+                  {locale === "en"
+                    ? "Top up your KIF wallet to book with tokens."
+                    : "Rechargez vos Jetons KIF pour réserver."}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>

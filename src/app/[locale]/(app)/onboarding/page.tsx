@@ -8,10 +8,12 @@ import { OnboardingWizard } from "./onboarding-wizard";
 
 type OnboardingPageProps = Readonly<{
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ error?: string }>;
 }>;
 
-export default async function OnboardingPage({ params }: OnboardingPageProps) {
+export default async function OnboardingPage({ params, searchParams }: OnboardingPageProps) {
   const { locale } = await params;
+  const { error: urlError } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
   const user = await getAuthenticatedUser();
@@ -23,9 +25,13 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
   const supabase = await createSupabaseServerClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("phone, phone_verified_at")
+    .select("phone, phone_verified_at, display_name, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
+
+  const avatarFromMetadata =
+    typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null;
+  const initialAvatarUrl = profile?.avatar_url ?? avatarFromMetadata;
 
   const meta = user.user_metadata as { phone_local?: string; phone_display?: string } | undefined;
   const initialPhone =
@@ -67,6 +73,21 @@ export default async function OnboardingPage({ params }: OnboardingPageProps) {
           initialStep={phoneVerified ? "profile" : "phone"}
           initialPhoneVerified={phoneVerified}
           verificationChannel={verificationChannel}
+          initialAvatarUrl={initialAvatarUrl}
+          initialDisplayName={profile?.display_name ?? ""}
+          initialUrlError={urlError}
+          avatarLabels={{
+            title: dictionary.player.profileAvatarTitle,
+            subtitle: dictionary.onboarding.profileAvatarOptional,
+            uploadCta: dictionary.player.profileAvatarUploadCta,
+            selfieCta: dictionary.player.profileAvatarSelfieCta,
+            uploading: dictionary.player.profileAvatarUploading,
+            hint: dictionary.player.profileAvatarHint,
+            selfieTitle: dictionary.player.profileAvatarSelfieTitle,
+            selfieCapture: dictionary.player.profileAvatarSelfieCapture,
+            selfieCancel: dictionary.player.profileAvatarSelfieCancel,
+            cameraError: dictionary.player.profileAvatarCameraError,
+          }}
         />
       </div>
     </div>

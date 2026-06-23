@@ -6,6 +6,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { fetchBookingsForPlayer } from "@/modules/bookings/repository";
+import { bookingInvitesPath, formatBookingPrice } from "@/lib/booking-paths";
 
 function statusLabel(status: string, labels: Record<string, string>) {
   const map: Record<string, string> = {
@@ -36,9 +37,17 @@ function statusClasses(status: string) {
   return "bg-white/10 text-white border-white/20";
 }
 
-export default async function PlayerBookingsPage({ params }: { params: Promise<{ locale: string }> }) {
+type PageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+export default async function PlayerBookingsPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
+
+  const sp = await searchParams;
+  const joined = sp.joined === "1";
 
   const user = await requireUser({ locale, redirectPath: "bookings" });
   const dictionary = await getDictionary(locale as Locale);
@@ -54,6 +63,12 @@ export default async function PlayerBookingsPage({ params }: { params: Promise<{
         <p className="text-sm text-[var(--foreground-muted)]">{labels.bookingsSubtitle}</p>
         <p className="text-[11px] text-[var(--foreground-muted)]">{labels.pendingExpiryHint}</p>
       </Card>
+
+      {joined ? (
+        <Card className="border-emerald-500/30 bg-emerald-500/10 p-4">
+          <p className="text-sm font-bold text-emerald-200">{labels.bookingInviteJoinedBanner}</p>
+        </Card>
+      ) : null}
 
       {bookings.length === 0 ? (
         <Card className="space-y-3 border-[var(--border)] bg-[var(--surface)]">
@@ -76,36 +91,50 @@ export default async function PlayerBookingsPage({ params }: { params: Promise<{
         </Card>
       ) : (
         <div className="space-y-3">
-          {bookings.map((booking) => (
-            <Card key={booking.id} className="border-[var(--border)] bg-[var(--surface)] p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-bold text-white">
-                    {booking.club_name} · {booking.court_label}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--foreground-muted)]">
-                    {new Date(booking.starts_at).toLocaleString(locale === "en" ? "en-GB" : "fr-FR", {
-                      weekday: "short",
-                      day: "2-digit",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+          {bookings.map((booking) => {
+            const showInviteCta = booking.status === "pending" && booking.id;
+            return (
+              <Card key={booking.id} className="border-[var(--border)] bg-[var(--surface)] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-white">
+                      {booking.club_name} · {booking.court_label}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--foreground-muted)]">
+                      {new Date(booking.starts_at).toLocaleString(locale === "en" ? "en-GB" : "fr-FR", {
+                        weekday: "short",
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClasses(booking.status)}`}
+                  >
+                    {statusLabel(booking.status, labels)}
+                  </span>
                 </div>
-                <span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClasses(booking.status)}`}>
-                  {statusLabel(booking.status, labels)}
-                </span>
-              </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[var(--foreground-muted)]">
-                <p>{labels.paymentLabel}: {paymentLabel(booking.payment_method, labels)}</p>
-                <p className="text-right">
-                  {booking.total_price != null ? `${Number(booking.total_price).toFixed(0)} TND` : "—"}
-                </p>
-              </div>
-            </Card>
-          ))}
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[var(--foreground-muted)]">
+                  <p>
+                    {labels.paymentLabel}: {paymentLabel(booking.payment_method, labels)}
+                  </p>
+                  <p className="text-right">{formatBookingPrice(booking.total_price)}</p>
+                </div>
+
+                {showInviteCta ? (
+                  <Link
+                    href={bookingInvitesPath(locale, String(booking.id))}
+                    className="mt-3 inline-flex min-h-[40px] w-full items-center justify-center rounded-xl bg-[var(--gold)] text-[10px] font-black uppercase tracking-widest text-black"
+                  >
+                    {labels.bookingInvitePartnersCta}
+                  </Link>
+                ) : null}
+              </Card>
+            );
+          })}
         </div>
       )}
     </section>

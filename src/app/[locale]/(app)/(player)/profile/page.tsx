@@ -3,6 +3,8 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireUser } from "@/modules/auth/guards/require-user";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 import { signOutAction } from "@/modules/auth/actions/sign-out";
 import { playerService } from "@/modules/players/service";
 import { clubService } from "@/modules/clubs/service";
@@ -34,28 +36,32 @@ import {
 } from "@/modules/rating/repository";
 import { SponsorPartnersStrip } from "@/components/features/sponsors/sponsor-partners-strip";
 import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
+import { Avatar } from "@/components/ui/avatar";
+import { AccountVerifiedCelebration } from "@/components/features/players/account-verified-celebration";
+import { buildAccountVerifiedCelebrationLabels } from "@/components/features/players/account-verified-celebration-labels";
 
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ verified?: string }>;
 };
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
+export const dynamic = "force-dynamic";
+
+export default async function ProfilePage({ params, searchParams }: ProfilePageProps) {
   const { locale } = await params;
+  const { verified } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale);
   const labels = dictionary.player;
 
+  const user = await requireUser({ locale, redirectPath: "profile" });
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/auth/sign-in`);
-  }
 
   let profile: Player | null = null;
   try {
     profile = await playerService.getPlayerProfile(user.id);
   } catch (err) {
+    rethrowFrameworkError(err);
     console.error("Failed to fetch profile:", err);
   }
 
@@ -72,20 +78,28 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const [topRivals, bookings, recentTournaments, managedClub, superAdminActor, sponsors, ratingEvents, matchStats] =
     await Promise.all([
-    playerService.getTopRivals(user.id, 3),
-    fetchBookingsForPlayer(user.id, 20),
-    fetchRecentTournamentSummariesForPlayer(user.id, 5),
-    clubService.getManagedClub(user.id),
-    getSuperAdminActor(supabase),
-    listActiveSponsorsForPublic(),
-    fetchPlayerRatingEvents(user.id, 10),
-    fetchPlayerMatchStats(user.id),
-  ]);
+      playerService.getTopRivals(user.id, 3).catch(() => []),
+      fetchBookingsForPlayer(user.id, 20).catch(() => []),
+      fetchRecentTournamentSummariesForPlayer(user.id, 5).catch(() => []),
+      clubService.getManagedClub(user.id).catch(() => null),
+      getSuperAdminActor(supabase).catch(() => null),
+      listActiveSponsorsForPublic().catch(() => []),
+      fetchPlayerRatingEvents(user.id, 10).catch(() => []),
+      fetchPlayerMatchStats(user.id).catch(() => null),
+    ]);
   const completedCount = bookings.filter((booking) => booking.status === "completed").length;
   const cancelledCount = bookings.filter((booking) => booking.status === "cancelled").length;
+  const showAccountVerifiedCelebration = phoneVerified && verified === "1";
+  const celebrationLabels = showAccountVerifiedCelebration
+    ? buildAccountVerifiedCelebrationLabels(labels, profile.display_name)
+    : null;
 
   return (
     <div className="flex-1 p-4 space-y-8 pb-20">
+      {showAccountVerifiedCelebration && celebrationLabels ? (
+        <AccountVerifiedCelebration locale={locale} labels={celebrationLabels} />
+      ) : null}
+
       {!phoneVerified ? (
         <Link
           href={`/${locale}/profile/verify-phone?next=/${locale}/book`}
@@ -117,8 +131,23 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         
         <div className="relative flex justify-between items-start">
           <div className="space-y-4">
-            <div className="h-8 w-8 bg-white/10 rounded-lg backdrop-blur-md flex items-center justify-center border border-white/10">
-              <CreditCard className="h-4 w-4" />
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/${locale}/profile/edit`}
+                className="rounded-full ring-2 ring-white/20 transition-opacity hover:opacity-90"
+                aria-label={labels.profileAvatarTitle}
+              >
+                <Avatar
+                  src={profile.avatar_url}
+                  alt={profile.display_name}
+                  fallback={profile.display_name.charAt(0)}
+                  size="lg"
+                  className="h-14 w-14 border-2 border-white/20 bg-white/10"
+                />
+              </Link>
+              <div className="h-8 w-8 bg-white/10 rounded-lg backdrop-blur-md flex items-center justify-center border border-white/10">
+                <CreditCard className="h-4 w-4" />
+              </div>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400">{labels.profileCardRoleLabel}</p>

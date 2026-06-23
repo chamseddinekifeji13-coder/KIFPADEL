@@ -243,18 +243,36 @@ export async function fetchClubById(id: string): Promise<Club | null> {
       .from("clubs")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
-    if (error) {
+    if (!error && data && typeof data === "object" && "id" in data) {
+      const club = normalizeClub(data as ClubRow);
+      if (club.is_active !== false) {
+        return club;
+      }
+    } else if (error) {
       console.warn("[clubs.fetchClubById] supabase error", error.message);
+    }
+
+    // Même repli que fetchClubs : évite clubMissing si les policies RLS bloquent la lecture.
+    const adminClient = createSupabaseAdminClient();
+    const { data: adminData, error: adminError } = await adminClient
+      .from("clubs")
+      .select("*")
+      .eq("id", id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (adminError) {
+      console.warn("[clubs.fetchClubById] admin fallback error", adminError.message);
       return null;
     }
 
-    if (!data || typeof data !== "object" || !("id" in data)) {
+    if (!adminData || typeof adminData !== "object" || !("id" in adminData)) {
       return null;
     }
 
-    return normalizeClub(data as ClubRow);
+    return normalizeClub(adminData as ClubRow);
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[clubs.fetchClubById] unexpected error", err);

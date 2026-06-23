@@ -40,3 +40,41 @@ export function sanitizeAuthNextPath(
 
   return next;
 }
+
+/** Chemin invitations paiement partagé pour une réservation. */
+export function bookingInvitesPath(locale: string, bookingId: string): string {
+  const loc = isLocale(locale) ? locale : DEFAULT_LOCALE;
+  return `/${loc}/bookings/${bookingId}/invites`;
+}
+
+/** Chemin liste des réservations joueur. */
+export function playerBookingsPath(locale: string, query?: Record<string, string>): string {
+  const loc = isLocale(locale) ? locale : DEFAULT_LOCALE;
+  const base = `/${loc}/bookings`;
+  if (!query || Object.keys(query).length === 0) return base;
+  return `${base}?${new URLSearchParams(query).toString()}`;
+}
+
+/** Page joueurs avec contexte d'invitation créneau. */
+export function findPlayersBookingInvitePath(
+  locale: string,
+  bookingId: string,
+  clubName: string,
+  sharePrice: number,
+  inviteId?: string,
+): string {
+  const loc = isLocale(locale) ? locale : DEFAULT_LOCALE;
+  const params = new URLSearchParams({
+    bookingId,
+    clubName,
+    sharePrice: String(sharePrice),
+  });
+  if (inviteId) params.set("inviteId", inviteId);
+  return `/${loc}/find-players?${params.toString()}`;
+}
+
+/** Affichage prix réservation (devise unique). */
+export function formatBookingPrice(amount: number | null | undefined): string {
+  if (amount == null || !Number.isFinite(amount)) return "—";
+  return `${Number(amount).toFixed(0)} DT`;
+}

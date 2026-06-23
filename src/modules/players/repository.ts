@@ -6,6 +6,7 @@ import {
 } from "@/domain/rules/player-category";
 import type { Gender } from "@/domain/types/core";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
+import { resolveStoredPlayerAvatarUrl } from "@/lib/storage/resolve-player-avatar-url";
 
 export interface Player {
   id: string;
@@ -85,7 +86,7 @@ export async function fetchPlayers(
     let request = supabase
       .from("profiles")
       .select(
-        "id, display_name, league, sport_rating, trust_score, gender, reliability_status, created_at",
+        "id, display_name, avatar_url, league, sport_rating, trust_score, gender, reliability_status, created_at",
       )
       .is("suspended_at", null)
       .order("sport_rating", { ascending: false });
@@ -116,6 +117,9 @@ export async function fetchPlayers(
 export async function fetchPlayerById(userId: string): Promise<Player | null> {
   try {
     const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const { data, error } = await supabase
       .from("profiles")
@@ -128,7 +132,21 @@ export async function fetchPlayerById(userId: string): Promise<Player | null> {
       return null;
     }
 
-    return normalizePlayer(data as ProfileRow);
+    const row = data as ProfileRow;
+    const metadataAvatar =
+      user?.id === userId && typeof user.user_metadata?.avatar_url === "string"
+        ? user.user_metadata.avatar_url
+        : null;
+
+    let avatarUrl = row.avatar_url ?? metadataAvatar;
+    if (!avatarUrl) {
+      avatarUrl = await resolveStoredPlayerAvatarUrl(userId);
+    }
+
+    return normalizePlayer({
+      ...row,
+      avatar_url: avatarUrl,
+    });
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[players.fetchPlayerById] unexpected error", err);

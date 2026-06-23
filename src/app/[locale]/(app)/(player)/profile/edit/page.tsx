@@ -10,6 +10,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { updateProfileAction } from "@/modules/players/actions/update-profile";
 import { playerService } from "@/modules/players/service";
+import { ProfileAvatarUploader } from "@/components/features/players/profile-avatar-uploader";
 
 type ProfileEditPageProps = {
   params: Promise<{ locale: string }>;
@@ -37,6 +38,26 @@ export default async function ProfileEditPage({ params, searchParams }: ProfileE
         <ChevronLeft className="h-4 w-4" />
         {labels.accountBackToProfile}
       </Link>
+
+      <Card className="p-5">
+        <ProfileAvatarUploader
+          locale={locale}
+          displayName={profile.display_name}
+          avatarUrl={profile.avatar_url}
+          labels={{
+            title: labels.profileAvatarTitle,
+            subtitle: labels.profileAvatarSubtitle,
+            uploadCta: labels.profileAvatarUploadCta,
+            selfieCta: labels.profileAvatarSelfieCta,
+            uploading: labels.profileAvatarUploading,
+            hint: labels.profileAvatarHint,
+            selfieTitle: labels.profileAvatarSelfieTitle,
+            selfieCapture: labels.profileAvatarSelfieCapture,
+            selfieCancel: labels.profileAvatarSelfieCancel,
+            cameraError: labels.profileAvatarCameraError,
+          }}
+        />
+      </Card>
 
       <Card className="p-5">
         <SectionTitle

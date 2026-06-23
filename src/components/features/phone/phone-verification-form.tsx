@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, CheckCircle2, AlertCircle } from "lucide-react";
+import { Phone, CheckCircle2, AlertCircle, Trophy } from "lucide-react";
 
 import type { PhoneVerificationChannel } from "@/lib/phone/verification-channel";
 import {
   confirmPhoneNumberAction,
+  retryPhoneVerificationRecoveryAction,
   sendPhoneOtpAction,
   verifyPhoneOtpAction,
 } from "@/modules/phone-verification/actions";
@@ -15,9 +16,15 @@ export type PhoneVerificationLabels = {
   title: string;
   subtitle: string;
   verifiedTitle: string;
+  verifiedCelebrationTitle?: string;
+  verifiedCelebrationBody?: string;
+  redirectingHint?: string;
   phoneLabel: string;
   sendCode: string;
   sending: string;
+  resendCode: string;
+  changePhone: string;
+  retryValidation: string;
   verifyCode: string;
   verifying: string;
   confirmPhone: string;
@@ -34,6 +41,9 @@ const DEFAULT_LABELS_FR: PhoneVerificationLabels = {
   phoneLabel: "Numéro de téléphone",
   sendCode: "Recevoir le code",
   sending: "Envoi en cours...",
+  resendCode: "Renvoyer le code",
+  changePhone: "Modifier le numéro",
+  retryValidation: "Finaliser la vérification",
   verifyCode: "Vérifier le code",
   verifying: "Vérification...",
   confirmPhone: "Confirmer mon numéro",
@@ -78,9 +88,11 @@ export function PhoneVerificationForm({
     setDevOtpHint(null);
     setLoading(false);
     onVerified?.(verifiedPhone);
+    router.refresh();
     if (redirectOnSuccess) {
-      router.push(redirectOnSuccess);
-      router.refresh();
+      window.setTimeout(() => {
+        router.push(redirectOnSuccess);
+      }, 1800);
     }
   };
 
@@ -118,10 +130,33 @@ export function PhoneVerificationForm({
     }
 
     setCodeSent(true);
+    setVerificationCode("");
     if (result.devHint) {
       setDevOtpHint(result.devHint);
     }
     setLoading(false);
+  };
+
+  const handleChangePhone = () => {
+    setCodeSent(false);
+    setVerificationCode("");
+    setPhoneError(null);
+    setDevOtpHint(null);
+  };
+
+  const handleRetryRecovery = async () => {
+    if (phone.length < 8) return;
+    setLoading(true);
+    setPhoneError(null);
+
+    const result = await retryPhoneVerificationRecoveryAction(phone);
+    if (!result.ok) {
+      setPhoneError(result.error);
+      setLoading(false);
+      return;
+    }
+
+    finishSuccess(phone);
   };
 
   const handleVerifyCode = async () => {
@@ -152,12 +187,36 @@ export function PhoneVerificationForm({
       </div>
 
       {phoneVerified ? (
-        <div className="p-4 rounded-xl bg-[var(--success)]/10 border border-[var(--success)]/20 flex items-center gap-3">
-          <CheckCircle2 className="h-5 w-5 text-[var(--success)]" />
-          <div>
-            <p className="font-medium text-[var(--success)]">{labels.verifiedTitle}</p>
-            <p className="text-xs text-[var(--foreground-muted)]">+216 {phone}</p>
+        <div className="space-y-4">
+          <div className="relative overflow-hidden rounded-2xl border border-[var(--gold)]/30 bg-gradient-to-br from-[var(--gold)]/15 to-[var(--success)]/10 p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--gold)]/20">
+                <Trophy className="h-5 w-5 text-[var(--gold)]" />
+              </div>
+              <div className="space-y-2">
+                <p className="font-bold text-white leading-snug">
+                  {labels.verifiedCelebrationTitle ?? labels.verifiedTitle}
+                </p>
+                {labels.verifiedCelebrationBody ? (
+                  <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
+                    {labels.verifiedCelebrationBody}
+                  </p>
+                ) : null}
+              </div>
+            </div>
           </div>
+          <div className="p-4 rounded-xl bg-[var(--success)]/10 border border-[var(--success)]/20 flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-[var(--success)]" />
+            <div>
+              <p className="font-medium text-[var(--success)]">{labels.verifiedTitle}</p>
+              <p className="text-xs text-[var(--foreground-muted)]">+216 {phone}</p>
+            </div>
+          </div>
+          {redirectOnSuccess ? (
+            <p className="text-xs text-center text-[var(--foreground-muted)] animate-pulse">
+              {labels.redirectingHint ?? "Redirection vers votre profil…"}
+            </p>
+          ) : null}
         </div>
       ) : (
         <div className="space-y-4">
@@ -230,8 +289,37 @@ export function PhoneVerificationForm({
               >
                 {loading ? labels.verifying : labels.verifyCode}
               </button>
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={loading}
+                  className="w-full text-sm font-bold text-[var(--gold)] hover:underline disabled:opacity-50"
+                >
+                  {loading ? labels.sending : labels.resendCode}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleChangePhone}
+                  disabled={loading}
+                  className="w-full text-xs text-[var(--foreground-muted)] hover:text-white disabled:opacity-50"
+                >
+                  {labels.changePhone}
+                </button>
+              </div>
             </div>
           )}
+
+          {usesOtp && phoneError?.includes("Aucun code actif") ? (
+            <button
+              type="button"
+              onClick={handleRetryRecovery}
+              disabled={phone.length < 8 || loading}
+              className="w-full h-11 rounded-xl border border-[var(--gold)]/40 text-[var(--gold)] font-bold text-sm hover:bg-[var(--gold)]/10 transition-colors disabled:opacity-50"
+            >
+              {loading ? labels.verifying : labels.retryValidation}
+            </button>
+          ) : null}
 
           <p className="text-xs text-[var(--foreground-muted)] text-center">{labels.hint}</p>
         </div>

@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
+import {
+  isConfirmedPlayer,
+  mustUseWalletForBooking,
+} from "@/modules/compliance/new-account-gates";
 import type { BookingSplitInvite } from "@/modules/bookings/split-payment-repository";
+import { fetchProfilePaymentGateFields } from "@/modules/bookings/split-payment-repository";
 
 export type SplitPaymentActionResult<T = undefined> =
   | (T extends undefined ? { ok: true } : { ok: true } & T)
@@ -49,12 +54,23 @@ export async function createBookingSplitInvitesAction(input: {
     if (msg.includes("BOOKING_NOT_FOUND")) {
       return { ok: false, error: "Réservation introuvable ou annulée." };
     }
+    if (msg.includes("UNAUTHORIZED")) {
+      return { ok: false, error: "Connexion requise." };
+    }
     console.error("[createBookingSplitInvitesAction]", error);
     return { ok: false, error: "Impossible de créer les invitations." };
   }
 
   const rows = (Array.isArray(data) ? data : []) as CreateInvitesRow[];
-  const invites: BookingSplitInvite[] = rows.map((row) => ({
+  const invites = mapInviteRows(rows);
+
+  revalidatePath(`/${locale}/bookings/${bookingId}/invites`, "page");
+
+  return { ok: true, invites };
+}
+
+function mapInviteRows(rows: CreateInvitesRow[]): BookingSplitInvite[] {
+  return rows.map((row) => ({
     inviteId: String(row.invite_id),
     seatIndex: Number(row.seat_index),
     inviteToken: String(row.invite_token),
@@ -62,7 +78,50 @@ export async function createBookingSplitInvitesAction(input: {
     expiresAt: String(row.expires_at),
     status: "pending",
   }));
+}
 
+export async function refreshBookingSplitInvitesAction(input: {
+  locale: string;
+  bookingId: string;
+}): Promise<SplitPaymentActionResult<{ invites: BookingSplitInvite[] }>> {
+  const locale = input.locale?.trim() || "fr";
+  const bookingId = input.bookingId?.trim();
+
+  if (!bookingId) {
+    return { ok: false, error: "Réservation introuvable." };
+  }
+
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, error: "Connexion requise." };
+  }
+
+  const { data, error } = await supabase.rpc("refresh_booking_split_invite_links", {
+    p_booking_id: bookingId,
+  });
+
+  if (error) {
+    const msg = error.message ?? "";
+    if (msg.includes("NOT_ORGANIZER")) {
+      return { ok: false, error: "Seul un participant peut regénérer les liens." };
+    }
+    if (msg.includes("BOOKING_NOT_FOUND")) {
+      return { ok: false, error: "Réservation introuvable ou annulée." };
+    }
+    console.error("[refreshBookingSplitInvitesAction]", error);
+    return { ok: false, error: "Impossible de regénérer les liens." };
+  }
+
+  const rows = (Array.isArray(data) ? data : []) as CreateInvitesRow[];
+  if (rows.length === 0) {
+    return { ok: false, error: "Aucune invitation active à regénérer." };
+  }
+
+  const invites = mapInviteRows(rows);
   revalidatePath(`/${locale}/bookings/${bookingId}/invites`, "page");
 
   return { ok: true, invites };
@@ -89,6 +148,40 @@ export async function acceptBookingInviteAction(input: {
 
   if (!user) {
     return { ok: false, error: "Connexion requise." };
+  }
+
+  const { data: inviteRow, error: inviteErr } = await supabase
+    .from("booking_participant_invites")
+    .select("invited_by, invite_source")
+    .eq("id", inviteId)
+    .maybeSingle();
+
+  if (inviteErr || !inviteRow) {
+    return { ok: false, error: "Invitation introuvable." };
+  }
+
+  const inviteSource = (inviteRow as { invite_source?: string }).invite_source;
+  const invitedByClub = inviteSource === "club";
+
+  const [guestProfile, inviterProfile] = await Promise.all([
+    fetchProfilePaymentGateFields(user.id),
+    invitedByClub
+      ? Promise.resolve(null)
+      : fetchProfilePaymentGateFields(String((inviteRow as { invited_by: string }).invited_by)),
+  ]);
+
+  const inviterIsConfirmed = inviterProfile ? isConfirmedPlayer(inviterProfile) : false;
+
+  if (
+    input.paymentMethod === "on_site" &&
+    guestProfile &&
+    mustUseWalletForBooking(guestProfile, { inviterIsConfirmed, invitedByClub })
+  ) {
+    return {
+      ok: false,
+      error:
+        "Compte récent : le paiement sur place est disponible après quelques réservations honorées, ou via invitation d'un joueur confirmé avec Jetons KIF. Utilisez les Jetons KIF ou demandez un lien à un joueur établi.",
+    };
   }
 
   const { data, error } = await supabase.rpc("accept_booking_invite_atomic", {

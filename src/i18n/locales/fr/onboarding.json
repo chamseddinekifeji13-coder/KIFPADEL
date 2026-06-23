@@ -4,5 +4,6 @@
   "stepIntent": "Choisis ton intention principale",
   "stepLevel": "Indique ton niveau initial",
   "stepClub": "Ajoute ton club principal (optionnel)",
-  "continueCta": "Continuer"
+  "continueCta": "Continuer",
+  "profileAvatarOptional": "Optionnel — tu pourras la modifier plus tard dans ton profil."
 }

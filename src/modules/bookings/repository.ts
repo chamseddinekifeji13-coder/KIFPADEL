@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isBookingParticipantActive } from "@/domain/rules/booking-participant";
+import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 import { tunisDayRangeUtc, formatTunisYmd } from "./timezone";
 
 /** Must stay aligned with overlap logic in `create_booking_atomic` + `bookings.is_blocking` trigger */
@@ -77,81 +78,89 @@ export type PlayerBookingRow = {
 };
 
 export async function fetchBookingsForPlayer(userId: string, limit = PLAYER_BOOKING_LIMIT) {
-  const supabase = await createSupabaseServerClient();
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  const { data: participantRows, error: participantError } = await supabase
-    .from("booking_participants")
-    .select(
-      "id, share_price, payment_method, status, seat_index, bookings(id, club_id, court_id, starts_at, ends_at, status, created_at, created_by, player_id, total_price)",
-    )
-    .eq("player_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  let data: PlayerBookingRow[] | null = null;
-
-  if (!participantError && (participantRows ?? []).length > 0) {
-    data = (participantRows ?? []).map((row) => {
-      const bookingRaw = (row as { bookings?: PlayerBookingRow | PlayerBookingRow[] }).bookings;
-      const booking = Array.isArray(bookingRaw) ? bookingRaw[0] : bookingRaw;
-      const b = (booking ?? {}) as PlayerBookingRow;
-      return {
-        ...b,
-        id: b.id ?? String((row as { booking_id?: string }).booking_id ?? ""),
-        total_price: (row as { share_price?: number }).share_price ?? b.total_price,
-        status: String((row as { status?: string }).status ?? b.status),
-        participant_id: String((row as { id: string }).id),
-        seat_index: (row as { seat_index?: number }).seat_index,
-      };
-    });
-  }
-
-  if (!data) {
-    const byCreatedBy = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("created_by", userId)
-      .order("starts_at", { ascending: true })
+    const { data: participantRows, error: participantError } = await supabase
+      .from("booking_participants")
+      .select(
+        "id, share_price, payment_method, status, seat_index, bookings(id, club_id, court_id, starts_at, ends_at, status, created_at, created_by, total_price)",
+      )
+      .eq("player_id", userId)
+      .order("created_at", { ascending: false })
       .limit(limit);
 
-    if (!byCreatedBy.error) {
-      data = (byCreatedBy.data ?? []) as PlayerBookingRow[];
-    } else {
-      const byPlayerId = await supabase
+    let data: PlayerBookingRow[] | null = null;
+
+    if (!participantError && (participantRows ?? []).length > 0) {
+      data = (participantRows ?? []).map((row) => {
+        const bookingRaw = (row as { bookings?: PlayerBookingRow | PlayerBookingRow[] }).bookings;
+        const booking = Array.isArray(bookingRaw) ? bookingRaw[0] : bookingRaw;
+        const b = (booking ?? {}) as PlayerBookingRow;
+        return {
+          ...b,
+          id: b.id ?? String((row as { booking_id?: string }).booking_id ?? ""),
+          total_price: (row as { share_price?: number }).share_price ?? b.total_price,
+          status: String((row as { status?: string }).status ?? b.status),
+          participant_id: String((row as { id: string }).id),
+          seat_index: (row as { seat_index?: number }).seat_index,
+        };
+      });
+    }
+
+    if (!data) {
+      const byCreatedBy = await supabase
         .from("bookings")
         .select("*")
-        .eq("player_id", userId)
+        .eq("created_by", userId)
         .order("starts_at", { ascending: true })
         .limit(limit);
 
-      if (byPlayerId.error) {
-        throw new Error(byPlayerId.error.message);
+      if (!byCreatedBy.error) {
+        data = (byCreatedBy.data ?? []) as PlayerBookingRow[];
+      } else {
+        console.warn("[fetchBookingsForPlayer] created_by query failed", byCreatedBy.error.message);
+        const byPlayerId = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("player_id", userId)
+          .order("starts_at", { ascending: true })
+          .limit(limit);
+
+        if (byPlayerId.error) {
+          console.warn("[fetchBookingsForPlayer] player_id query failed", byPlayerId.error.message);
+          return [];
+        }
+        data = (byPlayerId.data ?? []) as PlayerBookingRow[];
       }
-      data = (byPlayerId.data ?? []) as PlayerBookingRow[];
     }
+
+    const clubIds = [...new Set((data ?? []).map((row) => row.club_id).filter(Boolean))];
+    const courtIds = [...new Set((data ?? []).map((row) => row.court_id).filter(Boolean))];
+
+    const [clubsRes, courtsRes] = await Promise.all([
+      clubIds.length
+        ? supabase.from("clubs").select("id,name,city").in("id", clubIds)
+        : Promise.resolve({ data: [], error: null }),
+      courtIds.length
+        ? supabase.from("courts").select("id,label").in("id", courtIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const clubsById = new Map((clubsRes.data ?? []).map((club) => [club.id, club]));
+    const courtsById = new Map((courtsRes.data ?? []).map((court) => [court.id, court]));
+
+    return (data ?? []).map((booking) => ({
+      ...booking,
+      club_name: clubsById.get(booking.club_id)?.name ?? "Club",
+      club_city: clubsById.get(booking.club_id)?.city ?? "Tunis",
+      court_label: courtsById.get(booking.court_id)?.label ?? "Court",
+    }));
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[fetchBookingsForPlayer] unexpected error", err);
+    return [];
   }
-
-  const clubIds = [...new Set((data ?? []).map((row) => row.club_id).filter(Boolean))];
-  const courtIds = [...new Set((data ?? []).map((row) => row.court_id).filter(Boolean))];
-
-  const [clubsRes, courtsRes] = await Promise.all([
-    clubIds.length
-      ? supabase.from("clubs").select("id,name,city").in("id", clubIds)
-      : Promise.resolve({ data: [], error: null }),
-    courtIds.length
-      ? supabase.from("courts").select("id,label").in("id", courtIds)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-
-  const clubsById = new Map((clubsRes.data ?? []).map((club) => [club.id, club]));
-  const courtsById = new Map((courtsRes.data ?? []).map((court) => [court.id, court]));
-
-  return (data ?? []).map((booking) => ({
-    ...booking,
-    club_name: clubsById.get(booking.club_id)?.name ?? "Club",
-    club_city: clubsById.get(booking.club_id)?.city ?? "Tunis",
-    court_label: courtsById.get(booking.court_id)?.label ?? "Court",
-  }));
 }
 
 export type ClubOperationsParticipantRow = {

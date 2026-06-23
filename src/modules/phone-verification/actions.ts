@@ -259,3 +259,58 @@ export async function verifyPhoneOtpAction(
 
   return { ok: true };
 }
+
+/** Récupération si le code OTP a déjà été validé mais le profil n'a pas été mis à jour. */
+export async function retryPhoneVerificationRecoveryAction(
+  localDigits: string,
+): Promise<PhoneOtpActionResult> {
+  const phoneE164 = normalizeTunisiaPhoneToE164(localDigits);
+  if (!phoneE164) {
+    return { ok: false, error: "Numéro invalide.", code: "INVALID_PHONE" };
+  }
+
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, error: "Connexion requise.", code: "UNAUTHORIZED" };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data: profileRow } = await admin
+    .from("profiles")
+    .select("phone_verified_at")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileRow?.phone_verified_at) {
+    return { ok: true };
+  }
+
+  const { data: recovered } = await admin
+    .from("phone_verification_challenges")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("phone_e164", phoneE164)
+    .not("verified_at", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!recovered?.id) {
+    return {
+      ok: false,
+      error: "Aucune vérification en attente. Demandez un nouveau code.",
+      code: "NO_CHALLENGE",
+    };
+  }
+
+  const applied = await applyVerifiedPhoneToProfile(supabase, user.id, phoneE164);
+  if (!applied.ok) {
+    return applied;
+  }
+
+  return { ok: true };
+}

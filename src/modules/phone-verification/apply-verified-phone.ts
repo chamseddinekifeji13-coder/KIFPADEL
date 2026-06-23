@@ -2,6 +2,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isPhoneE164VerifiedByAnotherUser } from "@/lib/phone/phone-duplicate-guard";
+import { revalidatePhoneVerificationPaths } from "@/modules/phone-verification/revalidate-phone-paths";
 
 export async function applyVerifiedPhoneToProfile(
   _userClient: SupabaseClient,
@@ -48,5 +49,6 @@ export async function applyVerifiedPhoneToProfile(
     };
   }
 
+  revalidatePhoneVerificationPaths();
   return { ok: true };
 }

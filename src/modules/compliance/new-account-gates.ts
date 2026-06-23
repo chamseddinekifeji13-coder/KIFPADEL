@@ -7,6 +7,13 @@ export type ProfileGateInput = {
   phone_verified_at?: string | null;
 };
 
+export type BookingPaymentGateOptions = {
+  /** Inviteur établi (téléphone vérifié, compte mature) → filleul peut payer sur place. */
+  inviterIsConfirmed?: boolean;
+  /** Lien émis par le gérant club (résa téléphone) → paiement sur place autorisé. */
+  invitedByClub?: boolean;
+};
+
 export function isPhoneVerified(profile: ProfileGateInput): boolean {
   return Boolean(profile.phone_verified_at);
 }
@@ -33,4 +40,26 @@ export function isNewAccountForGates(profile: ProfileGateInput): boolean {
 
 export function newAccountMustPayOnline(profile: ProfileGateInput): boolean {
   return isNewAccountForGates(profile);
+}
+
+/** Joueur « confirmé » : peut parrainer un paiement sur place pour un compte récent invité. */
+export function isConfirmedPlayer(profile: ProfileGateInput): boolean {
+  const trust = profile.trust_score ?? 70;
+  if (trust < 45) return false;
+  if (!isPhoneVerified(profile)) return false;
+  return !isNewAccountForGates(profile);
+}
+
+/** Aligné avec createBookingAction / accept invite : wallet obligatoire sauf compte récent invité par un confirmé. */
+export function mustUseWalletForBooking(
+  profile: ProfileGateInput,
+  options?: BookingPaymentGateOptions,
+): boolean {
+  const trust = profile.trust_score ?? 70;
+  if (trust < 45) return true;
+  if (newAccountMustPayOnline(profile)) {
+    if (options?.invitedByClub || options?.inviterIsConfirmed) return false;
+    return true;
+  }
+  return false;
 }

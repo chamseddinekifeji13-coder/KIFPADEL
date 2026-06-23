@@ -3,6 +3,8 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Star, ShieldCheck } from "lucide-react";
 import { InvitePlayerButton } from "@/components/features/players/player-invite-button";
+import { BookingCourtInviteButton } from "@/components/features/bookings/booking-court-invite-button";
+import { MatchPlayerInviteButton } from "@/components/features/matches/match-player-invite-button";
 import { playerCategoryBadgeVariant } from "@/domain/rules/player-category";
 
 interface PlayerCardProps {
@@ -18,9 +20,21 @@ interface PlayerCardProps {
     gender?: "male" | "female" | null;
     reliability: string;
   };
+  bookingInvite?: {
+    bookingId: string;
+    clubName: string;
+    sharePrice: number;
+    inviteId?: string;
+    pendingInviteIds?: string[];
+  };
+  bookingInviteDisabled?: boolean;
+  matchInvite?: {
+    matchId: string;
+    clubName: string;
+  };
 }
 
-export function PlayerCard({ locale, player }: PlayerCardProps) {
+export function PlayerCard({ locale, player, bookingInvite, bookingInviteDisabled, matchInvite }: PlayerCardProps) {
   return (
     <Card className="p-4 flex items-center gap-4 border-white/5 bg-surface-elevated hover:shadow-gold-strong transition-all duration-500 touch-manipulation">
       <Avatar
@@ -62,11 +76,30 @@ export function PlayerCard({ locale, player }: PlayerCardProps) {
         </div>
       </div>
 
-      <InvitePlayerButton
-        locale={locale}
-        playerId={player.id}
-        playerDisplayName={player.display_name || "Joueur"}
-      />
+      {bookingInvite ? (
+        <BookingCourtInviteButton
+          locale={locale}
+          bookingId={bookingInvite.bookingId}
+          clubName={bookingInvite.clubName}
+          sharePrice={bookingInvite.sharePrice}
+          inviteId={bookingInvite.inviteId}
+          validInviteIds={bookingInvite.pendingInviteIds}
+          playerDisplayName={player.display_name || "Joueur"}
+          disabled={bookingInviteDisabled}
+        />
+      ) : matchInvite ? (
+        <MatchPlayerInviteButton
+          locale={locale}
+          matchId={matchInvite.matchId}
+          playerDisplayName={player.display_name || "Joueur"}
+        />
+      ) : (
+        <InvitePlayerButton
+          locale={locale}
+          playerId={player.id}
+          playerDisplayName={player.display_name || "Joueur"}
+        />
+      )}
     </Card>
   );
 }

@@ -14,13 +14,20 @@ export function isRacketRentalBookingPipelineReady(): boolean {
   return process.env.NODE_ENV !== "production";
 }
 
-export function isRacketRentalShownInBookingFlow(
+/** Affichage UI : le club propose la location (indépendant du flag RPC). */
+export function isRacketRentalOfferedByClub(
   club: Pick<Club, "racket_rental_enabled" | "racket_rental_price_per_unit">,
 ): boolean {
-  if (!isRacketRentalBookingPipelineReady()) return false;
   return (
     Boolean(club.racket_rental_enabled) &&
     club.racket_rental_price_per_unit != null &&
     Number(club.racket_rental_price_per_unit) > 0
   );
+}
+
+export function isRacketRentalShownInBookingFlow(
+  club: Pick<Club, "racket_rental_enabled" | "racket_rental_price_per_unit">,
+): boolean {
+  if (!isRacketRentalBookingPipelineReady()) return false;
+  return isRacketRentalOfferedByClub(club);
 }

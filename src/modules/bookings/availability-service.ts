@@ -22,6 +22,8 @@ export interface TimeSlot {
   seatsTaken: number;
   seatsTotal: number;
   seatsAvailable: number;
+  /** Créneau déjà commencé (jour courant). */
+  isPast: boolean;
 }
 
 function overlapsRange(
@@ -112,7 +114,8 @@ export async function getClubAvailability(clubId: string, date: string): Promise
         session?.id,
       );
 
-      const isAvailable = seatsAvailable > 0 && !blockedByOther;
+      const isPast = current.getTime() < Date.now();
+      const isAvailable = seatsAvailable > 0 && !blockedByOther && !isPast;
 
       slots.push({
         id: `${startStr}-${court.id}`,
@@ -120,6 +123,7 @@ export async function getClubAvailability(clubId: string, date: string): Promise
         start: startStr,
         end: endStr,
         isAvailable,
+        isPast,
         courtId: court.id,
         courtLabel: court.label,
         price: resolveCourtPlayerPrice(court),
