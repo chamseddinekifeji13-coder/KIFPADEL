@@ -258,5 +258,12 @@
   "bookingInvitePartnersCta": "Invite partners",
   "bookingInviteJoinedBanner": "You have successfully joined the court booking.",
   "bookingInviteFindPlayersTitle": "Choose a player",
-  "bookingInviteFindPlayersSubtitle": "Send the payment link to a Kifpadel partner."
+  "bookingInviteFindPlayersSubtitle": "Send the payment link to a Kifpadel partner.",
+  "referralTitle": "Invite your friends",
+  "referralSubtitle": "Share your personal link — when they sign up, we'll know you referred them (rewards coming soon).",
+  "referralPreviewTitle": "Message to share",
+  "referralCopyCta": "Copy",
+  "referralWhatsappCta": "WhatsApp",
+  "referralShareCta": "Share",
+  "referralCopiedToast": "Message copied!"
 }

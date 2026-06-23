@@ -7,5 +7,16 @@
   "navTournaments": "Tournois admin",
   "navSponsors": "Sponsors",
   "navAuditLog": "Journal d'audit",
-  "signOut": "Déconnexion"
+  "navPromotion": "Promotion",
+  "signOut": "Déconnexion",
+  "promotionPageTitle": "Kit promotion",
+  "promotionPageSubtitle": "Message officiel Kifpadel à partager (réseaux, WhatsApp, clubs).",
+  "promotionPanelTitle": "Rejoignez Kifpadel",
+  "promotionPanelSubtitle": "Lien d'inscription générique — sans code parrain joueur.",
+  "promotionPreviewTitle": "Aperçu du message",
+  "promotionCopyCta": "Copier le message",
+  "promotionWhatsappCta": "WhatsApp",
+  "promotionShareCta": "Partager",
+  "promotionCopiedToast": "Message copié !",
+  "promotionHint": "Les joueurs ont aussi leur lien parrain personnel dans Profil. Les récompenses parrainage seront activées dans une prochaine version."
 }

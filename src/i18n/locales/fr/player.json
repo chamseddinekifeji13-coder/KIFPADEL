@@ -258,5 +258,12 @@
   "bookingInvitePartnersCta": "Inviter des partenaires",
   "bookingInviteJoinedBanner": "Vous avez rejoint le créneau avec succès.",
   "bookingInviteFindPlayersTitle": "Choisir un joueur",
-  "bookingInviteFindPlayersSubtitle": "Envoyez le lien de paiement à un partenaire Kifpadel."
+  "bookingInviteFindPlayersSubtitle": "Envoyez le lien de paiement à un partenaire Kifpadel.",
+  "referralTitle": "Invite tes amis",
+  "referralSubtitle": "Partage ton lien personnel : quand ils s'inscrivent, on saura que tu les as parrainés (récompenses bientôt).",
+  "referralPreviewTitle": "Message à partager",
+  "referralCopyCta": "Copier",
+  "referralWhatsappCta": "WhatsApp",
+  "referralShareCta": "Partager",
+  "referralCopiedToast": "Message copié !"
 }

@@ -6,8 +6,10 @@ import {
   AUTH_NEXT_COOKIE_MAX_AGE_SEC,
   buildAuthCallbackPath,
 } from "@/lib/auth/auth-next-cookie";
+import { REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE_SEC } from "@/lib/auth/referral-cookie";
 import { isGoogleAuthEnabled } from "@/lib/auth/google-auth-enabled";
 import { resolveSiteOrigin } from "@/lib/auth/site-origin";
+import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { cookies } from "next/headers";
 
@@ -23,6 +25,7 @@ export async function signInWithGoogleAction(formData: FormData): Promise<Google
   const locale = String(formData.get("locale") ?? "fr");
   const defaultNext = `/${locale}/onboarding`;
   const next = sanitizeAuthNextPath(String(formData.get("next") ?? ""), locale, defaultNext);
+  const referrerId = parseReferrerIdParam(String(formData.get("ref") ?? ""));
 
   const origin = await resolveSiteOrigin();
   const callbackPath = buildAuthCallbackPath(locale);
@@ -36,6 +39,15 @@ export async function signInWithGoogleAction(formData: FormData): Promise<Google
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
   });
+  if (referrerId) {
+    cookieStore.set(REFERRAL_COOKIE, referrerId, {
+      path: "/",
+      maxAge: REFERRAL_COOKIE_MAX_AGE_SEC,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+  }
 
   const supabase = await createSupabaseServerActionClient();
 

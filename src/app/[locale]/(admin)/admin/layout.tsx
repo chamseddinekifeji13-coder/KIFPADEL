@@ -61,6 +61,9 @@ export default async function AdminLayout({
             <a href={`/${locale}/admin/audit-log`} className="hover:text-gold transition-colors">
               {a.navAuditLog}
             </a>
+            <a href={`/${locale}/admin/promotion`} className="hover:text-gold transition-colors">
+              {a.navPromotion}
+            </a>
             <form action={signOutAction}>
               <input type="hidden" name="locale" value={locale} />
               <button type="submit" className="hover:text-gold transition-colors">

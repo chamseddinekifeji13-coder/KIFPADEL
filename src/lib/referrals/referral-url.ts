@@ -1,0 +1,25 @@
+import { DEFAULT_LOCALE, isLocale } from "@/i18n/config";
+import { isUuidString } from "@/lib/uuid-utils";
+
+/** Lien d'inscription avec code parrain (UUID joueur). */
+export function buildReferralSignUpUrl(origin: string, locale: string, referrerUserId: string): string {
+  const loc = isLocale(locale) ? locale : DEFAULT_LOCALE;
+  const base = origin.replace(/\/$/, "");
+  const id = referrerUserId.trim();
+  if (!isUuidString(id)) {
+    return `${base}/${loc}/auth/sign-up`;
+  }
+  const params = new URLSearchParams({ ref: id });
+  return `${base}/${loc}/auth/sign-up?${params.toString()}`;
+}
+
+/** Lien d'inscription générique (promotion plateforme, sans parrain). */
+export function buildPlatformSignUpUrl(origin: string, locale: string): string {
+  const loc = isLocale(locale) ? locale : DEFAULT_LOCALE;
+  return `${origin.replace(/\/$/, "")}/${loc}/auth/sign-up`;
+}
+
+export function parseReferrerIdParam(raw: string | null | undefined): string | null {
+  const value = String(raw ?? "").trim();
+  return isUuidString(value) ? value : null;
+}

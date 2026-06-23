@@ -12,11 +12,12 @@ import { SectionTitle } from "@/components/ui/section-title";
 import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
 import { sanitizeAuthNextPath } from "@/lib/booking-paths";
+import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
 import { signUpAction } from "@/modules/auth/actions/sign-up";
 
 type SignUpPageProps = Readonly<{
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; ref?: string }>;
 }>;
 
 export async function generateMetadata({ params }: SignUpPageProps): Promise<Metadata> {
@@ -65,12 +66,15 @@ function resolveSignUpError(
 
 export default async function SignUpPage({ params, searchParams }: SignUpPageProps) {
   const { locale } = await params;
-  const { error, next } = await searchParams;
+  const { error, next, ref: refRaw } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
   const errorMessage = resolveSignUpError(error, dictionary);
   const safeNext = sanitizeAuthNextPath(next, locale, `/${locale}/onboarding`);
-  const nextQuery = `?next=${encodeURIComponent(safeNext)}`;
+  const referrerId = parseReferrerIdParam(refRaw);
+  const authQuery = new URLSearchParams({ next: safeNext });
+  if (referrerId) authQuery.set("ref", referrerId);
+  const authQueryString = `?${authQuery.toString()}`;
   const googleAuthEnabled = isGoogleAuthEnabled();
 
   return (
@@ -98,6 +102,7 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
             <GoogleSignInButton
               locale={locale}
               next={safeNext}
+              ref={referrerId ?? undefined}
               label={dictionary.auth.signUpWithGoogleCta}
               variant="primary"
             />
@@ -121,6 +126,7 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
         <form action={signUpAction} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="next" value={safeNext} />
+          {referrerId ? <input type="hidden" name="ref" value={referrerId} /> : null}
           <div className="space-y-1">
             <label htmlFor="phone" className="text-xs font-medium text-slate-700">
               {dictionary.auth.phoneLabel}
@@ -161,7 +167,7 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
       <Card className="text-center">
         <p className="text-sm text-slate-600">{dictionary.auth.haveAccountHint}</p>
         <Link
-          href={`/${locale}/auth/sign-in${nextQuery}`}
+          href={`/${locale}/auth/sign-in${authQueryString}`}
           className="mt-2 inline-block text-sm font-semibold text-sky-700"
         >
           {dictionary.auth.signInCta}

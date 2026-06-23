@@ -10,6 +10,7 @@ import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { sanitizeAuthNextPath } from "@/lib/booking-paths";
+import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
 import { isGoogleAuthEnabled } from "@/lib/auth/google-auth-enabled";
 import { GoogleSignInButton } from "@/components/features/auth/google-sign-in-button";
 import { signInAction } from "@/modules/auth/actions/sign-in";
@@ -17,7 +18,7 @@ import { ResendActivationEmailButton } from "@/components/features/auth/resend-a
 
 type SignInPageProps = Readonly<{
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ error?: string; status?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; status?: string; next?: string; ref?: string }>;
 }>;
 
 export async function generateMetadata({ params }: SignInPageProps): Promise<Metadata> {
@@ -38,12 +39,15 @@ export async function generateMetadata({ params }: SignInPageProps): Promise<Met
 
 export default async function SignInPage({ params, searchParams }: SignInPageProps) {
   const { locale } = await params;
-  const { error, status, next } = await searchParams;
+  const { error, status, next, ref: refRaw } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
   const googleAuthEnabled = isGoogleAuthEnabled();
   const safeNext = sanitizeAuthNextPath(next, locale, `/${locale}/profile`);
-  const signUpHref = `/${locale}/auth/sign-up?next=${encodeURIComponent(safeNext)}`;
+  const referrerId = parseReferrerIdParam(refRaw);
+  const signUpQuery = new URLSearchParams({ next: safeNext });
+  if (referrerId) signUpQuery.set("ref", referrerId);
+  const signUpHref = `/${locale}/auth/sign-up?${signUpQuery.toString()}`;
 
   return (
     <section className="space-y-6 flex flex-col items-center">
@@ -112,6 +116,7 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
             <GoogleSignInButton
               locale={locale}
               next={safeNext}
+              ref={referrerId ?? undefined}
               label={dictionary.auth.signInWithGoogleCta}
               variant="primary"
             />

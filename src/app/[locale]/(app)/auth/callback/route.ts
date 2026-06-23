@@ -3,7 +3,10 @@ import { cookies } from "next/headers";
 
 import { sanitizeAuthNextPath } from "@/lib/booking-paths";
 import { AUTH_NEXT_COOKIE } from "@/lib/auth/auth-next-cookie";
+import { REFERRAL_COOKIE } from "@/lib/auth/referral-cookie";
 import { createSupabaseOAuthRouteHandlerClient } from "@/lib/supabase/route-handler";
+import { applyReferrerToProfile } from "@/modules/referrals/apply-referrer";
+
 type CallbackRouteContext = {
   params: Promise<{ locale: string }>;
 };
@@ -22,6 +25,10 @@ export async function GET(request: Request, context: CallbackRouteContext) {
   const nextFromCookie = cookieStore.get(AUTH_NEXT_COOKIE)?.value;
   if (nextFromCookie) {
     cookieStore.delete(AUTH_NEXT_COOKIE);
+  }
+  const referralFromCookie = cookieStore.get(REFERRAL_COOKIE)?.value;
+  if (referralFromCookie) {
+    cookieStore.delete(REFERRAL_COOKIE);
   }
 
   const next = getSafeNextPath(nextFromCookie ?? requestUrl.searchParams.get("next"), locale);
@@ -47,6 +54,13 @@ export async function GET(request: Request, context: CallbackRouteContext) {
   if (error) {
     console.error("[auth/callback] exchangeCodeForSession:", error.message);
     return NextResponse.redirect(signInErrorUrl);
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user && referralFromCookie) {
+    await applyReferrerToProfile(user.id, referralFromCookie);
   }
 
   return response;

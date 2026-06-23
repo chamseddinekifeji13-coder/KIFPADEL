@@ -8,6 +8,7 @@ import { signInWithGoogleAction } from "@/modules/auth/actions/sign-in-with-goog
 type GoogleSignInButtonProps = {
   locale: string;
   next?: string;
+  ref?: string;
   label: string;
   className?: string;
   variant?: "primary" | "secondary";
@@ -39,6 +40,7 @@ function GoogleIcon() {
 export function GoogleSignInButton({
   locale,
   next,
+  ref: referrerId,
   label,
   className = "",
   variant = "primary",
@@ -60,6 +62,9 @@ export function GoogleSignInButton({
     formData.set("locale", locale);
     if (next) {
       formData.set("next", next);
+    }
+    if (referrerId) {
+      formData.set("ref", referrerId);
     }
 
     const result = await signInWithGoogleAction(formData);

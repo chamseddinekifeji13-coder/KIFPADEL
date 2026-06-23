@@ -4,6 +4,8 @@ import type { NextRequest } from "next/server";
 
 import { LOCALES, DEFAULT_LOCALE } from "@/i18n/config";
 import { getEdgeSupabasePublicConfig } from "@/lib/config/public-env-edge";
+import { REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE_SEC } from "@/lib/auth/referral-cookie";
+import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
 import { isUuidString } from "@/lib/uuid-utils";
 
 /**
@@ -100,6 +102,20 @@ export default async function proxy(request: NextRequest) {
         redirectResponse.cookies.set(cookie.name, cookie.value);
       });
       return redirectResponse;
+    }
+  }
+
+  const authSegment = segments[3];
+  if (section === "auth" && (authSegment === "sign-in" || authSegment === "sign-up")) {
+    const referrerId = parseReferrerIdParam(request.nextUrl.searchParams.get("ref"));
+    if (referrerId) {
+      response.cookies.set(REFERRAL_COOKIE, referrerId, {
+        path: "/",
+        maxAge: REFERRAL_COOKIE_MAX_AGE_SEC,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      });
     }
   }
 

@@ -39,6 +39,9 @@ import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
 import { Avatar } from "@/components/ui/avatar";
 import { AccountVerifiedCelebration } from "@/components/features/players/account-verified-celebration";
 import { buildAccountVerifiedCelebrationLabels } from "@/components/features/players/account-verified-celebration-labels";
+import { PlayerReferralPanel } from "@/components/features/players/player-referral-panel";
+import { publicEnv } from "@/lib/config/env";
+import { buildReferralSignUpUrl } from "@/lib/referrals/referral-url";
 
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
@@ -93,6 +96,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
   const celebrationLabels = showAccountVerifiedCelebration
     ? buildAccountVerifiedCelebrationLabels(labels, profile.display_name)
     : null;
+  const referralSignUpUrl = buildReferralSignUpUrl(publicEnv.siteUrl, locale, user.id);
 
   return (
     <div className="flex-1 p-4 space-y-8 pb-20">
@@ -283,6 +287,21 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
           </div>
         )}
       </section>
+
+      <PlayerReferralPanel
+        locale={locale}
+        displayName={profile.display_name}
+        signUpUrl={referralSignUpUrl}
+        labels={{
+          title: labels.referralTitle,
+          subtitle: labels.referralSubtitle,
+          previewTitle: labels.referralPreviewTitle,
+          copyCta: labels.referralCopyCta,
+          whatsappCta: labels.referralWhatsappCta,
+          shareCta: labels.referralShareCta,
+          copiedToast: labels.referralCopiedToast,
+        }}
+      />
 
       <SponsorPartnersStrip
         sponsors={sponsors}

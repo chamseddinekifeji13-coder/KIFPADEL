@@ -7,5 +7,16 @@
   "navTournaments": "Tournaments (admin)",
   "navSponsors": "Sponsors",
   "navAuditLog": "Audit log",
-  "signOut": "Sign out"
+  "navPromotion": "Promotion",
+  "signOut": "Sign out",
+  "promotionPageTitle": "Promotion kit",
+  "promotionPageSubtitle": "Official Kifpadel message to share (social, WhatsApp, clubs).",
+  "promotionPanelTitle": "Join Kifpadel",
+  "promotionPanelSubtitle": "Generic sign-up link — no player referral code.",
+  "promotionPreviewTitle": "Message preview",
+  "promotionCopyCta": "Copy message",
+  "promotionWhatsappCta": "WhatsApp",
+  "promotionShareCta": "Share",
+  "promotionCopiedToast": "Message copied!",
+  "promotionHint": "Players also have a personal referral link in Profile. Referral rewards will be enabled in a future release."
 }
