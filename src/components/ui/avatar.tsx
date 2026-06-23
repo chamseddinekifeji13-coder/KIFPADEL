@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { User } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -36,6 +37,7 @@ export function Avatar({
   }, [src]);
 
   const hasUsableSrc = Boolean(src && src.trim().length > 0) && !errored;
+  const initial = (fallback?.trim().charAt(0) || alt.trim().charAt(0) || "").toUpperCase();
 
   return (
     <div
@@ -57,7 +59,11 @@ export function Avatar({
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center font-medium text-slate-500 uppercase">
-          {fallback || alt.charAt(0) || "?"}
+          {initial ? (
+            <span>{initial}</span>
+          ) : (
+            <User className="h-[45%] w-[45%] text-slate-400" aria-hidden="true" />
+          )}
         </div>
       )}
     </div>

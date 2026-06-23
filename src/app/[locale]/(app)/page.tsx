@@ -19,6 +19,7 @@ import {
 import { Avatar } from "@/components/ui/avatar";
 import { SponsorPartnersStrip } from "@/components/features/sponsors/sponsor-partners-strip";
 import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
+import { playerService } from "@/modules/players/service";
 
 type LocaleHomeProps = {
   params: Promise<{ locale: string }>;
@@ -57,6 +58,12 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   const sponsors = await listActiveSponsorsForPublic();
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const profile = user ? await playerService.getPlayerProfile(user.id).catch(() => null) : null;
+  const headerDisplayName =
+    profile?.display_name?.trim() ||
+    String(user?.user_metadata?.full_name ?? "").trim() ||
+    user?.email?.split("@")[0] ||
+    "";
   const isEn = locale === "en";
 
   return (
@@ -80,7 +87,13 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
         </div>
         {user ? (
           <Link href={`/${locale}/profile`} aria-label="Mon profil" className="active:scale-90 transition-transform">
-            <Avatar src={null} alt="" size="lg" className="ring-2 ring-gold/20 shadow-gold" />
+            <Avatar
+              src={profile?.avatar_url}
+              alt={headerDisplayName}
+              fallback={headerDisplayName.charAt(0)}
+              size="lg"
+              className="ring-2 ring-gold/20 shadow-gold bg-[var(--surface)] border-[var(--gold)]/30"
+            />
           </Link>
         ) : (
           <Link
