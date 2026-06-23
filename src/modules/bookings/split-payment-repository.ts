@@ -1,3 +1,4 @@
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 import type { ProfileGateInput } from "@/modules/compliance/new-account-gates";
@@ -79,7 +80,8 @@ export async function fetchBookingInvitePublic(
   inviteId: string,
 ): Promise<BookingInvitePublic | null> {
   try {
-    const supabase = await createSupabaseServerClient();
+    // Admin : la RLS masque les invites expirées/acceptées aux visiteurs → 404 trompeuse.
+    const supabase = createSupabaseAdminClient();
     const { data, error } = await supabase
       .from("booking_participant_invites")
       .select(

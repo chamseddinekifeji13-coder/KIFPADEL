@@ -107,30 +107,13 @@ export default async function FindPlayersPage({
   return (
     <div
       className={cn(
-        "flex-1 p-4 space-y-6 pb-24",
-        inInviteFlow && "max-w-lg mx-auto",
-        inMatchFlow && !inInviteFlow && "max-w-lg mx-auto",
+        "flex-1 space-y-6",
+        (inInviteFlow || inMatchFlow) && "mx-auto max-w-lg",
       )}
     >
       <header className="space-y-1">
-        <h1
-          className={cn(
-            "text-2xl font-bold tracking-tight",
-            inInviteFlow ? "text-white" : inMatchFlow ? "text-white" : "text-slate-900",
-          )}
-        >
-          {title}
-        </h1>
-        <p
-          className={cn(
-            "text-sm",
-            inInviteFlow || inMatchFlow
-              ? "text-[var(--foreground-muted)]"
-              : "text-slate-500",
-          )}
-        >
-          {subtitle}
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-white">{title}</h1>
+        <p className="text-sm text-[var(--foreground-muted)]">{subtitle}</p>
       </header>
 
       {inInviteFlow && bookingInvite ? (
@@ -176,7 +159,7 @@ export default async function FindPlayersPage({
           </label>
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--foreground-muted)]"
           />
           <input
             id="find-players-search"
@@ -185,12 +168,7 @@ export default async function FindPlayersPage({
             defaultValue={q}
             placeholder={labels.findPlayersSearchPlaceholder}
             aria-label={labels.findPlayersSearchLabel}
-            className={cn(
-              "w-full rounded-xl py-3 pl-10 pr-4 text-sm transition-all shadow-sm min-h-11 focus:outline-none focus:ring-2",
-              inInviteFlow || inMatchFlow
-                ? "bg-[var(--surface)] border border-[var(--border)] text-white focus:ring-[var(--gold)]/20 focus:border-[var(--gold)]"
-                : "bg-white border border-slate-200 focus:ring-sky-500/20 focus:border-sky-500",
-            )}
+            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] py-3 pl-10 pr-4 text-sm text-white shadow-sm transition-all placeholder:text-[var(--foreground-muted)] focus:border-[var(--gold)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/20"
           />
         </form>
       </div>
@@ -215,52 +193,51 @@ export default async function FindPlayersPage({
         <button
           type="button"
           aria-label={labels.filtersLabel}
-          className={cn(
-            "inline-flex items-center gap-1.5 text-xs font-bold px-3 rounded-lg min-h-11",
-            inInviteFlow || inMatchFlow
-              ? "text-[var(--foreground-muted)] bg-white/10"
-              : "text-slate-500 bg-slate-100",
-          )}
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-white/10 px-3 text-xs font-bold text-[var(--foreground-muted)]"
         >
           <Filter className="h-3 w-3" aria-hidden="true" />
           {labels.filtersLabel}
         </button>
       </div>
 
-      {/* Recommended list */}
       {!q && players.length > 3 && !inInviteFlow && !inMatchFlow ? (
         <section className="space-y-4">
-           <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest px-1">
-             ⭐ {labels.topRatedLabel}
-           </div>
-           <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
-             {players.slice(0, 5).map((player) => (
-                <div key={player.id} className="min-w-[140px] flex flex-col items-center gap-3 p-5 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
-                  <Avatar src={player.avatar_url} alt={player.display_name || labels.genericPlayerName} size="lg" className="ring-4 ring-sky-50" />
-                  <div className="text-center space-y-1">
-                    <p className="text-xs font-bold text-slate-900 truncate w-24">{(player.display_name || labels.genericPlayerName).split(" ")[0]}</p>
-                    <Badge
-                      variant={
-                        playerCategoryBadgeVariant(player.leagueCategory ?? player.league) as BadgeProps["variant"]
-                      }
-                      className="text-[8px] px-2"
-                    >
-                      {player.league || labels.defaultLeagueLabel}
-                    </Badge>
-                  </div>
+          <div className="flex items-center gap-2 px-1 text-xs font-black uppercase tracking-widest text-[var(--foreground-muted)]">
+            ⭐ {labels.topRatedLabel}
+          </div>
+          <div className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-5 md:gap-3 md:overflow-visible md:px-0">
+            {players.slice(0, 5).map((player) => (
+              <div
+                key={player.id}
+                className="flex min-w-[132px] flex-col items-center gap-3 rounded-2xl border border-white/5 bg-surface-elevated p-4 shadow-sm transition-colors hover:border-gold/20 md:min-w-0"
+              >
+                <Avatar
+                  src={player.avatar_url}
+                  alt={player.display_name || labels.genericPlayerName}
+                  size="lg"
+                  className="ring-4 ring-gold/10"
+                />
+                <div className="space-y-1 text-center">
+                  <p className="w-24 truncate text-xs font-bold text-white">
+                    {(player.display_name || labels.genericPlayerName).split(" ")[0]}
+                  </p>
+                  <Badge
+                    variant={
+                      playerCategoryBadgeVariant(player.leagueCategory ?? player.league) as BadgeProps["variant"]
+                    }
+                    className="px-2 text-[8px]"
+                  >
+                    {player.league || labels.defaultLeagueLabel}
+                  </Badge>
                 </div>
-             ))}
-           </div>
+              </div>
+            ))}
+          </div>
         </section>
       ) : null}
 
       {players.length === 0 ? (
-        <div
-          className={cn(
-            "py-12 text-center italic",
-            inInviteFlow || inMatchFlow ? "text-[var(--foreground-muted)]" : "text-slate-500",
-          )}
-        >
+        <div className="py-12 text-center italic text-[var(--foreground-muted)]">
           {q ? `${labels.noPlayersForQueryPrefix} "${q}".` : labels.noPlayersAvailable}
         </div>
       ) : bookingInvite ? (

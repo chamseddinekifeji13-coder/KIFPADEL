@@ -9,6 +9,7 @@ import { SectionTitle } from "@/components/ui/section-title";
 import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { sanitizeAuthNextPath } from "@/lib/booking-paths";
 import { isGoogleAuthEnabled } from "@/lib/auth/google-auth-enabled";
 import { GoogleSignInButton } from "@/components/features/auth/google-sign-in-button";
 import { signInAction } from "@/modules/auth/actions/sign-in";
@@ -41,6 +42,8 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
   const googleAuthEnabled = isGoogleAuthEnabled();
+  const safeNext = sanitizeAuthNextPath(next, locale, `/${locale}/profile`);
+  const signUpHref = `/${locale}/auth/sign-up?next=${encodeURIComponent(safeNext)}`;
 
   return (
     <section className="space-y-6 flex flex-col items-center">
@@ -108,7 +111,7 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
           <>
             <GoogleSignInButton
               locale={locale}
-              next={next ?? `/${locale}/profile`}
+              next={safeNext}
               label={dictionary.auth.signInWithGoogleCta}
               variant="primary"
             />
@@ -126,7 +129,7 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
         ) : null}
         <form action={signInAction} className="space-y-4">
           <input type="hidden" name="locale" value={locale} />
-          <input type="hidden" name="next" value={next ?? `/${locale}/profile`} />
+          <input type="hidden" name="next" value={safeNext} />
           <div className="space-y-1 text-left">
             <label htmlFor="email" className="text-[10px] font-black text-gold uppercase tracking-widest px-1">
               {dictionary.auth.emailLabel}
@@ -156,7 +159,7 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
       <Card className="w-full text-center">
         <p className="text-sm text-foreground-muted">{dictionary.auth.createAccountHint}</p>
         <Link
-          href={`/${locale}/auth/sign-up`}
+          href={signUpHref}
           className="mt-2 inline-block text-sm font-black text-gold uppercase tracking-widest"
         >
           {dictionary.auth.createAccountCta}

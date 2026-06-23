@@ -11,11 +11,12 @@ import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
+import { sanitizeAuthNextPath } from "@/lib/booking-paths";
 import { signUpAction } from "@/modules/auth/actions/sign-up";
 
 type SignUpPageProps = Readonly<{
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }>;
 
 export async function generateMetadata({ params }: SignUpPageProps): Promise<Metadata> {
@@ -64,11 +65,12 @@ function resolveSignUpError(
 
 export default async function SignUpPage({ params, searchParams }: SignUpPageProps) {
   const { locale } = await params;
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
   const errorMessage = resolveSignUpError(error, dictionary);
-  const onboardingNext = `/${locale}/onboarding`;
+  const safeNext = sanitizeAuthNextPath(next, locale, `/${locale}/onboarding`);
+  const nextQuery = `?next=${encodeURIComponent(safeNext)}`;
   const googleAuthEnabled = isGoogleAuthEnabled();
 
   return (
@@ -95,7 +97,7 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
             </p>
             <GoogleSignInButton
               locale={locale}
-              next={onboardingNext}
+              next={safeNext}
               label={dictionary.auth.signUpWithGoogleCta}
               variant="primary"
             />
@@ -118,6 +120,7 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
 
         <form action={signUpAction} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />
+          <input type="hidden" name="next" value={safeNext} />
           <div className="space-y-1">
             <label htmlFor="phone" className="text-xs font-medium text-slate-700">
               {dictionary.auth.phoneLabel}
@@ -158,7 +161,7 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
       <Card className="text-center">
         <p className="text-sm text-slate-600">{dictionary.auth.haveAccountHint}</p>
         <Link
-          href={`/${locale}/auth/sign-in`}
+          href={`/${locale}/auth/sign-in${nextQuery}`}
           className="mt-2 inline-block text-sm font-semibold text-sky-700"
         >
           {dictionary.auth.signInCta}

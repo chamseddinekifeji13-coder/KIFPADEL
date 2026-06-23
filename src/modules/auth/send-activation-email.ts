@@ -1,13 +1,13 @@
 import { publicEnv } from "@/lib/config/env";
+import { sanitizeAuthNextPath } from "@/lib/booking-paths";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isResendConfigured, sendTransactionalEmail } from "@/modules/notifications/email-resend";
 import { buildKifpadelEmailHtml, escapeHtml } from "@/modules/notifications/kifpadel-email-template";
 
 export type SendActivationEmailResult = { ok: true } | { ok: false; error: string };
 
-function buildConfirmEmailRedirect(locale: string): string {
-  const onboardingPath = `/${locale}/onboarding`;
-  return `${publicEnv.siteUrl}/${locale}/auth/confirm-email?next=${encodeURIComponent(onboardingPath)}`;
+function buildConfirmEmailRedirect(locale: string, nextPath: string): string {
+  return `${publicEnv.siteUrl}/${locale}/auth/confirm-email?next=${encodeURIComponent(nextPath)}`;
 }
 
 function buildActivationEmailHtml(locale: string, email: string, confirmUrl: string): string {
@@ -35,9 +35,11 @@ function buildActivationEmailHtml(locale: string, email: string, confirmUrl: str
 export async function sendActivationEmailViaResend(input: {
   email: string;
   locale: string;
+  next?: string;
 }): Promise<SendActivationEmailResult> {
   const email = input.email.trim().toLowerCase();
   const locale = input.locale.trim() || "fr";
+  const safeNext = sanitizeAuthNextPath(input.next, locale, `/${locale}/onboarding`);
 
   if (!email) {
     return { ok: false, error: "E-mail invalide." };
@@ -49,7 +51,7 @@ export async function sendActivationEmailViaResend(input: {
   }
 
   const admin = createSupabaseAdminClient();
-  const redirectTo = buildConfirmEmailRedirect(locale);
+  const redirectTo = buildConfirmEmailRedirect(locale, safeNext);
 
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",

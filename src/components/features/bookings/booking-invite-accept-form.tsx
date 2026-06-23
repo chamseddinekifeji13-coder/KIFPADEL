@@ -60,9 +60,16 @@ export function BookingInviteAcceptForm({
   };
 
   if (invite.isExpired) {
+    const used = invite.status === "accepted";
     return (
       <p className="text-sm text-rose-300">
-        Cette invitation a expiré. Demandez à l&apos;organisateur un nouveau lien.
+        {used
+          ? isEn
+            ? "This seat has already been taken. Ask the organizer for a new link if another spot is free."
+            : "Cette place a déjà été prise. Demandez un nouveau lien à l'organisateur s'il reste une place."
+          : isEn
+            ? "This invitation has expired. Ask the organizer for a new link."
+            : "Cette invitation a expiré. Demandez à l'organisateur un nouveau lien."}
       </p>
     );
   }

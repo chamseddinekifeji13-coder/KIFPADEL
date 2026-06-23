@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { sanitizeAuthNextPath } from "@/lib/booking-paths";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isPhoneE164VerifiedByAnotherUser } from "@/lib/phone/phone-duplicate-guard";
 import { formatTunisiaLocalDisplay } from "@/lib/phone/normalize-tunisia";
@@ -13,36 +14,42 @@ function digitsOnly(raw: string): string {
   return raw.replace(/\D/g, "");
 }
 
+function signUpReturnPath(locale: string, safeNext: string, query: Record<string, string>) {
+  const params = new URLSearchParams(query);
+  params.set("next", safeNext);
+  return `/${locale}/auth/sign-up?${params.toString()}`;
+}
+
 export async function signUpAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "fr");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const phoneRaw = String(formData.get("phone") ?? "").trim();
+  const safeNext = sanitizeAuthNextPath(String(formData.get("next") ?? ""), locale, `/${locale}/onboarding`);
 
   if (!email || !password || !phoneRaw) {
-    redirect(`/${locale}/auth/sign-up?error=missing_fields`);
+    redirect(signUpReturnPath(locale, safeNext, { error: "missing_fields" }));
   }
 
   const phoneE164 = normalizeTunisiaPhoneToE164(phoneRaw);
   if (!phoneE164) {
-    redirect(`/${locale}/auth/sign-up?error=invalid_phone`);
+    redirect(signUpReturnPath(locale, safeNext, { error: "invalid_phone" }));
   }
 
   try {
     if (await isPhoneE164VerifiedByAnotherUser(phoneE164)) {
-      redirect(`/${locale}/auth/sign-up?error=phone_in_use`);
+      redirect(signUpReturnPath(locale, safeNext, { error: "phone_in_use" }));
     }
   } catch (dupErr) {
     console.warn("[signUpAction] phone duplicate check failed", dupErr);
-    redirect(`/${locale}/auth/sign-up?error=signup_failed`);
+    redirect(signUpReturnPath(locale, safeNext, { error: "signup_failed" }));
   }
 
   const phoneLocal = digitsOnly(phoneRaw).replace(/^216/, "").slice(-8);
   const phoneDisplay = formatTunisiaLocalDisplay(phoneE164);
 
   const supabase = await createSupabaseServerActionClient();
-  const onboardingPath = `/${locale}/onboarding`;
-  const emailRedirectTo = `${publicEnv.siteUrl}/${locale}/auth/confirm-email?next=${encodeURIComponent(onboardingPath)}`;
+  const emailRedirectTo = `${publicEnv.siteUrl}/${locale}/auth/confirm-email?next=${encodeURIComponent(safeNext)}`;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -60,10 +67,10 @@ export async function signUpAction(formData: FormData) {
     console.error("[signUpAction] Auth error details:", JSON.stringify(error, null, 2));
     const diagnostic = `${error.name}|${(error as { code?: string }).code ?? ""}|${(error as { status?: number }).status ?? ""}|${error.message}`.toLowerCase();
     if (diagnostic.includes("already registered")) {
-      redirect(`/${locale}/auth/sign-up?error=user_exists`);
+      redirect(signUpReturnPath(locale, safeNext, { error: "user_exists" }));
     }
     if (diagnostic.includes("redirect") || diagnostic.includes("url")) {
-      redirect(`/${locale}/auth/sign-up?error=invalid_redirect_url`);
+      redirect(signUpReturnPath(locale, safeNext, { error: "invalid_redirect_url" }));
     }
     if (
       diagnostic.includes("database error saving new user") ||
@@ -71,7 +78,7 @@ export async function signUpAction(formData: FormData) {
       diagnostic.includes("on_auth_user_created") ||
       diagnostic.includes("handle_new_user")
     ) {
-      redirect(`/${locale}/auth/sign-up?error=profile_trigger_error`);
+      redirect(signUpReturnPath(locale, safeNext, { error: "profile_trigger_error" }));
     }
     if (
       diagnostic.includes("api key") ||
@@ -79,22 +86,24 @@ export async function signUpAction(formData: FormData) {
       diagnostic.includes("unauthorized") ||
       diagnostic.includes("forbidden")
     ) {
-      redirect(`/${locale}/auth/sign-up?error=auth_config_error`);
+      redirect(signUpReturnPath(locale, safeNext, { error: "auth_config_error" }));
     }
     if (diagnostic.includes("rate limit") || diagnostic.includes("too many requests")) {
-      redirect(`/${locale}/auth/sign-up?error=rate_limited`);
+      redirect(signUpReturnPath(locale, safeNext, { error: "rate_limited" }));
     }
-    redirect(`/${locale}/auth/sign-up?error=signup_failed`);
+    redirect(signUpReturnPath(locale, safeNext, { error: "signup_failed" }));
   }
 
   const userId = data.user?.id;
   const needsEmailConfirm = Boolean(data.user && !data.user.email_confirmed_at);
 
   if (needsEmailConfirm) {
-    const mailed = await sendActivationEmailViaResend({ email, locale });
+    const mailed = await sendActivationEmailViaResend({ email, locale, next: safeNext });
     if (!mailed.ok) {
       console.error("[signUpAction] activation email via Resend failed", mailed.error);
-      redirect(`/${locale}/auth/sign-in?status=check_email&email_warning=send_failed`);
+      redirect(
+        `/${locale}/auth/sign-in?status=check_email&email_warning=send_failed&next=${encodeURIComponent(safeNext)}`,
+      );
     }
   }
 
@@ -116,5 +125,5 @@ export async function signUpAction(formData: FormData) {
     }
   }
 
-  redirect(`/${locale}/auth/sign-in?status=check_email`);
+  redirect(`/${locale}/auth/sign-in?status=check_email&next=${encodeURIComponent(safeNext)}`);
 }
