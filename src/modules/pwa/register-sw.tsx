@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const ACTIVE_CACHE_PREFIX = "kifpadel-static-v8";
+const ACTIVE_CACHE_PREFIX = "kifpadel-static-v9";
 
 export function RegisterServiceWorker() {
   useEffect(() => {

@@ -1,23 +1,22 @@
 /**
- * Kifpadel PWA service worker (v8)
- * - Shell accueil /fr et /en : stale-while-revalidate (ouverture instantanée PWA).
- * - Pas de cache HTML pour auth, profil, club, etc.
- * - Cache-first pour icônes + manifest.
- * - Cache-first pour chunks Next immutables (_next/static).
+ * Kifpadel PWA service worker (v9)
+ * - Accueil /fr|/en : réseau d'abord, écran boot statique si lent (jamais de cache HTML SSR).
+ * - Cache-first : icônes, manifest, chunks _next/static.
+ * - Pas d'interception auth / profil / club.
  */
 
-const CACHE_NAME = "kifpadel-static-v8";
+const CACHE_NAME = "kifpadel-static-v9";
+const NETWORK_TIMEOUT_MS = 2800;
+const BOOT_RETRY_HEADER = "X-Kifpadel-Boot-Retry";
 
 const PRECACHE_URLS = [
   "/manifest.webmanifest",
+  "/pwa-boot.html",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",
   "/icons/icon.svg",
 ];
-
-/** Routes d'accueil (start_url PWA) — shell minimal offline. */
-const SHELL_HOME_URLS = ["/fr", "/en"];
 
 const SENSITIVE_PATH_RE =
   /\/(auth|profile|onboarding|admin|club)(\/|$)|^\/api\//;
@@ -49,36 +48,8 @@ function isSensitivePath(pathname) {
     : false;
 }
 
-function shellCacheKey(pathname) {
-  const normalized = normalizePathname(pathname);
-  if (normalized === "/fr" || normalized === "/en") {
-    return normalized;
-  }
-  return null;
-}
-
-async function precacheShellPages(cache) {
-  await Promise.allSettled(
-    SHELL_HOME_URLS.map(async (url) => {
-      try {
-        const response = await fetch(url, { credentials: "same-origin" });
-        if (response.ok) {
-          await cache.put(url, response);
-        }
-      } catch {
-        // Hors ligne à l'install : le shell sera mis en cache au premier passage réseau.
-      }
-    }),
-  );
-}
-
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      await cache.addAll(PRECACHE_URLS);
-      await precacheShellPages(cache);
-    }),
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)));
   self.skipWaiting();
 });
 
@@ -112,8 +83,11 @@ self.addEventListener("fetch", (event) => {
     if (isSensitivePath(pathname) || SENSITIVE_PATH_RE.test(pathname)) {
       return;
     }
+    if (event.request.headers.get(BOOT_RETRY_HEADER) === "1") {
+      return;
+    }
     if (isShellHomePath(pathname)) {
-      event.respondWith(staleWhileRevalidateNavigation(event.request));
+      event.respondWith(networkFirstShellNavigation(event.request));
     }
     return;
   }
@@ -136,6 +110,7 @@ self.addEventListener("fetch", (event) => {
   if (
     pathname.startsWith("/icons/") ||
     pathname === "/manifest.webmanifest" ||
+    pathname === "/pwa-boot.html" ||
     pathname === "/sw.js"
   ) {
     event.respondWith(cacheFirst(event.request));
@@ -157,39 +132,33 @@ async function cacheFirst(request) {
 }
 
 /**
- * Affiche le shell en cache immédiatement, rafraîchit en arrière-plan.
- * Première visite : réseau uniquement (puis mise en cache).
+ * Réseau d'abord (évite HTML SSR périmé qui bloque React).
+ * Si le réseau est lent : écran boot statique qui relance en arrière-plan.
  */
-async function staleWhileRevalidateNavigation(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cacheKey = shellCacheKey(new URL(request.url).pathname);
-  const cachedResponse = cacheKey ? await cache.match(cacheKey) : await cache.match(request);
+async function networkFirstShellNavigation(request) {
+  const bootShell = await caches.match("/pwa-boot.html");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
 
-  const networkFetch = fetch(request, { credentials: "same-origin" })
-    .then(async (response) => {
-      if (response.ok && response.type === "basic") {
-        const putKey = cacheKey ?? request.url;
-        await cache.put(putKey, response.clone());
-      }
+  try {
+    const response = await fetch(request, {
+      credentials: "same-origin",
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (response.ok) {
       return response;
-    })
-    .catch(() => null);
-
-  if (cachedResponse) {
-    void networkFetch;
-    return cachedResponse;
+    }
+  } catch {
+    clearTimeout(timeoutId);
   }
 
-  const networkResponse = await networkFetch;
-  if (networkResponse) {
-    return networkResponse;
+  if (bootShell) {
+    return bootShell;
   }
 
-  return new Response(
-    `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kifpadel</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0B1020;color:#e2e8f0;font-family:system-ui,sans-serif;text-align:center;padding:1.5rem}p{max-width:20rem;line-height:1.5}</style></head><body><p>Hors ligne — reconnectez-vous pour charger Kifpadel.</p></body></html>`,
-    {
-      status: 503,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    },
-  );
+  return new Response("Kifpadel — hors ligne", {
+    status: 503,
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
 }

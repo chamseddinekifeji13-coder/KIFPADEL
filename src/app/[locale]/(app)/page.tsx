@@ -19,7 +19,6 @@ import {
 import { Avatar } from "@/components/ui/avatar";
 import { SponsorPartnersStrip } from "@/components/features/sponsors/sponsor-partners-strip";
 import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
-import { playerService } from "@/modules/players/service";
 
 type LocaleHomeProps = {
   params: Promise<{ locale: string }>;
@@ -55,13 +54,19 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
   }
 
   const dictionary = await getDictionary(locale as Locale);
-  const sponsors = await listActiveSponsorsForPublic();
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const profile = user ? await playerService.getPlayerProfile(user.id).catch(() => null) : null;
+  const [sponsors, authResult] = await Promise.all([
+    listActiveSponsorsForPublic(),
+    createSupabaseServerClient().then((client) => client.auth.getUser()),
+  ]);
+  const user = authResult.data.user;
+  const userMeta = user?.user_metadata as {
+    avatar_url?: string;
+    full_name?: string;
+  } | undefined;
+  const headerAvatarUrl =
+    typeof userMeta?.avatar_url === "string" ? userMeta.avatar_url : null;
   const headerDisplayName =
-    profile?.display_name?.trim() ||
-    String(user?.user_metadata?.full_name ?? "").trim() ||
+    String(userMeta?.full_name ?? "").trim() ||
     user?.email?.split("@")[0] ||
     "";
   const isEn = locale === "en";
@@ -88,7 +93,7 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
         {user ? (
           <Link href={`/${locale}/profile`} aria-label="Mon profil" className="active:scale-90 transition-transform">
             <Avatar
-              src={profile?.avatar_url}
+              src={headerAvatarUrl}
               alt={headerDisplayName}
               fallback={headerDisplayName.charAt(0)}
               size="lg"
@@ -196,8 +201,12 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
       <div className="flex flex-col items-center justify-center space-y-6 pt-12 text-center opacity-80">
         <div className="flex -space-x-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-10 w-10 rounded-full border-4 border-background bg-surface-elevated overflow-hidden shadow-premium">
-              <img src={`https://i.pravatar.cc/100?u=padel${i}`} alt="" className="h-full w-full object-cover grayscale hover:grayscale-0 transition-all duration-500" />
+            <div
+              key={i}
+              className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-background bg-surface-elevated text-[10px] font-bold text-gold/70 shadow-premium"
+              aria-hidden="true"
+            >
+              {String.fromCharCode(64 + i)}
             </div>
           ))}
         </div>

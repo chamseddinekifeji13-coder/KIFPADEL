@@ -58,7 +58,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              prefetch={true}
+              prefetch={false}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(

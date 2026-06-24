@@ -41,7 +41,17 @@ export default async function proxy(request: NextRequest) {
   }
 
   try {
-    await supabase.auth.getUser();
+    const isShellHome =
+      pathname === "/fr" ||
+      pathname === "/en" ||
+      pathname === "/fr/" ||
+      pathname === "/en/";
+
+    if (isShellHome) {
+      await supabase.auth.getSession();
+    } else {
+      await supabase.auth.getUser();
+    }
   } catch (err) {
     console.error("[Proxy] Error during session refresh:", err);
   }
