@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
+import { sameOriginApiPath } from "@/lib/url/same-origin-api";
 import {
   parseSetScorePair,
   validateMatchSetScores,
 } from "@/domain/rules/match-score";
 import { previewTeamEloImpact } from "@/domain/rules/rating";
-import { recordMatchResultAction } from "@/modules/matches/actions/record-match-result";
+import type { RecordMatchResultOutcome } from "@/modules/matches/record-match-result-service";
 
 type SetDraft = { a: string; b: string };
 
@@ -36,7 +36,6 @@ export function MatchScoreForm({
   teamRatings,
   trustPreviewLabel,
 }: MatchScoreFormProps) {
-  const router = useRouter();
   const [sets, setSets] = useState<SetDraft[]>([{ ...EMPTY_SET }, { ...EMPTY_SET }]);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -86,21 +85,39 @@ export function MatchScoreForm({
     setError("");
     setPending(true);
 
-    const result = await recordMatchResultAction({
-      locale,
-      matchId,
-      tournamentId,
-      sets: parsedSets,
-    });
+    let result: RecordMatchResultOutcome | null = null;
+    try {
+      const response = await fetch(sameOriginApiPath("/api/matches/result"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          locale,
+          matchId,
+          tournamentId,
+          sets: parsedSets,
+        }),
+        cache: "no-store",
+      });
+
+      if (response.headers.get("content-type")?.includes("application/json")) {
+        result = (await response.json()) as RecordMatchResultOutcome;
+      }
+    } catch (err) {
+      console.error("[MatchScoreForm] submit failed", err);
+    }
 
     setPending(false);
 
-    if (!result.ok) {
-      setError(result.error);
+    if (!result?.ok) {
+      setError(result?.error ?? "Enregistrement impossible. Réessayez.");
       return;
     }
 
-    router.refresh();
+    window.location.assign(`/${locale}/matches/${matchId}`);
   };
 
   return (
