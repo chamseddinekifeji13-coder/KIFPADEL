@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MapPin, ChevronRight } from "lucide-react";
+import { MapPin, ChevronRight, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { ClubDirectionsButton } from "@/components/features/clubs/club-directions-button";
@@ -24,9 +24,12 @@ interface MatchCardProps {
   };
   locale?: string;
   matchTypeUi: MatchCardMatchTypeUi;
+  /** Badge discussion (matchs où le joueur participe). */
+  chatMessageCount?: number;
+  chatBadgeLabel?: string;
 }
 
-export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps) {
+export function MatchCard({ match, locale = "fr", matchTypeUi, chatMessageCount, chatBadgeLabel }: MatchCardProps) {
   const date = match.starts_at ? new Date(match.starts_at) : new Date();
   const isValidDate = !isNaN(date.getTime());
 
@@ -116,6 +119,16 @@ export function MatchCard({ match, locale = "fr", matchTypeUi }: MatchCardProps)
               >
                 {slotsLeft > 0 ? `${slotsLeft} dispos` : "Complet"}
               </Badge>
+              {chatMessageCount != null && chatMessageCount > 0 ? (
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 rounded-lg bg-sky-500/15 text-sky-300 border-0 gap-1"
+                  title={chatBadgeLabel}
+                >
+                  <MessageCircle className="h-3 w-3" />
+                  {chatMessageCount}
+                </Badge>
+              ) : null}
             </div>
 
             <div className="space-y-1.5">

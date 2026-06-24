@@ -23,6 +23,7 @@ type MatchScoreFormProps = {
   tournamentId?: string;
   className?: string;
   teamRatings?: RatingPreview | null;
+  trustPreviewLabel?: string;
 };
 
 const EMPTY_SET: SetDraft = { a: "", b: "" };
@@ -33,6 +34,7 @@ export function MatchScoreForm({
   tournamentId,
   className,
   teamRatings,
+  trustPreviewLabel,
 }: MatchScoreFormProps) {
   const router = useRouter();
   const [sets, setSets] = useState<SetDraft[]>([{ ...EMPTY_SET }, { ...EMPTY_SET }]);
@@ -169,6 +171,11 @@ export function MatchScoreForm({
           <p className="text-[10px] text-[var(--foreground-muted)]">
             Par joueur : l&apos;équipe gagnante gagne des points, l&apos;équipe perdante en perd.
           </p>
+          {trustPreviewLabel ? (
+            <p className="text-[10px] text-emerald-400/90 border-t border-white/10 pt-2">
+              {trustPreviewLabel}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

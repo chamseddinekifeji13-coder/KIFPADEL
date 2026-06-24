@@ -7,6 +7,15 @@ import { cn } from "@/lib/utils/cn";
 import { sendMatchMessageAction } from "@/modules/matches/actions/send-match-message";
 import type { MatchMessage } from "@/modules/matches/messages-repository";
 
+export type MatchChatPanelLabels = {
+  title: string;
+  emptyHint: string;
+  placeholder: string;
+  sendAria: string;
+  youLabel: string;
+  readOnlyHint: string;
+};
+
 type Props = {
   locale: string;
   matchId: string;
@@ -14,6 +23,8 @@ type Props = {
   currentUserName: string;
   initialMessages: MatchMessage[];
   participantNames: Record<string, string>;
+  labels: MatchChatPanelLabels;
+  readOnly?: boolean;
 };
 
 export function MatchChatPanel({
@@ -23,6 +34,8 @@ export function MatchChatPanel({
   currentUserName,
   initialMessages,
   participantNames,
+  labels,
+  readOnly = false,
 }: Props) {
   const [messages, setMessages] = useState<MatchMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
@@ -95,6 +108,9 @@ export function MatchChatPanel({
   }, [matchId]);
 
   const onSend = async () => {
+    if (readOnly) {
+      return;
+    }
     const text = draft.trim();
     if (!text || pending) {
       return;
@@ -142,9 +158,7 @@ export function MatchChatPanel({
     <section className="rounded-2xl border border-white/10 bg-surface-elevated overflow-hidden">
       <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
         <MessageCircle className="h-4 w-4 text-[var(--gold)]" />
-        <h2 className="text-sm font-bold text-white">
-          {locale === "en" ? "Match chat" : "Discussion du match"}
-        </h2>
+        <h2 className="text-sm font-bold text-white">{labels.title}</h2>
       </div>
 
       <div
@@ -152,11 +166,7 @@ export function MatchChatPanel({
         className="max-h-64 min-h-[8rem] space-y-2 overflow-y-auto px-4 py-3"
       >
         {messages.length === 0 ? (
-          <p className="text-xs text-white/50 text-center py-6">
-            {locale === "en"
-              ? "Coordinate balls, exact time, carpool…"
-              : "Coordonnez les balles, l'heure exacte, le covoiturage…"}
-          </p>
+          <p className="text-xs text-white/50 text-center py-6">{labels.emptyHint}</p>
         ) : (
           messages.map((message) => {
             const isMine = message.senderId === currentUserId;
@@ -166,7 +176,7 @@ export function MatchChatPanel({
                 className={cn("flex flex-col gap-0.5", isMine ? "items-end" : "items-start")}
               >
                 <p className="text-[10px] text-white/40 px-1">
-                  {isMine ? (locale === "en" ? "You" : "Vous") : message.senderName}
+                  {isMine ? labels.youLabel : message.senderName}
                   {" · "}
                   {new Date(message.createdAt).toLocaleTimeString(dateLocale, {
                     hour: "2-digit",
@@ -191,14 +201,15 @@ export function MatchChatPanel({
 
       <div className="border-t border-white/10 p-3 space-y-2">
         {error ? <p className="text-xs text-rose-400">{error}</p> : null}
+        {readOnly ? (
+          <p className="text-xs text-white/50 text-center py-1">{labels.readOnlyHint}</p>
+        ) : (
         <div className="flex gap-2">
           <input
             type="text"
             value={draft}
             maxLength={500}
-            placeholder={
-              locale === "en" ? "Write a message…" : "Écrire un message…"
-            }
+            placeholder={labels.placeholder}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -218,11 +229,12 @@ export function MatchChatPanel({
                 ? "bg-white/10 text-white/40"
                 : "bg-[var(--gold)] text-black hover:bg-[var(--gold-light)]",
             )}
-            aria-label={locale === "en" ? "Send" : "Envoyer"}
+            aria-label={labels.sendAria}
           >
             <Send className="h-4 w-4" />
           </button>
         </div>
+        )}
       </div>
     </section>
   );

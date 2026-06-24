@@ -9,6 +9,7 @@ import Link from "next/link";
 
 import { matchService } from "@/modules/matches/service";
 import { fetchUserOpenMatches, sortMatchesByStartsAt, MatchWithDetails } from "@/modules/matches/repository";
+import { fetchMatchChatSummaries } from "@/modules/matches/messages-repository";
 import { MatchCard, type MatchCardMatchTypeUi } from "@/components/features/matches/match-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Trophy } from "lucide-react";
@@ -55,6 +56,7 @@ export default async function PlayNowPage({ params, searchParams }: PlayNowPageP
 
   let matches: MatchWithDetails[] = [];
   let myMatches: MatchWithDetails[] = [];
+  let chatCountByMatchId = new Map<string, number>();
   let viewerGender: Gender | null = null;
   let viewerId: string | null = null;
   let isSignedIn = false;
@@ -72,6 +74,8 @@ export default async function PlayNowPage({ params, searchParams }: PlayNowPageP
     matches = await matchService.getOpenMatches(viewerGender, viewerId);
     if (viewerId) {
       myMatches = await fetchUserOpenMatches(viewerId);
+      const summaries = await fetchMatchChatSummaries(myMatches.map((m) => m.id));
+      chatCountByMatchId = new Map(summaries.map((s) => [s.matchId, s.messageCount]));
     }
   } catch (err) {
     rethrowFrameworkError(err);
@@ -233,6 +237,8 @@ export default async function PlayNowPage({ params, searchParams }: PlayNowPageP
                 key={match.id}
                 locale={locale}
                 matchTypeUi={matchTypeUi}
+                chatMessageCount={chatCountByMatchId.get(match.id)}
+                chatBadgeLabel={labels.matchChatBadgeLabel}
                 match={{
                   id: match.id,
                   starts_at: match.starts_at,

@@ -138,6 +138,16 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
   };
 
   const matchStarted = isMatchStarted(match.starts_at);
+  const chatReadOnly = match.status !== "open" && match.status !== "locked";
+
+  const chatLabels = {
+    title: labels.matchChatTitle,
+    emptyHint: labels.matchChatEmptyHint,
+    placeholder: labels.matchChatPlaceholder,
+    sendAria: labels.matchChatSendAria,
+    youLabel: labels.matchChatYouLabel,
+    readOnlyHint: labels.matchChatReadOnlyHint,
+  };
 
   const joinLabels = {
     joinTitle: locale === "en" ? "Join" : "Rejoindre",
@@ -279,7 +289,13 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
           currentUserName={viewerDisplayName}
           initialMessages={chatMessages}
           participantNames={participantNames}
+          labels={chatLabels}
+          readOnly={chatReadOnly}
         />
+      ) : user && participationPhase === "none" && match.status === "open" ? (
+        <p className="text-xs text-white/50 text-center rounded-2xl border border-white/10 px-4 py-3">
+          {labels.matchChatJoinHint}
+        </p>
       ) : null}
 
       {matchResult ? (
@@ -294,18 +310,19 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
           {matchResult.setScores?.length ? (
             <p className="text-xs text-white/70">{formatSetScores(matchResult.setScores)}</p>
           ) : null}
-          <p className="text-[10px] text-white/50">
-            {locale === "en"
-              ? "ELO updated for all players."
-              : "Le classement ELO des joueurs a été mis à jour."}
-          </p>
+          <p className="text-[10px] text-white/50">{labels.matchResultRewardsHint}</p>
         </section>
       ) : canRecordResult ? (
         <section className="rounded-2xl border border-white/10 p-4 space-y-3 bg-surface-elevated">
           <h2 className="text-sm font-bold text-white">
             {locale === "en" ? "Enter the score" : "Saisir le score"}
           </h2>
-          <MatchScoreForm locale={locale} matchId={match.id} teamRatings={teamRatings} />
+          <MatchScoreForm
+            locale={locale}
+            matchId={match.id}
+            teamRatings={teamRatings}
+            trustPreviewLabel={labels.matchScoreTrustPreview}
+          />
         </section>
       ) : null}
     </div>

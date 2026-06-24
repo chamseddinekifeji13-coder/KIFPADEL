@@ -48,6 +48,21 @@ export async function sendMatchMessageAction(input: {
     return { ok: false, error: "Vous n'avez pas accès à ce fil de discussion." };
   }
 
+  const { data: match, error: matchError } = await supabase
+    .from("matches")
+    .select("status")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (matchError || !match) {
+    return { ok: false, error: "Match introuvable." };
+  }
+
+  const status = String((match as { status?: string }).status ?? "");
+  if (status !== "open" && status !== "locked") {
+    return { ok: false, error: "La discussion est fermée pour ce match." };
+  }
+
   const { data: inserted, error: insertError } = await supabase
     .from("match_messages")
     .insert({

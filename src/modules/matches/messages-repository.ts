@@ -10,6 +10,11 @@ export type MatchMessage = {
   createdAt: string;
 };
 
+export type MatchChatSummary = {
+  matchId: string;
+  messageCount: number;
+};
+
 export async function fetchMatchMessages(matchId: string, limit = 80): Promise<MatchMessage[]> {
   try {
     const supabase = await createSupabaseServerClient();
@@ -36,6 +41,39 @@ export async function fetchMatchMessages(matchId: string, limit = 80): Promise<M
         createdAt: String((row as { created_at: string }).created_at),
       };
     });
+  } catch (err) {
+    rethrowFrameworkError(err);
+    return [];
+  }
+}
+
+/** Nombre de messages par match (pour badges sur la liste play-now). */
+export async function fetchMatchChatSummaries(matchIds: string[]): Promise<MatchChatSummary[]> {
+  if (matchIds.length === 0) {
+    return [];
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("match_messages")
+      .select("match_id")
+      .in("match_id", matchIds);
+
+    if (error) {
+      console.warn("[matches.fetchMatchChatSummaries]", error.message);
+      return [];
+    }
+
+    const counts = new Map<string, number>();
+    for (const row of data ?? []) {
+      const id = String((row as { match_id: string }).match_id);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+
+    return matchIds
+      .filter((id) => (counts.get(id) ?? 0) > 0)
+      .map((id) => ({ matchId: id, messageCount: counts.get(id) ?? 0 }));
   } catch (err) {
     rethrowFrameworkError(err);
     return [];
@@ -91,7 +129,8 @@ export async function fetchMatchParticipantNames(
         .select("display_name")
         .eq("id", creatorId)
         .maybeSingle();
-      names[creatorId] = (creator as { display_name?: string | null } | null)?.display_name?.trim() || "Organisateur";
+      names[creatorId] =
+        (creator as { display_name?: string | null } | null)?.display_name?.trim() || "Organisateur";
     }
 
     return names;
