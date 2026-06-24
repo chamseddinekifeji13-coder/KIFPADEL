@@ -1,4 +1,4 @@
-/** Variables publiques Supabase — compatible Edge Runtime (proxy / middleware). */
+/** Variables publiques Supabase — compatible Edge Runtime (middleware). */
 export function getEdgeSupabasePublicConfig(): {
   supabaseUrl: string;
   supabaseAnonKey: string;

@@ -8,15 +8,18 @@ import { REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE_SEC } from "@/lib/auth/referra
 import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
 import { isUuidString } from "@/lib/uuid-utils";
 
-/**
- * Proxy Next.js 16 — refresh session Supabase, i18n, validation liens réservation.
- */
-export default async function proxy(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+function copyResponseCookies(from: NextResponse, to: NextResponse) {
+  from.cookies.getAll().forEach((cookie) => {
+    to.cookies.set(cookie.name, cookie.value);
   });
+}
+
+/**
+ * Middleware Next.js — refresh session Supabase, i18n, validation liens réservation.
+ * Doit rester à src/middleware.ts pour être exécuté sur chaque requête (Edge).
+ */
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({ request });
 
   let supabase;
   try {
@@ -36,7 +39,7 @@ export default async function proxy(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[Proxy] CRITICAL: Failed to create Supabase client:", err);
+    console.error("[Middleware] CRITICAL: Failed to create Supabase client:", err);
     return response;
   }
 
@@ -55,7 +58,7 @@ export default async function proxy(request: NextRequest) {
       await supabase.auth.getUser();
     }
   } catch (err) {
-    console.error("[Proxy] Error during session refresh:", err);
+    console.error("[Middleware] Error during session refresh:", err);
   }
 
   const hostname = request.nextUrl.hostname;
@@ -63,18 +66,14 @@ export default async function proxy(request: NextRequest) {
     const canonicalUrl = request.nextUrl.clone();
     canonicalUrl.hostname = "www.kifpadel.tn";
     const redirectResponse = NextResponse.redirect(canonicalUrl, 308);
-    response.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value);
-    });
+    copyResponseCookies(response, redirectResponse);
     return redirectResponse;
   }
 
   if (pathname === "/") {
     const url = new URL(`/${DEFAULT_LOCALE}`, request.url);
     const redirectResponse = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value);
-    });
+    copyResponseCookies(response, redirectResponse);
     return redirectResponse;
   }
 
@@ -94,9 +93,7 @@ export default async function proxy(request: NextRequest) {
   if (!LOCALES.includes(candidateLocale as (typeof LOCALES)[number])) {
     const url = new URL(`/${DEFAULT_LOCALE}${pathname}`, request.url);
     const redirectResponse = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value);
-    });
+    copyResponseCookies(response, redirectResponse);
     return redirectResponse;
   }
 
@@ -108,9 +105,7 @@ export default async function proxy(request: NextRequest) {
       const url = new URL(`/${candidateLocale}/book`, request.url);
       url.searchParams.set("invalidClubLink", "1");
       const redirectResponse = NextResponse.redirect(url);
-      response.cookies.getAll().forEach((cookie) => {
-        redirectResponse.cookies.set(cookie.name, cookie.value);
-      });
+      copyResponseCookies(response, redirectResponse);
       return redirectResponse;
     }
   }

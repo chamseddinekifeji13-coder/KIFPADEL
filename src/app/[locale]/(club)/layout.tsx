@@ -1,14 +1,15 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ClubShell } from "@/components/layout/club-shell";
-import { clubService } from "@/modules/clubs/service";
+import { requireClubManager } from "@/modules/clubs/guards/require-club-manager";
 
 type ClubLayoutProps = Readonly<{
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }>;
+
+export const dynamic = "force-dynamic";
 
 export default async function ClubLayout({ children, params }: ClubLayoutProps) {
   const { locale } = await params;
@@ -18,18 +19,7 @@ export default async function ClubLayout({ children, params }: ClubLayoutProps) 
   }
 
   const dictionary = await getDictionary(locale as Locale);
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/auth/sign-in?next=/${locale}/club`);
-  }
-
-  const managedClub = await clubService.getManagedClub(user.id);
-
-  if (!managedClub) {
-    redirect(`/${locale}/dashboard?error=club_access_denied`);
-  }
+  const { managedClub } = await requireClubManager(locale, { redirectPath: "club/dashboard" });
 
   return (
     <ClubShell

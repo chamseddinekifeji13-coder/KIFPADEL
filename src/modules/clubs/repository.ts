@@ -7,6 +7,7 @@ import { resolveBookingDurationMinutes } from "@/modules/bookings/constants";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
+import { CLUB_STAFF_ROLES } from "@/modules/clubs/actions/club-staff-guard";
 
 /**
  * Repository for Club related database operations.
@@ -344,91 +345,73 @@ export async function fetchCourtsByClub(clubId: string) {
   }
 }
 
-async function fetchPrimaryClubForUser(userId: string): Promise<ManagedClubBranding | null> {
-  const adminClient = createSupabaseAdminClient();
-
-  for (const profileKey of ["id", "user_id"] as const) {
-    const { data: profile, error: profileError } = await adminClient
-      .from("profiles")
-      .select("main_club_id")
-      .eq(profileKey, userId)
-      .maybeSingle();
-
-    if (profileError) {
-      continue;
-    }
-
-    if (!profile) {
-      continue;
-    }
-
-    const mainClubId = (profile as { main_club_id?: string | null }).main_club_id;
-    if (!mainClubId) {
-      return null;
-    }
-
-    const { data: clubRow, error: clubError } = await adminClient
-      .from("clubs")
-      .select(
-        "id,name,city,address,indoor_courts_count,outdoor_courts_count,contact_name,contact_phone,contact_email,is_active",
-      )
-      .eq("id", mainClubId)
-      .maybeSingle();
-
-    if (clubError || !clubRow?.id || !clubRow?.name) {
-      return null;
-    }
-
-    const club = normalizeClub(clubRow as ClubRow);
-    return {
-      id: club.id,
-      name: club.name,
-      city: club.city,
-      address: club.address,
-      indoor_courts_count: club.indoor_courts_count,
-      outdoor_courts_count: club.outdoor_courts_count,
-      contact_name: club.contact_name,
-      contact_phone: club.contact_phone,
-      contact_email: club.contact_email,
-      is_active: club.is_active,
-    };
+async function membershipToManagedClub(membership: ManagedClubMembership): Promise<ManagedClubBranding | null> {
+  const role = String(membership.role ?? "").trim();
+  if (!CLUB_STAFF_ROLES.has(role)) {
+    return null;
   }
 
-  return null;
+  const clubRecord = membership.club;
+  const club = Array.isArray(clubRecord) ? clubRecord[0] : clubRecord;
+  if (!club?.id || !club?.name) {
+    return null;
+  }
+
+  const addr = typeof club.address === "string" ? club.address.trim() : "";
+  const indoor = Math.max(0, Math.floor(Number(club.indoor_courts_count) || 0));
+  const outdoor = Math.max(0, Math.floor(Number(club.outdoor_courts_count) || 0));
+  const cn = typeof club.contact_name === "string" ? club.contact_name.trim() : "";
+  const cp = typeof club.contact_phone === "string" ? club.contact_phone.trim() : "";
+  const ce = typeof club.contact_email === "string" ? club.contact_email.trim() : "";
+
+  return {
+    id: club.id,
+    name: club.name,
+    city: club.city ?? "Tunis",
+    address: addr.length > 0 ? addr : null,
+    indoor_courts_count: indoor,
+    outdoor_courts_count: outdoor,
+    contact_name: cn.length > 0 ? cn : null,
+    contact_phone: cp.length > 0 ? cp : null,
+    contact_email: ce.length > 0 ? ce : null,
+    is_active: club.is_active ?? true,
+  };
 }
 
-export async function fetchManagedClubForUser(userId: string): Promise<ManagedClubBranding | null> {
-  try {
-    const supabase = await createSupabaseServerClient();
+async function fetchStaffMembershipClubForUser(userId: string): Promise<ManagedClubBranding | null> {
+  const supabase = await createSupabaseServerClient();
+  const staffRoles = [...CLUB_STAFF_ROLES];
+  const select = `
+    role,
+    is_primary,
+    club:clubs (
+      id,
+      name,
+      city,
+      address,
+      indoor_courts_count,
+      outdoor_courts_count,
+      contact_name,
+      contact_phone,
+      contact_email,
+      is_active
+    )
+  `;
 
-    const { data, error } = await supabase
+  for (const column of ["user_id", "player_id"] as const) {
+    let request = supabase
       .from("club_memberships")
-      .select(
-        `
-          role,
-          is_primary,
-          club:clubs (
-            id,
-            name,
-            city,
-            address,
-            indoor_courts_count,
-            outdoor_courts_count,
-            contact_name,
-            contact_phone,
-            contact_email,
-            is_active
-          )
-        `,
-      )
-      .eq("user_id", userId)
-      .in("role", ["club_admin", "club_manager", "club_staff", "platform_admin"])
+      .select(select)
+      .in("role", staffRoles)
       .order("is_primary", { ascending: false })
       .limit(1);
 
+    request = column === "user_id" ? request.eq("user_id", userId) : request.eq("player_id", userId);
+
+    const { data, error } = await request;
     if (error) {
-      console.warn("[clubs.fetchManagedClubForUser] lookup error", error.message);
-      return null;
+      console.warn(`[clubs.fetchManagedClubForUser] ${column} lookup error`, error.message);
+      continue;
     }
 
     const membership = Array.isArray(data)
@@ -436,34 +419,21 @@ export async function fetchManagedClubForUser(userId: string): Promise<ManagedCl
       : null;
 
     if (!membership) {
-      return fetchPrimaryClubForUser(userId);
+      continue;
     }
 
-    const clubRecord = membership?.club;
-    const club = Array.isArray(clubRecord) ? clubRecord[0] : clubRecord;
-
-    if (!club?.id || !club?.name) {
-      return fetchPrimaryClubForUser(userId);
+    const managed = await membershipToManagedClub(membership);
+    if (managed) {
+      return managed;
     }
+  }
 
-    const addr = typeof club.address === "string" ? club.address.trim() : "";
-    const indoor = Math.max(0, Math.floor(Number(club.indoor_courts_count) || 0));
-    const outdoor = Math.max(0, Math.floor(Number(club.outdoor_courts_count) || 0));
-    const cn = typeof club.contact_name === "string" ? club.contact_name.trim() : "";
-    const cp = typeof club.contact_phone === "string" ? club.contact_phone.trim() : "";
-    const ce = typeof club.contact_email === "string" ? club.contact_email.trim() : "";
-    return {
-      id: club.id,
-      name: club.name,
-      city: club.city ?? "Tunis",
-      address: addr.length > 0 ? addr : null,
-      indoor_courts_count: indoor,
-      outdoor_courts_count: outdoor,
-      contact_name: cn.length > 0 ? cn : null,
-      contact_phone: cp.length > 0 ? cp : null,
-      contact_email: ce.length > 0 ? ce : null,
-      is_active: club.is_active ?? true,
-    };
+  return null;
+}
+
+export async function fetchManagedClubForUser(userId: string): Promise<ManagedClubBranding | null> {
+  try {
+    return await fetchStaffMembershipClubForUser(userId);
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[clubs.fetchManagedClubForUser] unexpected error", err);
