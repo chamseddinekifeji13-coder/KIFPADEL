@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildTunisSlotTimestamps,
   formatTunisHm,
+  isValidYmdDate,
   normalizeTimeHm,
 } from "@/modules/bookings/timezone";
 
@@ -23,5 +24,11 @@ describe("booking timezone (iOS-safe)", () => {
     const { startsAtIso, endsAtIso } = buildTunisSlotTimestamps("2025-06-24", "18:00", 90);
     expect(startsAtIso).toBe("2025-06-24T17:00:00.000Z");
     expect(endsAtIso).toBe("2025-06-24T18:30:00.000Z");
+  });
+
+  it("validates YYYY-MM-DD without throwing", () => {
+    expect(isValidYmdDate("2025-06-24")).toBe(true);
+    expect(isValidYmdDate("invalid")).toBe(false);
+    expect(isValidYmdDate("2025-13-40")).toBe(true);
   });
 });

@@ -23,6 +23,11 @@ export default function Error({
         <p className="text-sm text-[var(--foreground-muted)]">
           Quelque chose s&apos;est mal passé. Veuillez réessayer.
         </p>
+        {error.digest ? (
+          <p className="text-[10px] text-[var(--foreground-muted)]/80 font-mono">
+            Réf. {error.digest}
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={() => reset()}

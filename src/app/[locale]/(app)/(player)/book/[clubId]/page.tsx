@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { clubService } from "@/modules/clubs/service";
 import { playerService } from "@/modules/players/service";
 import { getClubAvailability } from "@/modules/bookings/availability-service";
-import { formatTunisYmd, tunisLocalDateTimeToUtc } from "@/modules/bookings/timezone";
+import { formatTunisYmd, formatWeekdayDayFromYmd, isValidYmdDate, tunisLocalDateTimeToUtc } from "@/modules/bookings/timezone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 import { resolveBookingDurationMinutes } from "@/modules/bookings/constants";
@@ -72,7 +72,8 @@ export default async function ClubDetailPage({
   }
 
   const { date: dateQuery } = await searchParams;
-  const selectedDate = dateQuery || formatTunisYmd();
+  const selectedDate =
+    dateQuery && isValidYmdDate(dateQuery) ? dateQuery.trim() : formatTunisYmd();
 
   // Fetch club data and availability
   const club = await clubService.getClubDetails(clubId).catch(() => null);
@@ -241,7 +242,7 @@ export default async function ClubDetailPage({
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {days.map((day) => {
-              const d = new Date(day);
+              const { weekday, day: dayNum } = formatWeekdayDayFromYmd(day, locale);
               const isSelected = day === selectedDate;
               return (
                 <Link
@@ -254,14 +255,14 @@ export default async function ClubDetailPage({
                       : "bg-[var(--surface)] border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--foreground-muted)]"
                   )}
                 >
-                  <span className="text-[10px] uppercase font-bold opacity-70">
-                    {d.toLocaleDateString("fr-FR", { weekday: "short" })}
-                  </span>
-                  <span className={cn(
-                    "text-lg font-bold",
-                    isSelected ? "text-[var(--gold)]" : "text-white"
-                  )}>
-                    {d.getDate()}
+                  <span className="text-[10px] uppercase font-bold opacity-70">{weekday}</span>
+                  <span
+                    className={cn(
+                      "text-lg font-bold",
+                      isSelected ? "text-[var(--gold)]" : "text-white",
+                    )}
+                  >
+                    {dayNum}
                   </span>
                 </Link>
               );

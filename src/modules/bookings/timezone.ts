@@ -11,6 +11,35 @@ function parseDateParts(date: string) {
   return { year, month, day };
 }
 
+/** Valide YYYY-MM-DD sans lever (sélecteur date / query iOS). */
+export function isValidYmdDate(raw: string | null | undefined): boolean {
+  if (!raw || typeof raw !== "string") return false;
+  const date = raw.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  try {
+    parseDateParts(date);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Jour + libellé court pour le sélecteur (évite `new Date("YYYY-MM-DD")` sur WebKit). */
+export function formatWeekdayDayFromYmd(
+  dateYmd: string,
+  locale: string,
+): { weekday: string; day: number } {
+  const { year, month, day } = parseDateParts(dateYmd);
+  const utc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+  return {
+    weekday: utc.toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", {
+      weekday: "short",
+      timeZone: "UTC",
+    }),
+    day,
+  };
+}
+
 function parseTimeParts(time: string) {
   const trimmed = time.trim().replace(/\u202f/g, " ").replace(/\s+/g, " ");
 
@@ -84,6 +113,18 @@ export function formatBookingDateShort(dateYmd: string, locale: string): string 
     month: "short",
     timeZone: "UTC",
   });
+}
+
+export function formatBookingDateShortSafe(
+  dateYmd: string,
+  locale: string,
+  fallback = "",
+): string {
+  try {
+    return formatBookingDateShort(dateYmd, locale);
+  } catch {
+    return fallback || dateYmd;
+  }
 }
 
 /** Libellé date réservation sans parser ISO ambigu côté client (Safari). */

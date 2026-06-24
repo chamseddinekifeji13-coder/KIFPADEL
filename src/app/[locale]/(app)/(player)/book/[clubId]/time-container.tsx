@@ -7,7 +7,7 @@ import { PaymentMethodSelector, type PlayerPaymentMethod } from "@/components/fe
 import { BookingConfirmSheet } from "@/components/features/bookings/booking-confirm-sheet";
 import { type TimeSlot } from "@/modules/bookings/availability-service";
 import { createBookingViaApi } from "@/lib/bookings/create-booking-client";
-import { buildTunisSlotTimestamps, formatBookingDateShort } from "@/modules/bookings/timezone";
+import { buildTunisSlotTimestamps, formatBookingDateShortSafe } from "@/modules/bookings/timezone";
 import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { ChevronRight, ShieldAlert } from "lucide-react";
@@ -179,7 +179,7 @@ export function TimeContainer({
           setRentRacket(false);
           setBookingState("idle");
           if (result.bookingId) {
-            router.push(`/${locale}/bookings/${result.bookingId}/invites`);
+            window.location.assign(`/${locale}/bookings/${result.bookingId}/invites`);
           } else {
             router.refresh();
           }
@@ -286,7 +286,7 @@ export function TimeContainer({
                 </span>
                 <span className="text-sm font-bold text-white truncate">
                   {slotTime} • {selectedSlotData?.courtLabel} •{" "}
-                  {formatBookingDateShort(date, locale)}
+                  {formatBookingDateShortSafe(date, locale)}
                 </span>
                 <span className="text-xs text-[var(--foreground-muted)]">
                   {basePrice} DT créneau

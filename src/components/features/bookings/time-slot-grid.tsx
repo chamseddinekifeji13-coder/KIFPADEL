@@ -7,11 +7,17 @@ interface TimeSlotGridProps {
   onSelect: (id: string) => void;
 }
 
+function slotHour(time: string): number {
+  const match = time.trim().match(/^(\d{1,2}):/);
+  if (!match) return 12;
+  const hour = Number(match[1]);
+  return Number.isFinite(hour) ? hour : 12;
+}
+
 export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProps) {
-  // Group slots by time of day
-  const morning = slots.filter(s => parseInt(s.time.split(":")[0]) < 12);
-  const afternoon = slots.filter(s => parseInt(s.time.split(":")[0]) >= 12 && parseInt(s.time.split(":")[0]) < 18);
-  const evening = slots.filter(s => parseInt(s.time.split(":")[0]) >= 18);
+  const morning = slots.filter((s) => slotHour(s.time) < 12);
+  const afternoon = slots.filter((s) => slotHour(s.time) >= 12 && slotHour(s.time) < 18);
+  const evening = slots.filter((s) => slotHour(s.time) >= 18);
 
   const renderGroup = (title: string, groupSlots: TimeSlot[]) => (
     <div className="space-y-3">
