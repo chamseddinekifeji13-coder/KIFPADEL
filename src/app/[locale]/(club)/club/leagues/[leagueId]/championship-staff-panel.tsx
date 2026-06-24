@@ -7,12 +7,12 @@ import { computeChampionshipStandings } from "@/domain/rules/championship-standi
 import type { ChampionshipStatus } from "@/domain/types/championships";
 import type { LeagueDivision, LeagueEntry, LeagueMovement, LeagueResult } from "@/domain/types/championships";
 import type { ChampionshipSummary } from "@/domain/types/championships";
+import { formatChampionshipEntryLabel } from "@/domain/types/championships";
 import {
   applyPromotionRelegationAction,
   recordChampionshipResultAction,
   updateChampionshipStatusAction,
 } from "@/modules/championships/actions";
-import { entryLabel } from "@/modules/championships/repository";
 
 type Props = {
   locale: string;
@@ -47,7 +47,7 @@ export function ChampionshipStaffPanel({
     for (const division of divisions) {
       const divisionEntries = entries
         .filter((e) => e.divisionId === division.id)
-        .map((e) => ({ id: e.id, label: entryLabel(e) }));
+        .map((e) => ({ id: e.id, label: formatChampionshipEntryLabel(e) }));
       const divisionResults = results
         .filter((r) => r.divisionId === division.id)
         .map((r) => ({
@@ -237,7 +237,7 @@ export function ChampionshipStaffPanel({
               <option value="">{labels.leaguesRecordHome}</option>
               {divisionEntries.map((e) => (
                 <option key={e.id} value={e.id}>
-                  {entryLabel(e)}
+                  {formatChampionshipEntryLabel(e)}
                 </option>
               ))}
             </select>
@@ -250,7 +250,7 @@ export function ChampionshipStaffPanel({
               <option value="">{labels.leaguesRecordAway}</option>
               {divisionEntries.map((e) => (
                 <option key={e.id} value={e.id}>
-                  {entryLabel(e)}
+                  {formatChampionshipEntryLabel(e)}
                 </option>
               ))}
             </select>

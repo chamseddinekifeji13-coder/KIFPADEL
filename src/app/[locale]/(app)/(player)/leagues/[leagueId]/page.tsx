@@ -4,6 +4,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeChampionshipStandings } from "@/domain/rules/championship-standings";
+import { formatChampionshipEntryLabel } from "@/domain/types/championships";
 import {
   getChampionshipById,
   listDivisionsForLeague,
@@ -11,7 +12,6 @@ import {
   listPartnerCandidatesForChampionship,
   listResultsForLeague,
   playerAlreadyInChampionship,
-  entryLabel,
 } from "@/modules/championships/repository";
 import { ChampionshipRegisterForm } from "@/app/[locale]/(app)/(player)/leagues/[leagueId]/championship-register-form";
 import type { ChampionshipStatus } from "@/domain/types/championships";
@@ -86,7 +86,7 @@ export default async function PlayerLeagueDetailPage({ params }: Props) {
       {divisions.map((division) => {
         const divisionEntries = entries
           .filter((e) => e.divisionId === division.id)
-          .map((e) => ({ id: e.id, label: entryLabel(e) }));
+          .map((e) => ({ id: e.id, label: formatChampionshipEntryLabel(e) }));
         const divisionResults = results
           .filter((r) => r.divisionId === division.id)
           .map((r) => ({

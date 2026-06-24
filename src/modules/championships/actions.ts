@@ -8,10 +8,10 @@ import {
   computePromotionRelegationMovements,
 } from "@/domain/rules/championship-standings";
 import type { ChampionshipStatus } from "@/domain/types/championships";
+import { formatChampionshipEntryLabel } from "@/domain/types/championships";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { clubService } from "@/modules/clubs/service";
 import {
-  entryLabel,
   getChampionshipById,
   listDivisionsForLeague,
   listEntriesForLeague,
@@ -307,7 +307,7 @@ export async function applyPromotionRelegationAction(input: {
   for (const division of divisions) {
     const divisionEntries = entries
       .filter((e) => e.divisionId === division.id)
-      .map((e) => ({ id: e.id, label: entryLabel(e) }));
+      .map((e) => ({ id: e.id, label: formatChampionshipEntryLabel(e) }));
     const divisionResults = results
       .filter((r) => r.divisionId === division.id)
       .map((r) => ({

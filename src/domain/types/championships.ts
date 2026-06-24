@@ -9,6 +9,19 @@ export type LeagueEntryStatus = "registered" | "active" | "withdrawn";
 
 export type LeagueMovementType = "promoted" | "relegated" | "stayed";
 
+export function formatChampionshipEntryLabel(entry: {
+  teamName?: string | null;
+  player1Name?: string | null;
+  player2Name?: string | null;
+}): string {
+  if (entry.teamName?.trim()) {
+    return entry.teamName.trim();
+  }
+  const p1 = entry.player1Name?.trim() || "Joueur 1";
+  const p2 = entry.player2Name?.trim() || "Joueur 2";
+  return `${p1} / ${p2}`;
+}
+
 export type ChampionshipSummary = {
   id: string;
   clubId: string;

@@ -7,6 +7,7 @@ import type {
   LeagueMovement,
   LeagueResult,
 } from "@/domain/types/championships";
+import { formatChampionshipEntryLabel } from "@/domain/types/championships";
 
 function mapLeagueRow(row: Record<string, unknown>): ChampionshipSummary {
   return {
@@ -32,15 +33,6 @@ function mapDivisionRow(row: Record<string, unknown>): LeagueDivision {
     promotionSlots: Number(row.promotion_slots ?? 0),
     relegationSlots: Number(row.relegation_slots ?? 0),
   };
-}
-
-function entryLabel(row: LeagueEntry): string {
-  if (row.teamName?.trim()) {
-    return row.teamName.trim();
-  }
-  const p1 = row.player1Name?.trim() || "Joueur 1";
-  const p2 = row.player2Name?.trim() || "Joueur 2";
-  return `${p1} / ${p2}`;
 }
 
 export type ProfilePick = { id: string; displayName: string | null };
@@ -223,7 +215,7 @@ export async function listMovementsForLeague(leagueId: string): Promise<LeagueMo
       movement: r.movement as LeagueMovement["movement"],
       seasonLabel: String(r.season_label),
       createdAt: String(r.created_at),
-      teamLabel: entry ? entryLabel(entry) : undefined,
+      teamLabel: entry ? formatChampionshipEntryLabel(entry) : undefined,
       fromDivisionName: divisionById.get(fromId)?.name,
       toDivisionName: divisionById.get(toId)?.name,
     };
@@ -265,5 +257,3 @@ export async function playerAlreadyInChampionship(leagueId: string, userId: stri
 
   return Boolean(data?.length);
 }
-
-export { entryLabel };
