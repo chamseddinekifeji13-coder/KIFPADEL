@@ -1,3 +1,4 @@
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isBookingParticipantActive } from "@/domain/rules/booking-participant";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
@@ -35,27 +36,38 @@ export type BookingParticipantDbRow = {
   created_at: string;
 };
 
+/**
+ * Créneaux du jour pour la grille publique (places restantes).
+ * Service role : évite la récursion RLS bookings ↔ booking_participants (« stack depth limit exceeded »)
+ * et permet de voir les réservations des autres joueurs sur le créneau (indispensable pour le 4-joueurs).
+ */
 export async function fetchBookingsByClubAndDate(clubId: string, date: string) {
-  const supabase = await createSupabaseServerClient();
+  try {
+    const admin = createSupabaseAdminClient();
+    const { dayStart, nextDayStart } = tunisDayRangeUtc(date);
 
-  const { dayStart, nextDayStart } = tunisDayRangeUtc(date);
+    const { data, error } = await admin
+      .from("bookings")
+      .select(
+        "id, club_id, court_id, starts_at, ends_at, status, is_blocking, created_at, booking_participants(id, booking_id, player_id, seat_index, status, created_at, share_price, payment_method, payment_confirmed_at)",
+      )
+      .eq("club_id", clubId)
+      .lt("starts_at", nextDayStart.toISOString())
+      .gt("ends_at", dayStart.toISOString())
+      .neq("status", "cancelled")
+      .or(stalePendingBookingsExcludedOrFilter());
 
-  const { data, error } = await supabase
-    .from("bookings")
-    .select(
-      "*, booking_participants(id, booking_id, player_id, seat_index, status, created_at, share_price, payment_method, payment_confirmed_at)",
-    )
-    .eq("club_id", clubId)
-    .lt("starts_at", nextDayStart.toISOString())
-    .gt("ends_at", dayStart.toISOString())
-    .neq("status", "cancelled")
-    .or(stalePendingBookingsExcludedOrFilter());
+    if (error) {
+      console.warn("[fetchBookingsByClubAndDate]", error.message);
+      return [];
+    }
 
-  if (error) {
-    throw new Error(error.message);
+    return (data ?? []) as BookingWithParticipantsRow[];
+  } catch (err) {
+    rethrowFrameworkError(err);
+    console.warn("[fetchBookingsByClubAndDate] unexpected", err);
+    return [];
   }
-
-  return (data ?? []) as BookingWithParticipantsRow[];
 }
 
 export type PlayerBookingRow = {
