@@ -27,6 +27,7 @@ import {
   Star,
   LayoutDashboard,
   Shield,
+  Medal,
 } from "lucide-react";
 import { SectionTitle } from "@/components/ui/section-title";
 import { RatingHistoryPanel } from "@/components/features/players/rating-history-panel";
@@ -264,8 +265,14 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
           className="text-sm opacity-80 px-2 text-white"
         />
         {recentTournaments.length === 0 ? (
-          <Card className="p-4 bg-[var(--surface)] border-[var(--border)] text-sm text-[var(--foreground-muted)]">
-            {labels.profileRecentTournamentsEmpty}
+          <Card className="p-4 bg-[var(--surface)] border-[var(--border)] space-y-3">
+            <p className="text-sm text-[var(--foreground-muted)]">{labels.profileRecentTournamentsEmpty}</p>
+            <Link
+              href={`/${locale}/tournaments`}
+              className="inline-flex text-xs font-bold text-[var(--gold)] hover:underline"
+            >
+              {labels.profileBrowseTournamentsCta} →
+            </Link>
           </Card>
         ) : (
           <div className="space-y-2">
@@ -284,8 +291,31 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
                 </Link>
               </Card>
             ))}
+            <Link
+              href={`/${locale}/tournaments`}
+              className="block text-center text-xs font-bold text-[var(--gold)] py-2 hover:underline"
+            >
+              {labels.profileBrowseTournamentsCta} →
+            </Link>
           </div>
         )}
+      </section>
+
+      <section className="space-y-3">
+        <SectionTitle
+          title={labels.profileRecentLeaguesTitle}
+          icon={<Medal className="h-4 w-4" />}
+          className="text-sm opacity-80 px-2 text-white"
+        />
+        <Card className="p-4 bg-[var(--surface)] border-[var(--border)] space-y-3">
+          <p className="text-sm text-[var(--foreground-muted)]">{labels.profileRecentLeaguesEmpty}</p>
+          <Link
+            href={`/${locale}/leagues`}
+            className="inline-flex text-xs font-bold text-[var(--gold)] hover:underline"
+          >
+            {labels.profileBrowseLeaguesCta} →
+          </Link>
+        </Card>
       </section>
 
       <PlayerReferralPanel
@@ -351,6 +381,8 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
             ...(phoneVerified
               ? []
               : [{ label: labels.accountVerifyPhone, href: `/${locale}/profile/verify-phone` }]),
+            { label: labels.accountTournaments, href: `/${locale}/tournaments` },
+            { label: labels.accountLeagues, href: `/${locale}/leagues` },
             { label: labels.accountPersonalInfo, href: `/${locale}/profile/edit` },
             { label: labels.kifWalletTitle, href: `/${locale}/profile/wallet` },
             { label: labels.accountNotifications, href: `/${locale}/profile/notifications` },

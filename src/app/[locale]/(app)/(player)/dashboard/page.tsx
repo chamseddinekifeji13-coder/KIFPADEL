@@ -6,7 +6,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { playerService } from "@/modules/players/service";
 import { fetchBookingsForPlayer } from "@/modules/bookings/repository";
-import { Trophy, Calendar, User, LayoutDashboard, Shield } from "lucide-react";
+import { Trophy, Calendar, User, LayoutDashboard, Shield, Medal } from "lucide-react";
 import Link from "next/link";
 
 import { ProfileStatsGrid } from "@/components/features/players/profile-stats-grid";
@@ -144,6 +144,14 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
               <Link href={`/${locale}/book`} className="flex flex-col items-center gap-4 p-6 glass rounded-[2rem] border border-white/5 hover:bg-white/10 transition-all active:scale-95">
                 <Calendar className="h-8 w-8" />
                 <span className="text-[11px] font-black uppercase tracking-widest">Réserver</span>
+              </Link>
+              <Link href={`/${locale}/tournaments`} className="flex flex-col items-center gap-4 p-6 glass rounded-[2rem] border border-white/5 hover:bg-white/10 transition-all active:scale-95">
+                <Trophy className="h-8 w-8 text-amber-300" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-center">{labels.dashboardTournamentsCard}</span>
+              </Link>
+              <Link href={`/${locale}/leagues`} className="flex flex-col items-center gap-4 p-6 glass rounded-[2rem] border border-white/5 hover:bg-white/10 transition-all active:scale-95">
+                <Medal className="h-8 w-8 text-amber-300" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-center">{labels.dashboardLeaguesCard}</span>
               </Link>
             </div>
 
