@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { X, MapPin, Calendar, CreditCard, Banknote, Coins, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { ClientPortal } from "@/components/ui/client-portal";
+import { lockDocumentScroll } from "@/lib/dom/ios-scroll-lock";
 
 interface BookingConfirmSheetProps {
   isOpen: boolean;
@@ -40,11 +41,7 @@ export function BookingConfirmSheet({
 }: BookingConfirmSheetProps) {
   useEffect(() => {
     if (!isOpen) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
+    return lockDocumentScroll();
   }, [isOpen]);
 
   const isLoading = state === "loading";

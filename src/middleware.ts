@@ -52,7 +52,13 @@ export async function middleware(request: NextRequest) {
       pathname === "/fr/" ||
       pathname === "/en/";
 
-    if (isShellHome) {
+    // iOS Safari : getUser() appelle l'API Auth à chaque navigation → latence perceptible.
+    // getSession() rafraîchit les cookies localement ; getUser() reste sur les zones sensibles.
+    const needsStrictAuthRefresh =
+      /^\/(fr|en)\/(admin|club|auth|onboarding)\b/.test(pathname) ||
+      /^\/(fr|en)\/profile\b/.test(pathname);
+
+    if (isShellHome || !needsStrictAuthRefresh) {
       await supabase.auth.getSession();
     } else {
       await supabase.auth.getUser();

@@ -22,6 +22,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#0B1020",
+  interactiveWidget: "resizes-content",
 };
 
 export const metadata: Metadata = {
@@ -34,6 +35,11 @@ export const metadata: Metadata = {
     "Kifpadel est la plateforme n°1 en Tunisie pour réserver un terrain de padel, trouver des partenaires et rejoindre des matchs ouverts dans les meilleurs clubs.",
   applicationName: "Kifpadel",
   manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Kifpadel",
+    statusBarStyle: "black-translucent",
+  },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },

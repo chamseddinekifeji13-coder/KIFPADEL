@@ -47,7 +47,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
   return (
     <nav
       aria-label="Navigation principale"
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-lg animate-fade-in pb-[max(env(safe-area-inset-bottom),0px)]"
+      className="fixed inset-x-[4%] bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 mx-auto max-w-lg animate-fade-in max-md:animate-none"
     >
       <div className="glass-gold rounded-[2rem] p-2 flex justify-between items-center px-4 h-20 shadow-premium max-md:backdrop-blur-none">
         {items.map((item) => {
@@ -58,7 +58,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              prefetch={false}
+              prefetch
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
