@@ -10,6 +10,7 @@ export type Dictionary = {
   errors: Record<string, string>;
   admin: Record<string, string>;
   legal: Record<string, string>;
+  championships: Record<string, string>;
 };
 
 const dictionaries: Record<Locale, () => Promise<Dictionary>> = {
@@ -23,6 +24,7 @@ const dictionaries: Record<Locale, () => Promise<Dictionary>> = {
     errors: (await import("@/i18n/locales/fr/errors.json")).default,
     admin: (await import("@/i18n/locales/fr/admin.json")).default,
     legal: (await import("@/i18n/locales/fr/legal.json")).default,
+    championships: (await import("@/i18n/locales/fr/championships.json")).default,
   }),
   en: async () => ({
     common: (await import("@/i18n/locales/en/common.json")).default,
@@ -34,6 +36,7 @@ const dictionaries: Record<Locale, () => Promise<Dictionary>> = {
     errors: (await import("@/i18n/locales/en/errors.json")).default,
     admin: (await import("@/i18n/locales/en/admin.json")).default,
     legal: (await import("@/i18n/locales/en/legal.json")).default,
+    championships: (await import("@/i18n/locales/en/championships.json")).default,
   }),
 };
 

@@ -21,6 +21,7 @@ import {
   XCircle,
   ChevronRight,
   Trophy,
+  Medal,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -322,6 +323,29 @@ export default async function ClubDashboardPage({ params }: ClubDashboardPagePro
         </div>
         <div className="p-4 text-sm text-[var(--foreground-muted)]">
           {labels.dashboardTournamentsHint}
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-xl shadow-black/10">
+        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-[var(--gold)]/10 flex items-center justify-center">
+              <Medal className="h-4 w-4 text-[var(--gold)]" />
+            </div>
+            <div>
+              <h2 className="font-bold text-white text-sm">{dictionary.championships.leaguesPageTitle}</h2>
+              <p className="text-[10px] text-[var(--foreground-muted)]">{dictionary.championships.leaguesPageSubtitle}</p>
+            </div>
+          </div>
+          <Link
+            href={`/${locale}/club/leagues`}
+            className="text-[10px] font-bold uppercase tracking-wider text-[var(--gold)] hover:underline shrink-0"
+          >
+            {dictionary.championships.dashboardLeaguesCta}
+          </Link>
+        </div>
+        <div className="p-4 text-sm text-[var(--foreground-muted)]">
+          {dictionary.championships.dashboardLeaguesHint}
         </div>
       </section>
 
