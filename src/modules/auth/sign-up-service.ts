@@ -7,7 +7,7 @@ import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isPhoneE164VerifiedByAnotherUser } from "@/lib/phone/phone-duplicate-guard";
 import { formatTunisiaLocalDisplay, normalizeTunisiaPhoneToE164 } from "@/lib/phone/normalize-tunisia";
-import { normalizeSignupEmail } from "@/lib/auth/normalize-signup-email";
+import { normalizeSignupEmail, normalizeSignupPassword } from "@/lib/auth/normalize-signup-email";
 import { publicEnv } from "@/lib/config/env";
 import { sendActivationEmailViaResend } from "@/modules/auth/send-activation-email";
 import type { Gender } from "@/domain/types/core";
@@ -110,7 +110,7 @@ export async function signUpWithSupabase(
 ): Promise<SignUpResult> {
   const locale = input.locale || "fr";
   const email = normalizeSignupEmail(input.email);
-  const password = input.password;
+  const password = normalizeSignupPassword(input.password);
   const phoneRaw = input.phone.trim();
   const displayName = (input.displayName ?? "").trim();
   const gender = parseSignupGender(input.gender);

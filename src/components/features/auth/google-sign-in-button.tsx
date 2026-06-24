@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { sameOriginApiPath } from "@/lib/url/same-origin-api";
+
 type GoogleSignInButtonProps = {
   locale: string;
   next?: string;
@@ -56,7 +58,7 @@ export function GoogleSignInButton({
 
     setPending(true);
 
-    const result = await fetch("/api/oauth/google", {
+    const result = await fetch(sameOriginApiPath("/api/oauth/google"), {
       method: "POST",
       credentials: "same-origin",
       headers: {

@@ -1,6 +1,7 @@
 "use client";
 
 import type { BookingResult, CreateBookingInput } from "@/modules/bookings/create-booking-types";
+import { sameOriginApiPath } from "@/lib/url/same-origin-api";
 
 function isBookingResult(value: unknown): value is BookingResult {
   if (!value || typeof value !== "object" || !("ok" in value)) return false;
@@ -17,7 +18,7 @@ function isBookingResult(value: unknown): value is BookingResult {
 export async function createBookingViaApi(input: CreateBookingInput): Promise<BookingResult> {
   let response: Response;
   try {
-    response = await fetch("/api/bookings/create", {
+    response = await fetch(sameOriginApiPath("/api/bookings/create"), {
       method: "POST",
       credentials: "same-origin",
       headers: {

@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
 import type { SignUpErrorCode } from "@/modules/auth/sign-up-types";
-import { normalizeSignupEmail } from "@/lib/auth/normalize-signup-email";
+import { normalizeSignupEmail, normalizeSignupPassword } from "@/lib/auth/normalize-signup-email";
+import { sameOriginApiPath } from "@/lib/url/same-origin-api";
 
 type SignUpFormLabels = {
   phoneLabel: string;
@@ -36,6 +37,7 @@ type SignUpFormProps = {
 export function SignUpForm({ locale, safeNext, referrerId, labels }: SignUpFormProps) {
   const [pending, setPending] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [gender, setGender] = useState("");
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -51,15 +53,21 @@ export function SignUpForm({ locale, safeNext, referrerId, labels }: SignUpFormP
       locale,
       next: safeNext,
       ref: referrerId ?? undefined,
-      phone: String(formData.get("phone") ?? ""),
-      displayName: String(formData.get("displayName") ?? ""),
-      gender: String(formData.get("gender") ?? ""),
+      phone: String(formData.get("phone") ?? "").trim(),
+      displayName: String(formData.get("displayName") ?? "").trim(),
+      gender,
       email: normalizeSignupEmail(String(formData.get("email") ?? "")),
-      password: String(formData.get("password") ?? ""),
+      password: normalizeSignupPassword(String(formData.get("password") ?? "")),
     };
 
+    if (!payload.gender) {
+      setClientError(labels.errorByCode.invalid_gender ?? labels.errorByCode.signup_failed ?? "Genre requis.");
+      setPending(false);
+      return;
+    }
+
     try {
-      const response = await fetch("/api/register", {
+      const response = await fetch(sameOriginApiPath("/api/register"), {
         method: "POST",
         credentials: "same-origin",
         headers: {
@@ -76,11 +84,23 @@ export function SignUpForm({ locale, safeNext, referrerId, labels }: SignUpFormP
       }
 
       if (result?.ok && result.redirectTo) {
-        window.location.href = result.redirectTo;
+        window.location.assign(result.redirectTo);
         return;
       }
 
-      const errorCode = result?.error ?? "signup_failed";
+      if (!result) {
+        const staleHint =
+          response.status === 404
+            ? " Application obsolète — fermez l’icône écran d’accueil, ouvrez Safari et rechargez la page."
+            : "";
+        setClientError(
+          `Erreur serveur (${response.status}).${staleHint} Réessayez ou contactez le support.`,
+        );
+        setPending(false);
+        return;
+      }
+
+      const errorCode = result.error ?? "signup_failed";
       const message =
         result?.detail?.trim() ||
         labels.errorByCode[errorCode] ||
@@ -138,7 +158,8 @@ export function SignUpForm({ locale, safeNext, referrerId, labels }: SignUpFormP
             id="gender"
             name="gender"
             required
-            defaultValue=""
+            value={gender}
+            onChange={(event) => setGender(event.target.value)}
             className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-1 focus:ring-sky-400"
           >
             <option value="" disabled>

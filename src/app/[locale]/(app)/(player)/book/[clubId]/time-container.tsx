@@ -10,7 +10,6 @@ import { createBookingViaApi } from "@/lib/bookings/create-booking-client";
 import { buildTunisSlotTimestamps, formatBookingDateShort } from "@/modules/bookings/timezone";
 import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
-import { refreshAuthForServerAction } from "@/lib/auth/refresh-auth-for-server-action";
 import { ChevronRight, ShieldAlert } from "lucide-react";
 import { mustUseWalletForBooking } from "@/modules/compliance/new-account-gates";
 
@@ -148,15 +147,6 @@ export function TimeContainer({
         confirmInFlightRef.current = false;
         return;
       }
-    }
-
-    const authRefresh = await refreshAuthForServerAction();
-    if (!authRefresh.ok) {
-      setBookingState("error");
-      setErrorMessage(authRefresh.error ?? "Session expirée. Rechargez la page puis reconnectez-vous.");
-      setIsPending(false);
-      confirmInFlightRef.current = false;
-      return;
     }
 
     try {

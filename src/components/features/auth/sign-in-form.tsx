@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
 import type { SignInErrorCode } from "@/modules/auth/sign-in-types";
+import { normalizeSignupEmail } from "@/lib/auth/normalize-signup-email";
+import { sameOriginApiPath } from "@/lib/url/same-origin-api";
 
 type SignInFormLabels = {
   emailLabel: string;
@@ -40,12 +42,12 @@ export function SignInForm({ locale, safeNext, forgotPasswordHref, labels }: Sig
     const payload = {
       locale,
       next: safeNext,
-      email: String(formData.get("email") ?? ""),
-      password: String(formData.get("password") ?? ""),
+      email: normalizeSignupEmail(String(formData.get("email") ?? "")),
+      password: String(formData.get("password") ?? "").trim(),
     };
 
     try {
-      const response = await fetch("/api/login", {
+      const response = await fetch(sameOriginApiPath("/api/login"), {
         method: "POST",
         credentials: "same-origin",
         headers: {

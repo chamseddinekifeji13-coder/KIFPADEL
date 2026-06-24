@@ -47,5 +47,10 @@ export async function POST(request: Request) {
   });
 
   const status = result.ok ? 200 : 422;
-  return attachCookies(NextResponse.json(result, { status }));
+  return attachCookies(
+    NextResponse.json(result, {
+      status,
+      headers: { "Cache-Control": "no-store" },
+    }),
+  );
 }
