@@ -11,8 +11,11 @@ import { formatChampionshipEntryLabel } from "@/domain/types/championships";
 import {
   applyPromotionRelegationAction,
   recordChampionshipResultAction,
+  reopenChampionshipRegistrationAction,
   updateChampionshipStatusAction,
 } from "@/modules/championships/actions";
+import type { ProfilePick } from "@/modules/championships/repository";
+import { ChampionshipEntriesPanel } from "@/app/[locale]/(club)/club/leagues/[leagueId]/championship-entries-panel";
 
 type Props = {
   locale: string;
@@ -22,6 +25,7 @@ type Props = {
   entries: LeagueEntry[];
   results: LeagueResult[];
   movements: LeagueMovement[];
+  clubPlayers: ProfilePick[];
 };
 
 export function ChampionshipStaffPanel({
@@ -32,6 +36,7 @@ export function ChampionshipStaffPanel({
   entries,
   results,
   movements,
+  clubPlayers,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -71,6 +76,25 @@ export function ChampionshipStaffPanel({
   }, [divisions, entries, results, league.pointsPerWin, league.pointsPerLoss]);
 
   const divisionEntries = entries.filter((e) => e.divisionId === divisionId);
+  const totalTeams = entries.length;
+  const playerLeagueUrl = `/${locale}/leagues/${league.id}`;
+  const canRecordResults =
+    league.status === "active" && divisionEntries.length >= 2 && totalTeams >= 2;
+
+  const onReopenRegistration = async () => {
+    setError("");
+    setPending(true);
+    try {
+      const res = await reopenChampionshipRegistrationAction({ locale, leagueId: league.id });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setPending(false);
+    }
+  };
 
   const runStatus = async (status: ChampionshipStatus) => {
     setError("");
@@ -128,6 +152,44 @@ export function ChampionshipStaffPanel({
 
   return (
     <div className="space-y-6">
+      {league.status === "registration_open" ? (
+        <div className="rounded-2xl border border-sky-400/30 bg-sky-500/10 p-4 space-y-2">
+          <p className="text-sm text-sky-100">{labels.leaguesDetailWorkflowRegistration}</p>
+          <p className="text-xs text-sky-200/80">
+            {labels.leaguesDetailPlayerLink}{" "}
+            <a href={playerLeagueUrl} className="font-bold underline" target="_blank" rel="noreferrer">
+              {playerLeagueUrl}
+            </a>
+          </p>
+        </div>
+      ) : null}
+
+      {league.status === "active" && totalTeams < 2 ? (
+        <div className="rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 space-y-3">
+          <p className="text-sm text-amber-100">{labels.leaguesDetailActiveNoTeams}</p>
+          {results.length === 0 ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={onReopenRegistration}
+              className="rounded-xl border border-amber-300/50 px-4 py-2 text-xs font-bold text-amber-100"
+            >
+              {labels.leaguesDetailReopenRegistration}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <ChampionshipEntriesPanel
+        locale={locale}
+        leagueId={league.id}
+        leagueStatus={league.status}
+        divisions={divisions}
+        entries={entries}
+        clubPlayers={clubPlayers}
+        labels={labels}
+      />
+
       <div className="flex flex-wrap gap-2">
         {league.status === "draft" ? (
           <button
@@ -142,9 +204,10 @@ export function ChampionshipStaffPanel({
         {league.status === "registration_open" ? (
           <button
             type="button"
-            disabled={pending}
+            disabled={pending || totalTeams < 2}
             onClick={() => runStatus("active")}
-            className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-black"
+            className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-black disabled:opacity-50"
+            title={totalTeams < 2 ? labels.leaguesDetailStartSeasonBlocked : undefined}
           >
             {labels.leaguesDetailStartSeason}
           </button>
@@ -210,7 +273,7 @@ export function ChampionshipStaffPanel({
         );
       })}
 
-      {league.status === "active" ? (
+      {league.status === "active" && canRecordResults ? (
         <form
           onSubmit={onRecordResult}
           className="rounded-2xl border border-[var(--border)] bg-black/20 p-4 space-y-3"
@@ -283,6 +346,8 @@ export function ChampionshipStaffPanel({
             {pending ? labels.leaguesRecordPending : labels.leaguesRecordCta}
           </button>
         </form>
+      ) : league.status === "active" && totalTeams >= 2 && divisionEntries.length < 2 ? (
+        <p className="text-sm text-[var(--foreground-muted)]">{labels.leaguesDetailRecordNeedsTwoTeams}</p>
       ) : null}
 
       {movements.length > 0 ? (

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { fetchClubParticipantsForDateRange } from "@/modules/bookings/repository";
 import type {
   ChampionshipStatus,
   ChampionshipSummary,
@@ -8,6 +9,8 @@ import type {
   LeagueResult,
 } from "@/domain/types/championships";
 import { formatChampionshipEntryLabel } from "@/domain/types/championships";
+
+export type ProfilePick = { id: string; displayName: string | null };
 
 function mapLeagueRow(row: Record<string, unknown>): ChampionshipSummary {
   return {
@@ -34,8 +37,6 @@ function mapDivisionRow(row: Record<string, unknown>): LeagueDivision {
     relegationSlots: Number(row.relegation_slots ?? 0),
   };
 }
-
-export type ProfilePick = { id: string; displayName: string | null };
 
 export async function listChampionshipsForClub(clubId: string): Promise<ChampionshipSummary[]> {
   const supabase = await createSupabaseServerClient();
@@ -222,10 +223,89 @@ export async function listMovementsForLeague(leagueId: string): Promise<LeagueMo
   });
 }
 
+export async function listClubPlayerPicksForChampionship(
+  clubId: string,
+  excludeUserId?: string,
+  limit = 60,
+): Promise<ProfilePick[]> {
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(start.getDate() - 90);
+  const startYmd = start.toISOString().slice(0, 10);
+  const endYmd = today.toISOString().slice(0, 10);
+
+  const participantRows = await fetchClubParticipantsForDateRange(clubId, startYmd, endYmd);
+  const ids = [
+    ...new Set(
+      participantRows
+        .map((row) => row.player_id)
+        .filter((id): id is string => Boolean(id) && id !== excludeUserId),
+    ),
+  ].slice(0, limit);
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.from("profiles").select("id, display_name").in("id", ids);
+
+  if (error) {
+    return [];
+  }
+
+  const byId = new Map(
+    (data ?? []).map((row) => [
+      String((row as { id: string }).id),
+      (row as { display_name?: string | null }).display_name ?? null,
+    ]),
+  );
+
+  return ids
+    .map((id) => ({ id, displayName: byId.get(id) ?? null }))
+    .filter((p) => p.displayName)
+    .sort((a, b) => (a.displayName ?? "").localeCompare(b.displayName ?? ""));
+}
+
+/** Joueurs du club (réservations récentes), avec repli sur le répertoire global pour le staff. */
+export async function listStaffPlayerPicksForChampionship(
+  clubId: string,
+  limit = 60,
+): Promise<ProfilePick[]> {
+  const clubPlayers = await listClubPlayerPicksForChampionship(clubId, undefined, limit);
+  if (clubPlayers.length > 0) {
+    return clubPlayers;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, display_name")
+    .not("display_name", "is", null)
+    .order("display_name", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    return [];
+  }
+
+  return (data ?? []).map((row) => ({
+    id: String((row as { id: string }).id),
+    displayName: (row as { display_name?: string | null }).display_name ?? null,
+  }));
+}
+
 export async function listPartnerCandidatesForChampionship(
   userId: string,
+  clubId?: string,
   limit = 40,
 ): Promise<ProfilePick[]> {
+  if (clubId) {
+    const clubPlayers = await listClubPlayerPicksForChampionship(clubId, userId, limit);
+    if (clubPlayers.length > 0) {
+      return clubPlayers;
+    }
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
@@ -243,6 +323,20 @@ export async function listPartnerCandidatesForChampionship(
     id: String((row as { id: string }).id),
     displayName: (row as { display_name?: string | null }).display_name ?? null,
   }));
+}
+
+export async function countActiveEntriesForLeague(leagueId: string): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const { count, error } = await supabase
+    .from("league_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("league_id", leagueId)
+    .neq("status", "withdrawn");
+
+  if (error) {
+    return 0;
+  }
+  return count ?? 0;
 }
 
 export async function playerAlreadyInChampionship(leagueId: string, userId: string): Promise<boolean> {

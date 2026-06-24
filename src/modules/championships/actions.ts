@@ -12,6 +12,7 @@ import { formatChampionshipEntryLabel } from "@/domain/types/championships";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { clubService } from "@/modules/clubs/service";
 import {
+  countActiveEntriesForLeague,
   getChampionshipById,
   listDivisionsForLeague,
   listEntriesForLeague,
@@ -137,10 +138,197 @@ export async function updateChampionshipStatusAction(input: {
     return { ok: false, error: "Accès club refusé." };
   }
 
+  if (input.status === "active") {
+    const entryCount = await countActiveEntriesForLeague(input.leagueId);
+    if (entryCount < 2) {
+      return {
+        ok: false,
+        error:
+          "Inscrivez au moins 2 équipes avant de démarrer la saison (formulaire ci-dessous ou lien joueurs).",
+      };
+    }
+
+    const { error: activateError } = await supabase
+      .from("league_entries")
+      .update({ status: "active" })
+      .eq("league_id", input.leagueId)
+      .eq("status", "registered");
+
+    if (activateError) {
+      return { ok: false, error: activateError.message };
+    }
+  }
+
   const { error } = await supabase
     .from("competitive_leagues")
     .update({ status: input.status })
     .eq("id", input.leagueId);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidateChampionshipPaths(loc, input.leagueId);
+  return { ok: true };
+}
+
+export async function reopenChampionshipRegistrationAction(input: {
+  locale: string;
+  leagueId: string;
+}): Promise<ActionResult> {
+  const loc = input.locale?.trim() || "fr";
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, error: "Connexion requise." };
+  }
+
+  const league = await getChampionshipById(input.leagueId);
+  if (!league) {
+    return { ok: false, error: "Championnat introuvable." };
+  }
+
+  const club = await requireManagedClub(user.id);
+  if (!club.ok || club.clubId !== league.clubId) {
+    return { ok: false, error: "Accès club refusé." };
+  }
+
+  if (league.status !== "active") {
+    return { ok: false, error: "Seule une saison en cours peut être rouverte." };
+  }
+
+  const results = await listResultsForLeague(input.leagueId);
+  if (results.length > 0) {
+    return { ok: false, error: "Impossible : des matchs ont déjà été enregistrés." };
+  }
+
+  const { error } = await supabase
+    .from("competitive_leagues")
+    .update({ status: "registration_open" })
+    .eq("id", input.leagueId);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidateChampionshipPaths(loc, input.leagueId);
+  return { ok: true };
+}
+
+export async function registerChampionshipEntryAsStaffAction(input: {
+  locale: string;
+  leagueId: string;
+  divisionId: string;
+  player1Id: string;
+  player2Id: string;
+  teamName?: string | null;
+}): Promise<ActionResult> {
+  const loc = input.locale?.trim() || "fr";
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, error: "Connexion requise." };
+  }
+
+  const league = await getChampionshipById(input.leagueId);
+  if (!league) {
+    return { ok: false, error: "Championnat introuvable." };
+  }
+
+  if (league.status === "completed" || league.status === "cancelled") {
+    return { ok: false, error: "Ce championnat n'accepte plus d'inscriptions." };
+  }
+
+  const club = await requireManagedClub(user.id);
+  if (!club.ok || club.clubId !== league.clubId) {
+    return { ok: false, error: "Accès club refusé." };
+  }
+
+  const player1Id = input.player1Id?.trim();
+  const player2Id = input.player2Id?.trim();
+  if (!player1Id || !player2Id || player1Id === player2Id) {
+    return { ok: false, error: "Choisissez deux joueurs différents." };
+  }
+
+  const divisions = await listDivisionsForLeague(input.leagueId);
+  if (!divisions.some((d) => d.id === input.divisionId)) {
+    return { ok: false, error: "Division invalide." };
+  }
+
+  const { data: existing } = await supabase
+    .from("league_entries")
+    .select("id")
+    .eq("league_id", input.leagueId)
+    .neq("status", "withdrawn")
+    .or(
+      `player1_id.eq.${player1Id},player2_id.eq.${player1Id},player1_id.eq.${player2Id},player2_id.eq.${player2Id}`,
+    )
+    .limit(1);
+
+  if (existing?.length) {
+    return { ok: false, error: "Un des joueurs est déjà inscrit dans ce championnat." };
+  }
+
+  const entryStatus = league.status === "active" ? "active" : "registered";
+
+  const { error } = await supabase.from("league_entries").insert({
+    league_id: input.leagueId,
+    division_id: input.divisionId,
+    player1_id: player1Id,
+    player2_id: player2Id,
+    team_name: input.teamName?.trim() || null,
+    status: entryStatus,
+  });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidateChampionshipPaths(loc, input.leagueId);
+  return { ok: true };
+}
+
+export async function withdrawChampionshipEntryAsStaffAction(input: {
+  locale: string;
+  leagueId: string;
+  entryId: string;
+}): Promise<ActionResult> {
+  const loc = input.locale?.trim() || "fr";
+  const supabase = await createSupabaseServerActionClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, error: "Connexion requise." };
+  }
+
+  const league = await getChampionshipById(input.leagueId);
+  if (!league) {
+    return { ok: false, error: "Championnat introuvable." };
+  }
+
+  const club = await requireManagedClub(user.id);
+  if (!club.ok || club.clubId !== league.clubId) {
+    return { ok: false, error: "Accès club refusé." };
+  }
+
+  const results = await listResultsForLeague(input.leagueId);
+  const involved = results.some(
+    (r) => r.homeEntryId === input.entryId || r.awayEntryId === input.entryId,
+  );
+  if (involved) {
+    return { ok: false, error: "Cette équipe a déjà des matchs enregistrés." };
+  }
+
+  const { error } = await supabase
+    .from("league_entries")
+    .update({ status: "withdrawn" })
+    .eq("id", input.entryId)
+    .eq("league_id", input.leagueId);
 
   if (error) {
     return { ok: false, error: error.message };

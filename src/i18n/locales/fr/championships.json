@@ -48,5 +48,22 @@
   "leaguesRecordCta": "Enregistrer le match",
   "leaguesRecordPending": "Enregistrement…",
   "dashboardLeaguesCta": "Gérer les ligues",
-  "dashboardLeaguesHint": "Lancez un championnat par divisions pour garder vos joueurs actifs toute la saison."
+  "dashboardLeaguesHint": "Lancez un championnat par divisions pour garder vos joueurs actifs toute la saison.",
+  "leaguesDetailManageEntries": "Inscrire des équipes",
+  "leaguesDetailManageEntriesHint": "Ajoutez les binômes manuellement ou partagez le lien joueurs pour les inscriptions en ligne.",
+  "leaguesDetailAddTeam": "Ajouter une équipe",
+  "leaguesDetailAddTeamCta": "Inscrire l'équipe",
+  "leaguesDetailAddTeamPending": "Inscription…",
+  "leaguesDetailTeamNameOptional": "Nom d'équipe (optionnel)",
+  "leaguesDetailPlayer1": "Joueur 1",
+  "leaguesDetailPlayer2": "Joueur 2",
+  "leaguesDetailWithdrawEntry": "Retirer",
+  "leaguesDetailNoTeamsYet": "Aucune équipe inscrite. Ajoutez au moins 2 équipes avant de démarrer la saison.",
+  "leaguesDetailNoClubPlayers": "Aucun joueur récent trouvé au club. Les joueurs doivent avoir réservé un court ces 90 derniers jours.",
+  "leaguesDetailWorkflowRegistration": "Étape 1 : inscrivez les équipes. Étape 2 : démarrez la saison une fois au moins 2 binômes inscrits.",
+  "leaguesDetailPlayerLink": "Lien d'inscription joueurs :",
+  "leaguesDetailActiveNoTeams": "La saison est démarrée sans équipe inscrite. Inscrivez des équipes ci-dessous ou rouvrez les inscriptions.",
+  "leaguesDetailReopenRegistration": "Rouvrir les inscriptions",
+  "leaguesDetailStartSeasonBlocked": "Au moins 2 équipes requises",
+  "leaguesDetailRecordNeedsTwoTeams": "Au moins 2 équipes dans la division sélectionnée pour saisir un résultat."
 }

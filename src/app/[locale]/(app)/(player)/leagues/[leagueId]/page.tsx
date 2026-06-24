@@ -49,7 +49,7 @@ export default async function PlayerLeagueDetailPage({ params }: Props) {
     listEntriesForLeague(leagueId),
     listResultsForLeague(leagueId),
     user ? playerAlreadyInChampionship(leagueId, user.id) : Promise.resolve(false),
-    user ? listPartnerCandidatesForChampionship(user.id) : Promise.resolve([]),
+    user ? listPartnerCandidatesForChampionship(user.id, league.clubId) : Promise.resolve([]),
   ]);
 
   const canRegister = league.status === "registration_open" && Boolean(user) && !alreadyRegistered;

@@ -48,5 +48,22 @@
   "leaguesRecordCta": "Save match",
   "leaguesRecordPending": "Saving…",
   "dashboardLeaguesCta": "Manage leagues",
-  "dashboardLeaguesHint": "Run a division-based championship to keep players engaged all season."
+  "dashboardLeaguesHint": "Run a division-based championship to keep players engaged all season.",
+  "leaguesDetailManageEntries": "Register teams",
+  "leaguesDetailManageEntriesHint": "Add pairs manually or share the player link for online registration.",
+  "leaguesDetailAddTeam": "Add a team",
+  "leaguesDetailAddTeamCta": "Register team",
+  "leaguesDetailAddTeamPending": "Registering…",
+  "leaguesDetailTeamNameOptional": "Team name (optional)",
+  "leaguesDetailPlayer1": "Player 1",
+  "leaguesDetailPlayer2": "Player 2",
+  "leaguesDetailWithdrawEntry": "Remove",
+  "leaguesDetailNoTeamsYet": "No team registered yet. Add at least 2 teams before starting the season.",
+  "leaguesDetailNoClubPlayers": "No recent players at the club. Players must have booked a court in the last 90 days.",
+  "leaguesDetailWorkflowRegistration": "Step 1: register teams. Step 2: start the season once at least 2 pairs are registered.",
+  "leaguesDetailPlayerLink": "Player registration link:",
+  "leaguesDetailActiveNoTeams": "Season started with no teams. Register teams below or reopen registration.",
+  "leaguesDetailReopenRegistration": "Reopen registration",
+  "leaguesDetailStartSeasonBlocked": "At least 2 teams required",
+  "leaguesDetailRecordNeedsTwoTeams": "At least 2 teams in the selected division to record a result."
 }

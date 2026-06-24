@@ -6,6 +6,7 @@ import { requireUser } from "@/modules/auth/guards/require-user";
 import { clubService } from "@/modules/clubs/service";
 import {
   getChampionshipById,
+  listStaffPlayerPicksForChampionship,
   listDivisionsForLeague,
   listEntriesForLeague,
   listMovementsForLeague,
@@ -41,11 +42,12 @@ export default async function ClubLeagueDetailPage({ params }: Props) {
   const league = await getChampionshipById(leagueId);
   if (!league || league.clubId !== managed.id) notFound();
 
-  const [divisions, entries, results, movements] = await Promise.all([
+  const [divisions, entries, results, movements, clubPlayers] = await Promise.all([
     listDivisionsForLeague(leagueId),
     listEntriesForLeague(leagueId),
     listResultsForLeague(leagueId),
     listMovementsForLeague(leagueId),
+    listStaffPlayerPicksForChampionship(league.clubId),
   ]);
 
   return (
@@ -69,6 +71,7 @@ export default async function ClubLeagueDetailPage({ params }: Props) {
         entries={entries}
         results={results}
         movements={movements}
+        clubPlayers={clubPlayers}
       />
     </div>
   );
