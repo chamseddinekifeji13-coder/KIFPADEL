@@ -230,9 +230,6 @@ $$;
 REVOKE ALL ON FUNCTION public.kif_complete_top_up(uuid, text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.kif_complete_top_up(uuid, text, text) TO service_role;
 
--- Compatibilité appel 1 argument (service_role / dev auto-complete)
-GRANT EXECUTE ON FUNCTION public.kif_complete_top_up(uuid) TO service_role;
-
 -- -----------------------------------------------------------------------------
 -- create_booking_atomic : commission sur crédit club
 -- -----------------------------------------------------------------------------
