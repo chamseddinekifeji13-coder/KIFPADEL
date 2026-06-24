@@ -158,28 +158,51 @@ export const publicEnv: PublicEnv = {
   })(),
 };
 
-// Client-side diagnostic for debugging Vercel environment variables
-if (typeof window !== "undefined") {
-  const missing = [];
-  if (publicEnv.supabaseUrl.includes("your-project-id") || publicEnv.supabaseUrl.includes("MISSING")) {
+function isClearlyMissingSupabasePublicConfig(url: string, anonKey: string): string[] {
+  const missing: string[] = [];
+  if (
+    url.includes("your-project-id") ||
+    url.includes("MISSING") ||
+    url.includes("build-placeholder")
+  ) {
     missing.push("NEXT_PUBLIC_SUPABASE_URL");
   }
-  if (publicEnv.supabaseAnonKey.includes("your-anon") || publicEnv.supabaseAnonKey.includes("MISSING")) {
+  if (
+    anonKey.includes("your-anon") ||
+    anonKey.includes("MISSING") ||
+    anonKey.includes("build-placeholder")
+  ) {
     missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   }
-  
+  return missing;
+}
+
+function isLikelyInvalidSupabaseAnonKey(anonKey: string): boolean {
+  if (!anonKey.trim()) return true;
+  if (anonKey.startsWith("sb_publishable_")) {
+    return anonKey.length < 30;
+  }
+  if (anonKey.startsWith("eyJ")) {
+    return anonKey.length < 100;
+  }
+  return anonKey.length < 20;
+}
+
+// Diagnostic navigateur (dev uniquement) — les NEXT_PUBLIC_* sont figées au build Vercel.
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  const missing = isClearlyMissingSupabasePublicConfig(
+    publicEnv.supabaseUrl,
+    publicEnv.supabaseAnonKey,
+  );
+
   if (missing.length > 0) {
     console.warn(
-      `[Kifpadel] ⚠️ Configuration d'authentification incomplète ! Variables manquantes : ${missing.join(", ")}. `
+      `[Kifpadel] Configuration Supabase incomplète côté client : ${missing.join(", ")}.`,
     );
-  } else {
-    // Basic format check
-    if (!publicEnv.supabaseUrl.startsWith("https://")) {
-      console.error("[Kifpadel] ❌ NEXT_PUBLIC_SUPABASE_URL doit commencer par https://");
-    }
-    if (publicEnv.supabaseAnonKey.length < 50) {
-      console.error("[Kifpadel] ❌ NEXT_PUBLIC_SUPABASE_ANON_KEY semble trop courte ou invalide.");
-    }
+  } else if (!publicEnv.supabaseUrl.startsWith("https://")) {
+    console.warn("[Kifpadel] NEXT_PUBLIC_SUPABASE_URL doit commencer par https://");
+  } else if (isLikelyInvalidSupabaseAnonKey(publicEnv.supabaseAnonKey)) {
+    console.warn("[Kifpadel] NEXT_PUBLIC_SUPABASE_ANON_KEY semble invalide ou tronquée.");
   }
 }
 
