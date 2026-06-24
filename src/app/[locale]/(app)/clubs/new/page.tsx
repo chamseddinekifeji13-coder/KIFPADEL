@@ -11,6 +11,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { createClubAction } from "@/modules/clubs/actions/create-club";
+import { ClubTermsConsentField } from "@/components/features/clubs/club-terms-consent-field";
  
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,9 @@ export default async function NewClubPage({ params, searchParams }: NewClubPageP
         ? dictionary.club.createMembershipFailed
         : error === "create_failed"
           ? dictionary.club.createFailed
-          : null;
+          : error === "terms_required" || error === "terms_version"
+            ? dictionary.club.createTermsRequired
+            : null;
 
   return (
     <section className="space-y-3">
@@ -162,6 +165,17 @@ export default async function NewClubPage({ params, searchParams }: NewClubPageP
             </div>
           </div>
           <p className="text-[11px] text-slate-500">{dictionary.club.createContactHint}</p>
+
+          <ClubTermsConsentField
+            locale={locale}
+            variant="light"
+            labelBefore={dictionary.club.createTermsLabelBefore}
+            labelBetween={dictionary.club.createTermsLabelBetween}
+            labelAfter={dictionary.club.createTermsLabelAfter}
+            charterLinkLabel={dictionary.club.createTermsCharterLink}
+            privacyLinkLabel={dictionary.club.createTermsPrivacyLink}
+            className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+          />
 
           <Button type="submit" className="w-full">
             {dictionary.club.createCta}

@@ -5,6 +5,10 @@ import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import {
+  CURRENT_CLUB_TERMS_VERSION,
+  isAcceptedClubTermsVersion,
+} from "@/domain/legal/club-terms";
+import {
   optionalTrimmedString,
   parseNonNegativeInt,
 } from "@/lib/utils/club-form-parse";
@@ -286,9 +290,20 @@ export async function createClubAction(formData: FormData) {
   const contactName = optionalTrimmedString(formData.get("contact_name"));
   const contactPhone = optionalTrimmedString(formData.get("contact_phone"));
   const contactEmail = optionalTrimmedString(formData.get("contact_email"));
+  const termsAccepted = String(formData.get("terms_accepted") ?? "").trim() === "true";
+  const termsVersion = String(formData.get("terms_version") ?? "").trim();
+  const redirectBase = String(formData.get("redirect_path") ?? "clubs/new").trim() || "clubs/new";
 
   if (!name || !city) {
-    redirect(`/${locale}/clubs/new?error=missing_fields`);
+    redirect(`/${locale}/${redirectBase}?error=missing_fields`);
+  }
+
+  if (!termsAccepted) {
+    redirect(`/${locale}/${redirectBase}?error=terms_required`);
+  }
+
+  if (!isAcceptedClubTermsVersion(termsVersion)) {
+    redirect(`/${locale}/${redirectBase}?error=terms_version`);
   }
 
   const supabase = await createSupabaseServerActionClient();
@@ -298,7 +313,7 @@ export async function createClubAction(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/${locale}/auth/sign-in?error=auth_required&next=/${locale}/clubs/new`);
+    redirect(`/${locale}/auth/sign-in?error=auth_required&next=/${locale}/${redirectBase}`);
   }
 
   const clubPayload: Record<string, unknown> = {
@@ -307,6 +322,8 @@ export async function createClubAction(formData: FormData) {
     is_active: true,
     indoor_courts_count: indoorCourts,
     outdoor_courts_count: outdoorCourts,
+    terms_accepted_at: new Date().toISOString(),
+    terms_version: CURRENT_CLUB_TERMS_VERSION,
   };
   if (address) clubPayload.address = address;
   if (contactName) clubPayload.contact_name = contactName;
@@ -317,14 +334,14 @@ export async function createClubAction(formData: FormData) {
 
   if (!clubId) {
     console.error("[createClubAction] club creation failed", clubError);
-    redirect(`/${locale}/clubs/new?error=create_failed`);
+    redirect(`/${locale}/${redirectBase}?error=create_failed`);
   }
 
   const managerAssignment = await assignClubManager(adminClient, clubId, user.id);
   if (!managerAssignment.ok) {
     console.error("[createClubAction] membership assignment failed", managerAssignment.errors);
     await adminClient.from("clubs").delete().eq("id", clubId);
-    redirect(`/${locale}/clubs/new?error=membership_failed`);
+    redirect(`/${locale}/${redirectBase}?error=membership_failed`);
   }
 
   await setPrimaryClubIfEmpty(adminClient, user.id, clubId);

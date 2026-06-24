@@ -17,7 +17,7 @@
   "promotionPanelSubtitle": "Lien d'inscription générique — sans code parrain joueur.",
   "promotionClubPanelTitle": "Inscrivez votre club gratuitement",
   "promotionClubPanelSubtitle": "Lien d'inscription avec redirection vers la création de club — sans frais ni engagement.",
-  "promotionClubHint": "Le message précise que l'inscription est gratuite et sans engagement. Après inscription, le club est redirigé vers la page de création de profil club.",
+  "promotionClubHint": "Le message précise que l'inscription est gratuite et sans engagement, et inclut les liens vers la charte club et la politique de confidentialité. L'acceptation est obligatoire à la création du club.",
   "promotionPreviewTitle": "Aperçu du message",
   "promotionCopyCta": "Copier le message",
   "promotionWhatsappCta": "WhatsApp",

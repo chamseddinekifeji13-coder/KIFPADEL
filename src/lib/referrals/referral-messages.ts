@@ -13,6 +13,8 @@ type BuildReferralMessageInput = {
   referrerName?: string;
   /** Lien connexion (variant club) pour les gestionnaires déjà inscrits. */
   secondaryUrl?: string;
+  charterUrl?: string;
+  privacyUrl?: string;
 };
 
 export function buildReferralShareCopy(input: BuildReferralMessageInput): ReferralShareCopy {
@@ -21,10 +23,18 @@ export function buildReferralShareCopy(input: BuildReferralMessageInput): Referr
 
   if (input.variant === "club") {
     const signInUrl = input.secondaryUrl?.trim() || input.url;
+    const charterUrl = input.charterUrl?.trim();
+    const privacyUrl = input.privacyUrl?.trim();
+    const legalBlock =
+      charterUrl && privacyUrl
+        ? isEn
+          ? `\n\nClub charter:\n${charterUrl}\n\nClub privacy policy:\n${privacyUrl}`
+          : `\n\nCharte club :\n${charterUrl}\n\nPolitique de confidentialité club :\n${privacyUrl}`
+        : "";
     const title = isEn ? "Kifpadel — free club profile" : "Kifpadel — profil club gratuit";
     const text = isEn
-      ? `Hello,\n\nKifpadel invites your club to join Tunisia's padel network and create your club profile for free.\n\n✅ Free club account creation\n✅ No sign-up fees\n✅ No commitment\n\nStep 1 — Create your account:\n${input.url}\n\nStep 2 — Already registered? Sign in to create your club:\n${signInUrl}`
-      : `Bonjour,\n\nKifpadel vous invite à rejoindre le réseau padel en Tunisie et à créer gratuitement le profil de votre club.\n\n✅ Création de compte club gratuite\n✅ Aucun frais à l'inscription\n✅ Sans engagement\n\nÉtape 1 — Créez votre compte :\n${input.url}\n\nÉtape 2 — Déjà inscrit ? Connectez-vous pour créer votre club :\n${signInUrl}`;
+      ? `Hello,\n\nKifpadel invites your club to join Tunisia's padel network and create your club profile for free.\n\n✅ Free club account creation\n✅ No sign-up fees\n✅ No commitment\n\nStep 1 — Create your account:\n${input.url}\n\nStep 2 — Already registered? Sign in to create your club:\n${signInUrl}${legalBlock}`
+      : `Bonjour,\n\nKifpadel vous invite à rejoindre le réseau padel en Tunisie et à créer gratuitement le profil de votre club.\n\n✅ Création de compte club gratuite\n✅ Aucun frais à l'inscription\n✅ Sans engagement\n\nÉtape 1 — Créez votre compte :\n${input.url}\n\nÉtape 2 — Déjà inscrit ? Connectez-vous pour créer votre club :\n${signInUrl}${legalBlock}`;
     const payload = `${text}`;
     return { title, text, payload };
   }

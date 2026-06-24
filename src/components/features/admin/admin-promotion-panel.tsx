@@ -10,6 +10,8 @@ type AdminPromotionPanelProps = {
   signUpUrl: string;
   variant?: "platform" | "club";
   secondaryUrl?: string;
+  charterUrl?: string;
+  privacyUrl?: string;
   labels: ReferralPanelLabels;
 };
 
@@ -18,6 +20,8 @@ export function AdminPromotionPanel({
   signUpUrl,
   variant = "platform",
   secondaryUrl,
+  charterUrl,
+  privacyUrl,
   labels,
 }: AdminPromotionPanelProps) {
   return (
@@ -26,6 +30,8 @@ export function AdminPromotionPanel({
       signUpUrl={signUpUrl}
       variant={variant}
       secondaryUrl={secondaryUrl}
+      charterUrl={charterUrl}
+      privacyUrl={privacyUrl}
       labels={labels}
     />
   );

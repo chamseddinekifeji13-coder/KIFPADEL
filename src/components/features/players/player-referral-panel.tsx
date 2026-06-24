@@ -27,6 +27,8 @@ type ReferralSharePanelProps = {
   variant: "player" | "platform" | "club";
   referrerName?: string;
   secondaryUrl?: string;
+  charterUrl?: string;
+  privacyUrl?: string;
   labels: ReferralPanelLabels;
   className?: string;
 };
@@ -37,6 +39,8 @@ export function ReferralSharePanel({
   variant,
   referrerName,
   secondaryUrl,
+  charterUrl,
+  privacyUrl,
   labels,
   className,
 }: ReferralSharePanelProps) {
@@ -51,8 +55,10 @@ export function ReferralSharePanel({
         variant,
         referrerName,
         secondaryUrl,
+        charterUrl,
+        privacyUrl,
       }),
-    [locale, signUpUrl, variant, referrerName, secondaryUrl],
+    [locale, signUpUrl, variant, referrerName, secondaryUrl, charterUrl, privacyUrl],
   );
 
   const onCopy = async () => {

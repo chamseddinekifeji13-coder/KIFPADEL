@@ -8,6 +8,7 @@ import {
   buildPlatformClubSignUpUrl,
   buildPlatformSignUpUrl,
 } from "@/lib/referrals/referral-url";
+import { buildClubCharterUrl, buildClubPrivacyUrl } from "@/lib/legal/club-legal-urls";
 import { notFound } from "next/navigation";
 import { Megaphone } from "lucide-react";
 
@@ -23,6 +24,8 @@ export default async function AdminPromotionPage({ params }: Props) {
   const signUpUrl = buildPlatformSignUpUrl(publicEnv.siteUrl, locale);
   const clubSignUpUrl = buildPlatformClubSignUpUrl(publicEnv.siteUrl, locale);
   const clubSignInUrl = buildPlatformClubSignInUrl(publicEnv.siteUrl, locale);
+  const clubCharterUrl = buildClubCharterUrl(publicEnv.siteUrl, locale);
+  const clubPrivacyUrl = buildClubPrivacyUrl(publicEnv.siteUrl, locale);
   const panelLabels = {
     previewTitle: a.promotionPreviewTitle,
     copyCta: a.promotionCopyCta,
@@ -65,6 +68,8 @@ export default async function AdminPromotionPage({ params }: Props) {
           locale={locale}
           signUpUrl={clubSignUpUrl}
           secondaryUrl={clubSignInUrl}
+          charterUrl={clubCharterUrl}
+          privacyUrl={clubPrivacyUrl}
           variant="club"
           labels={{
             ...panelLabels,

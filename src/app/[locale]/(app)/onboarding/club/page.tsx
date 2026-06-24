@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { isLocale } from "@/i18n/config";
+import { getDictionary } from "@/i18n/get-dictionary";
 import { requireUser } from "@/modules/auth/guards/require-user";
 import { createClubAction } from "@/modules/clubs/actions/create-club";
+import { ClubTermsConsentField } from "@/components/features/clubs/club-terms-consent-field";
 
 type ClubOnboardingPageProps = {
   params: Promise<{ locale: string }>;
@@ -29,23 +31,21 @@ export default async function ClubOnboardingPage({
   if (!isLocale(locale)) notFound();
   await requireUser({ locale, redirectPath: "onboarding/club" });
 
+  const dictionary = await getDictionary(locale);
+  const c = dictionary.club;
   const { error } = await searchParams;
   const isEn = locale === "en";
 
   const errorMessage =
     error === "missing_fields"
-      ? isEn
-        ? "Please fill in club name and city."
-        : "Merci de renseigner le nom du club et la ville."
+      ? c.createMissingFields
       : error === "membership_failed"
-        ? isEn
-          ? "Club was created then rolled back due to manager assignment failure."
-          : "Le club a été créé puis annulé car l'assignation manager a échoué."
+        ? c.createMembershipFailed
         : error === "create_failed"
-          ? isEn
-            ? "Unable to create club for now."
-            : "Impossible de créer le club pour le moment."
-          : null;
+          ? c.createFailed
+          : error === "terms_required" || error === "terms_version"
+            ? c.createTermsRequired
+            : null;
 
   return (
     <section className="mx-auto w-full max-w-xl space-y-4">
@@ -74,6 +74,7 @@ export default async function ClubOnboardingPage({
         className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
       >
         <input type="hidden" name="locale" value={locale} />
+        <input type="hidden" name="redirect_path" value="onboarding/club" />
 
         <div className="space-y-1">
           <label htmlFor="name" className="text-xs font-medium text-[var(--foreground-muted)]">
@@ -195,6 +196,17 @@ export default async function ClubOnboardingPage({
             />
           </div>
         </div>
+
+        <ClubTermsConsentField
+          locale={locale}
+          variant="dark"
+          labelBefore={c.createTermsLabelBefore}
+          labelBetween={c.createTermsLabelBetween}
+          labelAfter={c.createTermsLabelAfter}
+          charterLinkLabel={c.createTermsCharterLink}
+          privacyLinkLabel={c.createTermsPrivacyLink}
+          className="rounded-xl border border-[var(--border)] bg-black/20 p-3"
+        />
 
         <button
           type="submit"

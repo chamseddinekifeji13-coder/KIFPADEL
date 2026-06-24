@@ -17,7 +17,7 @@
   "promotionPanelSubtitle": "Generic sign-up link — no player referral code.",
   "promotionClubPanelTitle": "Register your club for free",
   "promotionClubPanelSubtitle": "Sign-up link that redirects to club creation — no fees, no commitment.",
-  "promotionClubHint": "The message states that sign-up is free with no commitment. After registration, the club manager is redirected to the club profile creation page.",
+  "promotionClubHint": "The message states that sign-up is free with no commitment, and includes links to the club charter and privacy policy. Acceptance is required when creating a club.",
   "promotionPreviewTitle": "Message preview",
   "promotionCopyCta": "Copy message",
   "promotionWhatsappCta": "WhatsApp",
