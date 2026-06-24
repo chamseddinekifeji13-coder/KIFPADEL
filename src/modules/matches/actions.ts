@@ -12,7 +12,10 @@ import {
   isActiveMatchParticipantRow,
   resolveViewerParticipationPhase,
 } from "@/domain/rules/match-participant";
-import { resolveCourtPlayerPrice } from "@/domain/rules/court-pricing";
+import {
+  DEFAULT_COURT_PLAYER_PRICE_DT,
+  resolveCourtPlayerPrice,
+} from "@/domain/rules/court-pricing";
 import type { Gender, MatchGenderType } from "@/domain/types/core";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { requireActionUser } from "@/lib/supabase/action-auth";
@@ -37,6 +40,14 @@ export type DeclineMatchParticipationResult = { ok: true } | { ok: false; error:
 const DEFAULT_PRICE_PER_PLAYER = 0;
 /** Durée padel classique, pour colonne ends_at si présente. */
 const MATCH_DURATION_MS = 90 * 60 * 1000;
+
+function normalizeMatchSharePrice(raw: unknown): number {
+  const n = Number(raw);
+  if (Number.isFinite(n) && n > 0) {
+    return Math.round(n * 100) / 100;
+  }
+  return DEFAULT_COURT_PLAYER_PRICE_DT;
+}
 
 async function getActionUser(supabase: SupabaseClient) {
   return requireActionUser(supabase);
@@ -119,8 +130,9 @@ export async function createOpenMatchAction(input: {
     .limit(1)
     .maybeSingle();
 
-  const pricePerPlayer =
-    court != null ? resolveCourtPlayerPrice(court) : DEFAULT_PRICE_PER_PLAYER;
+  const pricePerPlayer = normalizeMatchSharePrice(
+    court != null ? resolveCourtPlayerPrice(court) : DEFAULT_PRICE_PER_PLAYER,
+  );
 
   const base = {
     club_id: clubId,
@@ -130,28 +142,29 @@ export async function createOpenMatchAction(input: {
     match_gender_type: matchGenderType,
   };
 
+  // Important: always try payloads WITH price first to avoid persisting 0 DT.
   const attempts: Record<string, unknown>[] = [
-    { ...base },
     { ...base, price_per_player: pricePerPlayer },
-    { ...base, ends_at: endsAtIso },
     {
       ...base,
       price_per_player: pricePerPlayer,
       ends_at: endsAtIso,
     },
+    { ...base, ends_at: endsAtIso },
+    { ...base },
   ];
 
   if (court?.id) {
     attempts.push(
-      { ...base, court_id: court.id },
       { ...base, court_id: court.id, price_per_player: pricePerPlayer },
-      { ...base, court_id: court.id, ends_at: endsAtIso },
       {
         ...base,
         court_id: court.id,
         price_per_player: pricePerPlayer,
         ends_at: endsAtIso,
       },
+      { ...base, court_id: court.id, ends_at: endsAtIso },
+      { ...base, court_id: court.id },
     );
   }
 
@@ -193,7 +206,7 @@ export async function createOpenMatchAction(input: {
     player_id: user.id,
     team: "A",
     status: "pending",
-    share_price: pricePerPlayer,
+    share_price: normalizeMatchSharePrice(pricePerPlayer),
   });
 
   if (partError) {
@@ -276,7 +289,7 @@ export async function joinOpenMatchAction(input: {
 
   const { data: participantRows, error: participantsError } = await supabase
     .from("match_participants")
-    .select("player_id, team, status, payment_method")
+    .select("player_id, team, status, payment_method, share_price")
     .eq("match_id", matchId);
 
   if (participantsError) {
@@ -288,6 +301,7 @@ export async function joinOpenMatchAction(input: {
     team: string;
     status?: string | null;
     payment_method?: string | null;
+    share_price?: number | string | null;
   }[];
   const activeParticipants = participants.filter((p) => isActiveMatchParticipantRow(p));
 
@@ -344,7 +358,10 @@ export async function joinOpenMatchAction(input: {
     };
   }
 
-  const sharePrice = Number(match.price_per_player ?? DEFAULT_PRICE_PER_PLAYER);
+  const participantShareFallback =
+    participants.find((p) => Number.isFinite(Number(p.share_price)) && Number(p.share_price) > 0)?.share_price ??
+    null;
+  const sharePrice = normalizeMatchSharePrice(participantShareFallback ?? match.price_per_player);
 
   const { error: insError } = await supabase.from("match_participants").insert({
     match_id: matchId,

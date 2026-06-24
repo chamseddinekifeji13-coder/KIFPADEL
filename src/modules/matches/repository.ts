@@ -1,9 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { DEFAULT_COURT_PLAYER_PRICE_DT } from "@/domain/rules/court-pricing";
 import {
   countActiveMatchParticipants,
   isActiveMatchParticipantRow,
-  resolveSharePrice,
   resolveViewerParticipationPhase,
 } from "@/domain/rules/match-participant";
 import {
@@ -94,6 +94,25 @@ export function sortMatchesByStartsAt(matches: MatchWithDetails[]): MatchWithDet
 function filterListableOpenMatches(matches: MatchWithDetails[]): MatchWithDetails[] {
   const floor = Date.now() - OPEN_MATCH_LISTING_GRACE_MS;
   return matches.filter((m) => new Date(m.starts_at).getTime() >= floor);
+}
+
+function resolveMatchListPricePerPlayer(
+  rawMatchPrice: number | string | null | undefined,
+  participants: MatchParticipantRow[],
+): number {
+  const matchPrice = Number(rawMatchPrice);
+  if (Number.isFinite(matchPrice) && matchPrice > 0) {
+    return matchPrice;
+  }
+
+  const participantPrice = participants
+    .map((p) => Number(p.share_price))
+    .find((n) => Number.isFinite(n) && n > 0);
+  if (participantPrice !== undefined) {
+    return participantPrice;
+  }
+
+  return DEFAULT_COURT_PLAYER_PRICE_DT;
 }
 
 async function hydrateMatchRows(
@@ -195,7 +214,7 @@ async function hydrateMatchRows(
       starts_at: row.starts_at,
       ends_at: row.ends_at ?? undefined,
       status: row.status,
-      price_per_player: Number(row.price_per_player ?? 0),
+      price_per_player: resolveMatchListPricePerPlayer(row.price_per_player, parts),
       court_id: row.court_id ?? undefined,
       match_gender_type: coerceMatchGenderType(row.match_gender_type),
       match_participants: parts,
