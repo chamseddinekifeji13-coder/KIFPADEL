@@ -59,7 +59,7 @@ export function SignUpForm({ locale, safeNext, referrerId, labels }: SignUpFormP
     };
 
     try {
-      const response = await fetch("/api/auth/sign-up", {
+      const response = await fetch("/api/register", {
         method: "POST",
         credentials: "same-origin",
         headers: {

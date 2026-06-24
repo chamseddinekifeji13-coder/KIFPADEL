@@ -45,7 +45,7 @@ export function SignInForm({ locale, safeNext, forgotPasswordHref, labels }: Sig
     };
 
     try {
-      const response = await fetch("/api/auth/sign-in", {
+      const response = await fetch("/api/login", {
         method: "POST",
         credentials: "same-origin",
         headers: {

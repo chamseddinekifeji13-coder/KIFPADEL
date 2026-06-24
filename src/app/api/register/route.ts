@@ -16,6 +16,7 @@ function isSignUpBody(body: unknown): body is SignUpInput {
   );
 }
 
+/** Inscription — chemin hors /api/auth/* (conflit avec [locale]/auth/...). */
 export async function POST(request: Request) {
   const { supabase, attachCookies } = await createSupabaseRouteApiClient();
 

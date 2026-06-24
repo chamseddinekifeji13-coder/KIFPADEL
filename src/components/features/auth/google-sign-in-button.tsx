@@ -56,7 +56,7 @@ export function GoogleSignInButton({
 
     setPending(true);
 
-    const result = await fetch("/api/auth/google", {
+    const result = await fetch("/api/oauth/google", {
       method: "POST",
       credentials: "same-origin",
       headers: {
