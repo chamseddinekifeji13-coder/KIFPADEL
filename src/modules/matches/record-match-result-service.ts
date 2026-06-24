@@ -6,10 +6,19 @@ import {
   validateMatchSetScores,
   type SetScore,
 } from "@/domain/rules/match-score";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { assertClubStaffCanManage } from "@/modules/clubs/actions/club-staff-guard";
 import { applyAmericanoPointsForMatch } from "@/modules/tournaments/americano-scoring";
 
 export type RecordMatchResultOutcome = { ok: true } | { ok: false; error: string };
+
+function formatRecordResultError(message: string | undefined): string {
+  const raw = message?.trim() ?? "";
+  if (/stack depth/i.test(raw)) {
+    return "Enregistrement bloqué par la base de données. Réessayez dans un instant ou contactez le support.";
+  }
+  return raw || "Enregistrement impossible.";
+}
 
 async function userCanRecordMatchResult(
   supabase: SupabaseClient,
@@ -94,7 +103,15 @@ export async function recordMatchResult(
     return { ok: false, error: "Le résultat de ce match est déjà enregistré." };
   }
 
-  const { error: insertError } = await supabase.from("match_results").insert({
+  let admin;
+  try {
+    admin = createSupabaseAdminClient();
+  } catch (err) {
+    console.error("[recordMatchResult] admin client unavailable", err);
+    return { ok: false, error: "Service temporairement indisponible." };
+  }
+
+  const { error: insertError } = await admin.from("match_results").insert({
     match_id: matchId,
     winner_team: validation.winnerTeam,
     set_scores: sets,
@@ -103,10 +120,17 @@ export async function recordMatchResult(
 
   if (insertError) {
     console.error("[recordMatchResult] insert failed", insertError);
-    return { ok: false, error: insertError.message || "Enregistrement impossible." };
+    return { ok: false, error: formatRecordResultError(insertError.message) };
   }
 
-  await supabase.from("matches").update({ status: "played" }).eq("id", matchId);
+  const { error: statusError } = await admin
+    .from("matches")
+    .update({ status: "played" })
+    .eq("id", matchId);
+
+  if (statusError) {
+    console.error("[recordMatchResult] match status update failed", statusError);
+  }
 
   try {
     await applyAmericanoPointsForMatch(matchId, sets);
