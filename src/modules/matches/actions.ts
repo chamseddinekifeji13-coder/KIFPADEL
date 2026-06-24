@@ -10,6 +10,7 @@ import {
 import { normalizePaymentMethodForWallet } from "@/domain/rules/kif-wallet";
 import {
   isActiveMatchParticipantRow,
+  isMatchStarted,
   resolveViewerParticipationPhase,
 } from "@/domain/rules/match-participant";
 import {
@@ -265,7 +266,7 @@ export async function joinOpenMatchAction(input: {
 
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("id, status, match_gender_type, price_per_player")
+    .select("id, status, match_gender_type, price_per_player, starts_at")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -275,6 +276,10 @@ export async function joinOpenMatchAction(input: {
 
   if (match.status !== "open") {
     return { ok: false, error: "Ce match n'est plus ouvert." };
+  }
+
+  if (isMatchStarted(match.starts_at as string)) {
+    return { ok: false, error: "Ce match a déjà commencé — inscription fermée." };
   }
 
   const matchType = parseMatchGenderType(match.match_gender_type as string);
@@ -454,7 +459,7 @@ export async function switchMatchTeamAction(input: {
 
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("id, status, match_gender_type")
+    .select("id, status, match_gender_type, starts_at")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -464,6 +469,13 @@ export async function switchMatchTeamAction(input: {
 
   if (match.status !== "open") {
     return { ok: false, error: "Ce match n'est plus ouvert." };
+  }
+
+  if (isMatchStarted(match.starts_at as string)) {
+    return {
+      ok: false,
+      error: "Ce match a déjà commencé — changement d'équipe impossible.",
+    };
   }
 
   const matchType = parseMatchGenderType(match.match_gender_type as string);

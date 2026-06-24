@@ -25,7 +25,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
   const supabase = await createSupabaseServerClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("phone, phone_verified_at, display_name, avatar_url")
+    .select("phone, phone_verified_at, display_name, avatar_url, gender")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -75,6 +75,9 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
           verificationChannel={verificationChannel}
           initialAvatarUrl={initialAvatarUrl}
           initialDisplayName={profile?.display_name ?? ""}
+          initialGender={
+            profile?.gender === "male" || profile?.gender === "female" ? profile.gender : ""
+          }
           initialUrlError={urlError}
           avatarLabels={{
             title: dictionary.player.profileAvatarTitle,

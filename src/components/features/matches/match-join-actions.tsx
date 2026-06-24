@@ -32,6 +32,7 @@ type Props = {
   walletBalance: number;
   walletHref: string;
   isOpen: boolean;
+  matchStarted: boolean;
   teamACount: number;
   teamBCount: number;
   participants: MatchParticipantProfile[];
@@ -46,6 +47,7 @@ type Props = {
     participationPendingHint: string;
     viewerTeam: string;
     matchClosed: string;
+    matchStarted: string;
     matchFull: string;
     genderRequired: string;
     joining: string;
@@ -231,6 +233,7 @@ export function MatchJoinActions({
   walletBalance,
   walletHref,
   isOpen,
+  matchStarted,
   teamACount,
   teamBCount,
   participants,
@@ -259,8 +262,10 @@ export function MatchJoinActions({
   const totalCommitment = price + racketFee;
 
   const activeTeam = isPending ? viewerTeam ?? null : selectedTeam;
-  const canSwitchToA = isPending ? !teamAFull || viewerTeam === "A" : !teamAFull;
-  const canSwitchToB = isPending ? !teamBFull || viewerTeam === "B" : !teamBFull;
+  const canSwitchToA =
+    !matchStarted && (isPending ? !teamAFull || viewerTeam === "A" : !teamAFull);
+  const canSwitchToB =
+    !matchStarted && (isPending ? !teamBFull || viewerTeam === "B" : !teamBFull);
 
   const readyToConfirm =
     activeTeam !== null &&
@@ -369,6 +374,10 @@ export function MatchJoinActions({
     return <p className="text-sm text-white/60">{labels.matchClosed}</p>;
   }
 
+  if (matchStarted && isJoining) {
+    return <p className="text-sm text-white/60">{labels.matchStarted}</p>;
+  }
+
   if (participationPhase === "confirmed") {
     return (
       <div
@@ -410,11 +419,13 @@ export function MatchJoinActions({
           {isPending ? labels.participationPendingTitle : labels.joinTitle}
         </p>
         <p className="text-xs text-[var(--foreground-muted)]">
-          {isPending
-            ? labels.participationPendingHint
-            : isEn
-              ? "See who is on each team, pick yours, then confirm payment."
-              : "Vois qui est sur chaque équipe, choisis la tienne, puis confirme ton paiement."}
+          {matchStarted && isPending
+            ? labels.matchStarted
+            : isPending
+              ? labels.participationPendingHint
+              : isEn
+                ? "See who is on each team, pick yours, then confirm payment."
+                : "Vois qui est sur chaque équipe, choisis la tienne, puis confirme ton paiement."}
         </p>
       </div>
 

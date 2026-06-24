@@ -38,6 +38,7 @@ type OnboardingWizardProps = {
   verificationChannel?: PhoneVerificationChannel;
   initialAvatarUrl?: string | null;
   initialDisplayName?: string;
+  initialGender?: "" | "male" | "female";
   initialUrlError?: string;
   avatarLabels: ProfileAvatarUploaderLabels;
 };
@@ -62,6 +63,7 @@ export function OnboardingWizard({
   verificationChannel = "instant",
   initialAvatarUrl = null,
   initialDisplayName = "",
+  initialGender = "",
   initialUrlError,
   avatarLabels,
 }: OnboardingWizardProps) {
@@ -79,7 +81,9 @@ export function OnboardingWizard({
     ? (ONBOARDING_ERROR_MESSAGES[initialUrlError] ?? decodeURIComponent(initialUrlError))
     : null;
   const [level, setLevel] = useState("");
-  const [gender, setGender] = useState<"" | "male" | "female">("");
+  const [gender, setGender] = useState<"" | "male" | "female">(
+    initialGender === "male" || initialGender === "female" ? initialGender : "",
+  );
 
   const steps: Step[] = ["profile", "phone", "level", "trust"];
   const currentStepIndex = steps.indexOf(step);

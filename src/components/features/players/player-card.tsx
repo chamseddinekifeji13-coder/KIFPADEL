@@ -35,13 +35,17 @@ interface PlayerCardProps {
 }
 
 export function PlayerCard({ locale, player, bookingInvite, bookingInviteDisabled, matchInvite }: PlayerCardProps) {
+  const displayName = player.display_name || "Joueur";
+  const avatarFallback = displayName.trim().charAt(0).toUpperCase() || "?";
+
   return (
     <Card className="p-4 flex items-center gap-4 border-white/5 bg-surface-elevated hover:shadow-gold-strong transition-all duration-500 touch-manipulation">
       <Avatar
         src={player.avatar_url}
-        alt={player.display_name}
+        alt={displayName}
+        fallback={avatarFallback}
         size="lg"
-        className="ring-2 ring-gold/20"
+        className="ring-2 ring-gold/20 bg-[var(--surface)] border-[var(--border)]"
       />
 
       <div className="flex-1 min-w-0">

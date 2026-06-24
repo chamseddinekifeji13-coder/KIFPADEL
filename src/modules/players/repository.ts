@@ -6,7 +6,7 @@ import {
 } from "@/domain/rules/player-category";
 import type { Gender } from "@/domain/types/core";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
-import { resolveStoredPlayerAvatarUrl } from "@/lib/storage/resolve-player-avatar-url";
+import { resolveStoredPlayerAvatarUrl, enrichPlayerDirectoryAvatars } from "@/lib/storage/resolve-player-avatar-url";
 
 export interface Player {
   id: string;
@@ -106,7 +106,8 @@ export async function fetchPlayers(
       return [];
     }
 
-    return ((data ?? []) as ProfileRow[]).map(normalizePlayer);
+    const players = ((data ?? []) as ProfileRow[]).map(normalizePlayer);
+    return enrichPlayerDirectoryAvatars(players);
   } catch (err) {
     rethrowFrameworkError(err);
     console.warn("[players.fetchPlayers] unexpected error", err);

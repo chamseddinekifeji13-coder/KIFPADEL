@@ -51,6 +51,8 @@ function resolveSignUpError(
       return auth.invalidRedirectUrlError;
     case "invalid_phone":
       return auth.invalidPhoneError;
+    case "invalid_gender":
+      return auth.invalidGenderError;
     case "phone_in_use":
       return auth.phoneInUseError;
     case "profile_trigger_error":
@@ -150,6 +152,39 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
               maxLength={14}
             />
             <p className="text-[11px] text-slate-500">{dictionary.auth.phoneSignupHint}</p>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="displayName" className="text-xs font-medium text-slate-700">
+              {dictionary.auth.displayNameLabel}
+            </label>
+            <TextInput
+              id="displayName"
+              name="displayName"
+              type="text"
+              placeholder={dictionary.auth.displayNamePlaceholder}
+              minLength={2}
+              maxLength={60}
+            />
+            <p className="text-[11px] text-slate-500">{dictionary.auth.displayNameSignupHint}</p>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="gender" className="text-xs font-medium text-slate-700">
+              {dictionary.auth.genderLabel}
+            </label>
+            <select
+              id="gender"
+              name="gender"
+              required
+              defaultValue=""
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-1 focus:ring-sky-400"
+            >
+              <option value="" disabled>
+                {dictionary.auth.genderPlaceholder}
+              </option>
+              <option value="male">{dictionary.auth.genderMale}</option>
+              <option value="female">{dictionary.auth.genderFemale}</option>
+            </select>
+            <p className="text-[11px] text-slate-500">{dictionary.auth.genderSignupHint}</p>
           </div>
           <div className="space-y-1">
             <label htmlFor="email" className="text-xs font-medium text-slate-700">

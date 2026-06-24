@@ -62,6 +62,17 @@ export function countActiveMatchParticipants(rows: MatchParticipantRow[]): numbe
   return rows.filter((row) => isActiveMatchParticipantRow(row)).length;
 }
 
+/** True when the scheduled start time has passed (no more team changes / joins). */
+export function isMatchStarted(
+  startsAtIso: string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!startsAtIso?.trim()) return false;
+  const starts = new Date(startsAtIso);
+  if (Number.isNaN(starts.getTime())) return false;
+  return starts.getTime() <= now.getTime();
+}
+
 export function resolveSharePrice(
   row: MatchParticipantRow | null | undefined,
   matchPricePerPlayer: number,

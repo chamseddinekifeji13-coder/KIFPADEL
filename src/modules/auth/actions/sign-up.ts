@@ -12,7 +12,13 @@ import { normalizeTunisiaPhoneToE164 } from "@/lib/phone/normalize-tunisia";
 import { publicEnv } from "@/lib/config/env";
 import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { sendActivationEmailViaResend } from "@/modules/auth/send-activation-email";
+import type { Gender } from "@/domain/types/core";
 import { applyReferrerToProfile } from "@/modules/referrals/apply-referrer";
+
+function parseSignupGender(raw: string): Gender | null {
+  const value = raw.trim();
+  return value === "male" || value === "female" ? value : null;
+}
 
 function digitsOnly(raw: string): string {
   return raw.replace(/\D/g, "");
@@ -42,11 +48,17 @@ export async function signUpAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const phoneRaw = String(formData.get("phone") ?? "").trim();
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  const gender = parseSignupGender(String(formData.get("gender") ?? ""));
   const safeNext = sanitizeAuthNextPath(String(formData.get("next") ?? ""), locale, `/${locale}/onboarding`);
   const referrerId = await resolveReferrerId(formData);
 
   if (!email || !password || !phoneRaw) {
     redirect(signUpReturnPath(locale, safeNext, { error: "missing_fields" }, referrerId));
+  }
+
+  if (!gender) {
+    redirect(signUpReturnPath(locale, safeNext, { error: "invalid_gender" }, referrerId));
   }
 
   const phoneE164 = normalizeTunisiaPhoneToE164(phoneRaw);
@@ -77,6 +89,7 @@ export async function signUpAction(formData: FormData) {
         phone_local: phoneLocal,
         phone_e164: phoneE164,
         phone_display: phoneDisplay,
+        gender,
       },
     },
   });
@@ -158,7 +171,14 @@ export async function signUpAction(formData: FormData) {
   if (userId) {
     try {
       const admin = createSupabaseAdminClient();
-      await admin.from("profiles").update({ phone: phoneDisplay }).eq("id", userId);
+      const profilePatch: { phone: string; gender: Gender; display_name?: string } = {
+        phone: phoneDisplay,
+        gender,
+      };
+      if (displayName.length >= 2) {
+        profilePatch.display_name = displayName;
+      }
+      await admin.from("profiles").update(profilePatch).eq("id", userId);
       await admin.from("player_notification_preferences").upsert({
         user_id: userId,
         tournaments_enabled: true,

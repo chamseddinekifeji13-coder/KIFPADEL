@@ -206,20 +206,24 @@ export default async function FindPlayersPage({
             ⭐ {labels.topRatedLabel}
           </div>
           <div className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-5 md:gap-3 md:overflow-visible md:px-0">
-            {players.slice(0, 5).map((player) => (
+            {players.slice(0, 5).map((player) => {
+              const name = player.display_name || labels.genericPlayerName;
+              const avatarFallback = name.trim().charAt(0).toUpperCase() || "?";
+              return (
               <div
                 key={player.id}
                 className="flex min-w-[132px] flex-col items-center gap-3 rounded-2xl border border-white/5 bg-surface-elevated p-4 shadow-sm transition-colors hover:border-gold/20 md:min-w-0"
               >
                 <Avatar
                   src={player.avatar_url}
-                  alt={player.display_name || labels.genericPlayerName}
+                  alt={name}
+                  fallback={avatarFallback}
                   size="lg"
-                  className="ring-4 ring-gold/10"
+                  className="ring-4 ring-gold/10 bg-[var(--surface)] border-[var(--border)]"
                 />
                 <div className="space-y-1 text-center">
                   <p className="w-24 truncate text-xs font-bold text-white">
-                    {(player.display_name || labels.genericPlayerName).split(" ")[0]}
+                    {name.split(" ")[0]}
                   </p>
                   <Badge
                     variant={
@@ -231,7 +235,8 @@ export default async function FindPlayersPage({
                   </Badge>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </section>
       ) : null}

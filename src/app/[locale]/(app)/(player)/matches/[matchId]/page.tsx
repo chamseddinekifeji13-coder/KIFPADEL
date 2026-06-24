@@ -21,6 +21,7 @@ import {
 } from "@/modules/matches/messages-repository";
 import {
   isActiveMatchParticipantRow,
+  isMatchStarted,
   resolveSharePrice,
   resolveViewerParticipationPhase,
 } from "@/domain/rules/match-participant";
@@ -128,6 +129,8 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
     mixed: labels.matchTypeLabelMixed,
   };
 
+  const matchStarted = isMatchStarted(match.starts_at);
+
   const joinLabels = {
     joinTitle: locale === "en" ? "Join" : "Rejoindre",
     teamA: locale === "en" ? "Team A ({count}/2)" : "Équipe A ({count}/2)",
@@ -138,6 +141,10 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
     participationPendingHint: labels.matchParticipationPendingHint,
     viewerTeam: labels.matchJoinedTeamLabel,
     matchClosed: locale === "en" ? "This match is no longer open." : "Ce match n'est plus ouvert.",
+    matchStarted:
+      locale === "en"
+        ? "This match has already started — team changes are no longer allowed."
+        : "Ce match a déjà commencé — changement d'équipe impossible.",
     matchFull: locale === "en" ? "Match is full." : "Match complet.",
     genderRequired:
       locale === "en"
@@ -229,6 +236,7 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
             walletBalance={walletBalance}
             walletHref={`/${locale}/profile/wallet`}
             isOpen={match.status === "open"}
+            matchStarted={matchStarted}
             teamACount={teamA.length}
             teamBCount={teamB.length}
             participants={participantProfiles}
