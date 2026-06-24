@@ -7,14 +7,32 @@ import { createSupabaseServerActionClient } from "@/lib/supabase/server-action";
 import { getSuperAdminActor } from "@/modules/admin/actor";
 import { insertAuditRow } from "@/modules/admin/audit-log";
 import { insertSponsorRow, updateSponsorPatch } from "@/modules/sponsors/repository";
+import { uploadSponsorLogoForSponsor } from "@/modules/sponsors/actions/upload-sponsor-logo";
 
 function parseOptionalUrl(raw: string): string | null {
   return sanitizeHttpsUrl(raw);
 }
+
+async function resolveLogoUrlFromForm(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerActionClient>>,
+  sponsorId: string,
+  formData: FormData,
+  urlFromField: string | null,
+): Promise<string | null> {
+  const fileEntry = formData.get("logo_file");
+  if (fileEntry instanceof File && fileEntry.size > 0) {
+    const upload = await uploadSponsorLogoForSponsor(supabase, sponsorId, fileEntry);
+    if (upload.ok) {
+      return upload.logoUrl;
+    }
+    console.warn("[sponsors.resolveLogoUrlFromForm]", upload.error);
+  }
+  return urlFromField;
+}
 export async function adminCreateSponsorAction(formData: FormData): Promise<void> {
   const locale = String(formData.get("locale") ?? "fr").trim() || "fr";
   const name = String(formData.get("name") ?? "").trim();
-  const logo_url = parseOptionalUrl(String(formData.get("logo_url") ?? ""));
+  let logo_url = parseOptionalUrl(String(formData.get("logo_url") ?? ""));
   const website_url = parseOptionalUrl(String(formData.get("website_url") ?? ""));
   const positionRaw = Number(String(formData.get("position") ?? "0"));
 
@@ -34,6 +52,12 @@ export async function adminCreateSponsorAction(formData: FormData): Promise<void
       position,
       is_active: true,
     });
+
+    const resolvedLogoUrl = await resolveLogoUrlFromForm(supabase, id, formData, logo_url);
+    if (resolvedLogoUrl && resolvedLogoUrl !== logo_url) {
+      await updateSponsorPatch(supabase, { id, logo_url: resolvedLogoUrl });
+      logo_url = resolvedLogoUrl;
+    }
 
     await insertAuditRow(supabase, {
       actor_profile_id: actor.userId,
@@ -58,7 +82,7 @@ export async function adminUpdateSponsorAction(formData: FormData): Promise<void
   const locale = String(formData.get("locale") ?? "fr").trim() || "fr";
   const id = String(formData.get("id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
-  const logo_url = parseOptionalUrl(String(formData.get("logo_url") ?? ""));
+  let logo_url = parseOptionalUrl(String(formData.get("logo_url") ?? ""));
   const website_url = parseOptionalUrl(String(formData.get("website_url") ?? ""));
   const positionRaw = Number(String(formData.get("position") ?? "0"));
 
@@ -71,6 +95,11 @@ export async function adminUpdateSponsorAction(formData: FormData): Promise<void
   const position = Number.isFinite(positionRaw) ? Math.floor(positionRaw) : 0;
 
   try {
+    const resolvedLogoUrl = await resolveLogoUrlFromForm(supabase, id, formData, logo_url);
+    if (resolvedLogoUrl) {
+      logo_url = resolvedLogoUrl;
+    }
+
     await updateSponsorPatch(supabase, {
       id,
       name,
