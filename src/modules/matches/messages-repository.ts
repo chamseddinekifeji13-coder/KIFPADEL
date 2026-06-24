@@ -15,12 +15,16 @@ export type MatchChatSummary = {
   messageCount: number;
 };
 
-export async function fetchMatchMessages(matchId: string, limit = 80): Promise<MatchMessage[]> {
+export async function fetchMatchMessages(
+  matchId: string,
+  participantNames: Record<string, string> = {},
+  limit = 80,
+): Promise<MatchMessage[]> {
   try {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("match_messages")
-      .select("id, match_id, sender_id, body, created_at, profiles:sender_id(display_name)")
+      .select("id, match_id, sender_id, body, created_at")
       .eq("match_id", matchId)
       .order("created_at", { ascending: true })
       .limit(limit);
@@ -31,12 +35,12 @@ export async function fetchMatchMessages(matchId: string, limit = 80): Promise<M
     }
 
     return (data ?? []).map((row) => {
-      const profile = (row as { profiles?: { display_name?: string | null } | null }).profiles;
+      const senderId = String((row as { sender_id: string }).sender_id);
       return {
         id: String((row as { id: string }).id),
         matchId: String((row as { match_id: string }).match_id),
-        senderId: String((row as { sender_id: string }).sender_id),
-        senderName: profile?.display_name?.trim() || "Joueur",
+        senderId,
+        senderName: participantNames[senderId]?.trim() || "Joueur",
         body: String((row as { body: string }).body),
         createdAt: String((row as { created_at: string }).created_at),
       };

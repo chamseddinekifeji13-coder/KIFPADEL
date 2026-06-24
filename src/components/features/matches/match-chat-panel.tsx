@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Send } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { sameOriginApiPath } from "@/lib/url/same-origin-api";
 import { cn } from "@/lib/utils/cn";
-import { sendMatchMessageAction } from "@/modules/matches/actions/send-match-message";
+import type { SendMatchMessageOutcome } from "@/modules/matches/actions/send-match-message";
 import type { MatchMessage } from "@/modules/matches/messages-repository";
 
 export type MatchChatPanelLabels = {
@@ -43,14 +44,19 @@ export function MatchChatPanel({
   const [pending, setPending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const namesRef = useRef(participantNames);
+  const hydratedMatchIdRef = useRef(matchId);
 
   useEffect(() => {
     namesRef.current = { ...namesRef.current, ...participantNames, [currentUserId]: currentUserName };
   }, [participantNames, currentUserId, currentUserName]);
 
+  // Hydrate uniquement au changement de match — pas après chaque revalidation serveur.
   useEffect(() => {
-    setMessages(initialMessages);
-  }, [initialMessages]);
+    if (hydratedMatchIdRef.current !== matchId) {
+      hydratedMatchIdRef.current = matchId;
+      setMessages(initialMessages);
+    }
+  }, [matchId, initialMessages]);
 
   useEffect(() => {
     const el = listRef.current;
@@ -100,7 +106,11 @@ export function MatchChatPanel({
           });
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.warn("[MatchChatPanel] realtime subscribe failed", matchId);
+        }
+      });
 
     return () => {
       void supabase.removeChannel(channel);
@@ -119,16 +129,30 @@ export function MatchChatPanel({
     setError("");
     setPending(true);
 
-    const result = await sendMatchMessageAction({
-      locale,
-      matchId,
-      body: text,
-    });
+    let result: SendMatchMessageOutcome | null = null;
+    try {
+      const response = await fetch(sameOriginApiPath("/api/matches/messages"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ matchId, body: text }),
+        cache: "no-store",
+      });
+
+      if (response.headers.get("content-type")?.includes("application/json")) {
+        result = (await response.json()) as SendMatchMessageOutcome;
+      }
+    } catch (err) {
+      console.error("[MatchChatPanel] send failed", err);
+    }
 
     setPending(false);
 
-    if (!result.ok) {
-      setError(result.error);
+    if (!result?.ok) {
+      setError(result?.error ?? "Envoi impossible. Réessayez.");
       return;
     }
 

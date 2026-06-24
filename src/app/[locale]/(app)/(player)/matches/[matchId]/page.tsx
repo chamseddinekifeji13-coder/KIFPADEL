@@ -99,10 +99,8 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
   let chatMessages: Awaited<ReturnType<typeof fetchMatchMessages>> = [];
   let participantNames: Record<string, string> = {};
   if (user && canAccessChat) {
-    [chatMessages, participantNames] = await Promise.all([
-      fetchMatchMessages(matchId),
-      fetchMatchParticipantNames(matchId, match.created_by),
-    ]);
+    participantNames = await fetchMatchParticipantNames(matchId, match.created_by);
+    chatMessages = await fetchMatchMessages(matchId, participantNames);
   }
 
   const racketOffered = clubDetails ? isRacketRentalOfferedByClub(clubDetails) : false;
