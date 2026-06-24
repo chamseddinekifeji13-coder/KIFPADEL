@@ -63,7 +63,12 @@ export function BookingConfirmSheet({
     }
   };
 
-  const formattedDate = formatBookingDateLabel(date, locale);
+  let formattedDate = date;
+  try {
+    formattedDate = formatBookingDateLabel(date, locale);
+  } catch {
+    formattedDate = date;
+  }
 
   if (!isOpen) return null;
 

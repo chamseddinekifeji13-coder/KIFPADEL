@@ -6,8 +6,8 @@ import { TimeSlotGrid } from "@/components/features/bookings/time-slot-grid";
 import { PaymentMethodSelector, type PlayerPaymentMethod } from "@/components/features/bookings/payment-method-selector";
 import { BookingConfirmSheet } from "@/components/features/bookings/booking-confirm-sheet";
 import { type TimeSlot } from "@/modules/bookings/availability-service";
+import { createBookingViaApi } from "@/lib/bookings/create-booking-client";
 import { buildTunisSlotTimestamps, formatBookingDateShort } from "@/modules/bookings/timezone";
-import { createBookingAction } from "@/modules/bookings/actions";
 import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
 import { refreshAuthForServerAction } from "@/lib/auth/refresh-auth-for-server-action";
@@ -58,6 +58,8 @@ export function TimeContainer({
   const playerSharePrice = selectedSlotData?.price ?? 10;
   const courtId = selectedSlotData?.courtId ?? "";
   const slotTime = selectedSlotData?.time ?? "";
+  const slotStartsAtIso = selectedSlotData?.startsAtIso ?? "";
+  const slotEndsAtIso = selectedSlotData?.endsAtIso ?? "";
 
   const racketUnit = racketRentalOffered && racketPricePerUnit > 0 ? racketPricePerUnit : 0;
   const racketQty = racketUnit > 0 && rentRacket ? 1 : 0;
@@ -131,16 +133,21 @@ export function TimeContainer({
 
     let startsAtIso: string;
     let endsAtIso: string;
-    try {
-      const built = buildTunisSlotTimestamps(date, slotTime, bookingDurationMinutes);
-      startsAtIso = built.startsAtIso;
-      endsAtIso = built.endsAtIso;
-    } catch {
-      setBookingState("error");
-      setErrorMessage("Date ou heure du créneau invalide. Rechargez la page et réessayez.");
-      setIsPending(false);
-      confirmInFlightRef.current = false;
-      return;
+    if (slotStartsAtIso && slotEndsAtIso) {
+      startsAtIso = slotStartsAtIso;
+      endsAtIso = slotEndsAtIso;
+    } else {
+      try {
+        const built = buildTunisSlotTimestamps(date, slotTime, bookingDurationMinutes);
+        startsAtIso = built.startsAtIso;
+        endsAtIso = built.endsAtIso;
+      } catch {
+        setBookingState("error");
+        setErrorMessage("Date ou heure du créneau invalide. Rechargez la page et réessayez.");
+        setIsPending(false);
+        confirmInFlightRef.current = false;
+        return;
+      }
     }
 
     const authRefresh = await refreshAuthForServerAction();
@@ -153,7 +160,7 @@ export function TimeContainer({
     }
 
     try {
-      const result = await createBookingAction({
+      const result = await createBookingViaApi({
         clubId,
         courtId,
         startsAt: startsAtIso,
@@ -194,7 +201,7 @@ export function TimeContainer({
         confirmInFlightRef.current = false;
       }
     } catch (err) {
-      console.error("[TimeContainer] createBookingAction failed", err);
+      console.error("[TimeContainer] createBookingViaApi failed", err);
       const message = err instanceof Error ? err.message : "";
       const staleAction =
         /server action/i.test(message) ||

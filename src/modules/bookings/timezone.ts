@@ -14,7 +14,7 @@ function parseDateParts(date: string) {
 function parseTimeParts(time: string) {
   const trimmed = time.trim().replace(/\u202f/g, " ").replace(/\s+/g, " ");
 
-  const colonMatch = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  const colonMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   if (colonMatch) {
     const hour = Number(colonMatch[1]);
     const minute = Number(colonMatch[2]);

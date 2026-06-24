@@ -14,6 +14,9 @@ export interface TimeSlot {
   time: string;
   start: string;
   end: string;
+  /** ISO UTC — identique à la base / RPC (ne pas recalculer côté client). */
+  startsAtIso: string;
+  endsAtIso: string;
   isAvailable: boolean;
   courtId: string;
   courtLabel: string;
@@ -122,6 +125,8 @@ export async function getClubAvailability(clubId: string, date: string): Promise
         time: startStr,
         start: startStr,
         end: endStr,
+        startsAtIso,
+        endsAtIso,
         isAvailable,
         isPast,
         courtId: court.id,
