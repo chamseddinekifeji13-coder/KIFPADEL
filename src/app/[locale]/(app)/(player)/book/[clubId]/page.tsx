@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { clubService } from "@/modules/clubs/service";
 import { playerService } from "@/modules/players/service";
 import { getClubAvailability } from "@/modules/bookings/availability-service";
+import { formatTunisYmd, tunisLocalDateTimeToUtc } from "@/modules/bookings/timezone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rethrowFrameworkError } from "@/lib/utils/safe-rsc";
 import { resolveBookingDurationMinutes } from "@/modules/bookings/constants";
@@ -71,7 +72,7 @@ export default async function ClubDetailPage({
   }
 
   const { date: dateQuery } = await searchParams;
-  const selectedDate = dateQuery || new Date().toISOString().split("T")[0];
+  const selectedDate = dateQuery || formatTunisYmd();
 
   // Fetch club data and availability
   const club = await clubService.getClubDetails(clubId).catch(() => null);
@@ -96,10 +97,10 @@ export default async function ClubDetailPage({
     Boolean(club.contact_email?.trim());
 
   // Generate next 7 days for the date selector
+  const daysBase = tunisLocalDateTimeToUtc(formatTunisYmd(), "12:00");
   const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    return d.toISOString().split("T")[0];
+    const d = new Date(daysBase.getTime() + i * 24 * 60 * 60 * 1000);
+    return formatTunisYmd(d);
   });
 
   // Get player trust info

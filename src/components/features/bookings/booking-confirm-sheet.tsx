@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X, MapPin, Calendar, CreditCard, Banknote, Coins, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { ClientPortal } from "@/components/ui/client-portal";
 import { lockDocumentScroll } from "@/lib/dom/ios-scroll-lock";
+import { formatBookingDateLabel } from "@/modules/bookings/timezone";
 
 interface BookingConfirmSheetProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface BookingConfirmSheetProps {
   racketFee?: number;
   state?: "idle" | "loading" | "success" | "error";
   errorMessage?: string | null;
+  locale?: string;
 }
 
 export function BookingConfirmSheet({
@@ -38,7 +40,10 @@ export function BookingConfirmSheet({
   racketFee = 0,
   state = "idle",
   errorMessage = null,
+  locale = "fr",
 }: BookingConfirmSheetProps) {
+  const confirmLockRef = useRef(false);
+
   useEffect(() => {
     if (!isOpen) return;
     return lockDocumentScroll();
@@ -49,14 +54,16 @@ export function BookingConfirmSheet({
   const isError = state === "error";
 
   const handleConfirm = async () => {
-    await onConfirm();
+    if (confirmLockRef.current || isLoading) return;
+    confirmLockRef.current = true;
+    try {
+      await onConfirm();
+    } finally {
+      confirmLockRef.current = false;
+    }
   };
 
-  const formattedDate = new Date(date).toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  const formattedDate = formatBookingDateLabel(date, locale);
 
   if (!isOpen) return null;
 

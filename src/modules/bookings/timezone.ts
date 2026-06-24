@@ -12,14 +12,33 @@ function parseDateParts(date: string) {
 }
 
 function parseTimeParts(time: string) {
-  const [hourRaw, minuteRaw = "0"] = time.split(":");
-  const hour = Number(hourRaw);
-  const minute = Number(minuteRaw);
+  const trimmed = time.trim().replace(/\u202f/g, " ").replace(/\s+/g, " ");
 
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
-    throw new Error(`Invalid time format: ${time}`);
+  const colonMatch = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (colonMatch) {
+    const hour = Number(colonMatch[1]);
+    const minute = Number(colonMatch[2]);
+    if (Number.isFinite(hour) && Number.isFinite(minute)) {
+      return { hour, minute };
+    }
   }
-  return { hour, minute };
+
+  const hMatch = trimmed.match(/^(\d{1,2})\s*h\s*(\d{1,2})$/i);
+  if (hMatch) {
+    const hour = Number(hMatch[1]);
+    const minute = Number(hMatch[2]);
+    if (Number.isFinite(hour) && Number.isFinite(minute)) {
+      return { hour, minute };
+    }
+  }
+
+  throw new Error(`Invalid time format: ${time}`);
+}
+
+/** Affichage / parsing stable (évite les variantes Intl selon l’appareil). */
+export function normalizeTimeHm(raw: string): string {
+  const { hour, minute } = parseTimeParts(raw);
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
 export function tunisLocalDateTimeToUtc(date: string, time: string) {
@@ -44,12 +63,39 @@ export function addMinutes(date: Date, minutes: number) {
 }
 
 export function formatTunisHm(date: Date) {
-  return new Intl.DateTimeFormat("fr-TN", {
+  const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: TUNIS_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(date);
+  }).formatToParts(date);
+
+  const hour = parts.find((part) => part.type === "hour")?.value ?? "00";
+  const minute = parts.find((part) => part.type === "minute")?.value ?? "00";
+  return `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+}
+
+/** Libellé court (barre de réservation). */
+export function formatBookingDateShort(dateYmd: string, locale: string): string {
+  const { year, month, day } = parseDateParts(dateYmd);
+  const utc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+  return utc.toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+/** Libellé date réservation sans parser ISO ambigu côté client (Safari). */
+export function formatBookingDateLabel(dateYmd: string, locale: string): string {
+  const { year, month, day } = parseDateParts(dateYmd);
+  const utc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+  return utc.toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  });
 }
 
 /** Date calendaire (YYYY-MM-DD) en fuseau Tunis — pour filtres club / réservation. */
@@ -68,7 +114,8 @@ export function buildTunisSlotTimestamps(
   timeHm: string,
   durationMinutes: number,
 ): { startsAtIso: string; endsAtIso: string } {
-  const startsAt = tunisLocalDateTimeToUtc(dateYmd, timeHm);
+  const normalizedTime = normalizeTimeHm(timeHm);
+  const startsAt = tunisLocalDateTimeToUtc(dateYmd, normalizedTime);
   const duration =
     Number.isFinite(durationMinutes) && durationMinutes > 0
       ? durationMinutes

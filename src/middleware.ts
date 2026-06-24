@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
     // getSession() rafraîchit les cookies localement ; getUser() reste sur les zones sensibles.
     const needsStrictAuthRefresh =
       /^\/(fr|en)\/(admin|club|auth|onboarding)\b/.test(pathname) ||
-      /^\/(fr|en)\/profile\b/.test(pathname);
+      /^\/(fr|en)\/(profile|book|bookings|play-now|matches|tournaments|dashboard)\b/.test(pathname);
 
     if (isShellHome || !needsStrictAuthRefresh) {
       await supabase.auth.getSession();

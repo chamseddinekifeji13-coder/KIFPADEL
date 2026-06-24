@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TimeSlotGrid } from "@/components/features/bookings/time-slot-grid";
 import { PaymentMethodSelector, type PlayerPaymentMethod } from "@/components/features/bookings/payment-method-selector";
 import { BookingConfirmSheet } from "@/components/features/bookings/booking-confirm-sheet";
 import { type TimeSlot } from "@/modules/bookings/availability-service";
-import { buildTunisSlotTimestamps } from "@/modules/bookings/timezone";
+import { buildTunisSlotTimestamps, formatBookingDateShort } from "@/modules/bookings/timezone";
 import { createBookingAction } from "@/modules/bookings/actions";
 import { computeBookingTotals } from "@/modules/bookings/pricing-service";
 import { DEFAULT_BOOKING_DURATION_MINUTES } from "@/modules/bookings/constants";
+import { refreshAuthForServerAction } from "@/lib/auth/refresh-auth-for-server-action";
 import { ChevronRight, ShieldAlert } from "lucide-react";
 import { mustUseWalletForBooking } from "@/modules/compliance/new-account-gates";
 
@@ -44,6 +45,7 @@ export function TimeContainer({
 }: TimeContainerProps) {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
+  const confirmInFlightRef = useRef(false);
 
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [rentRacket, setRentRacket] = useState(false);
@@ -118,8 +120,11 @@ export function TimeContainer({
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedSlot || !paymentMethod || !courtId || !slotTime || isPending) return;
+    if (!selectedSlot || !paymentMethod || !courtId || !slotTime || isPending || confirmInFlightRef.current) {
+      return;
+    }
 
+    confirmInFlightRef.current = true;
     setBookingState("loading");
     setErrorMessage(null);
     setIsPending(true);
@@ -134,6 +139,16 @@ export function TimeContainer({
       setBookingState("error");
       setErrorMessage("Date ou heure du créneau invalide. Rechargez la page et réessayez.");
       setIsPending(false);
+      confirmInFlightRef.current = false;
+      return;
+    }
+
+    const authRefresh = await refreshAuthForServerAction();
+    if (!authRefresh.ok) {
+      setBookingState("error");
+      setErrorMessage(authRefresh.error ?? "Session expirée. Rechargez la page puis reconnectez-vous.");
+      setIsPending(false);
+      confirmInFlightRef.current = false;
       return;
     }
 
@@ -148,9 +163,18 @@ export function TimeContainer({
         clientTotalHint: totalPrice,
       });
 
+      if (!result || typeof result !== "object" || !("ok" in result)) {
+        setBookingState("error");
+        setErrorMessage("Réponse serveur inattendue. Rechargez la page puis réessayez.");
+        setIsPending(false);
+        confirmInFlightRef.current = false;
+        return;
+      }
+
       if (result.ok) {
         setBookingState("success");
         setIsPending(false);
+        confirmInFlightRef.current = false;
         setTimeout(() => {
           setShowConfirmSheet(false);
           setSelectedSlot(null);
@@ -165,14 +189,25 @@ export function TimeContainer({
         }, 1500);
       } else {
         setBookingState("error");
-        setErrorMessage(result.error);
+        setErrorMessage(result.error?.trim() || "Impossible de créer la réservation. Réessayez.");
         setIsPending(false);
+        confirmInFlightRef.current = false;
       }
     } catch (err) {
       console.error("[TimeContainer] createBookingAction failed", err);
+      const message = err instanceof Error ? err.message : "";
+      const staleAction =
+        /server action/i.test(message) ||
+        /failed to find server action/i.test(message) ||
+        /action not found/i.test(message);
       setBookingState("error");
-      setErrorMessage("Connexion interrompue. Vérifiez le réseau et réessayez.");
+      setErrorMessage(
+        staleAction
+          ? "L'application a été mise à jour. Rechargez la page puis réessayez."
+          : "Connexion interrompue. Vérifiez le réseau et réessayez.",
+      );
       setIsPending(false);
+      confirmInFlightRef.current = false;
     }
   };
 
@@ -254,10 +289,7 @@ export function TimeContainer({
                 </span>
                 <span className="text-sm font-bold text-white truncate">
                   {slotTime} • {selectedSlotData?.courtLabel} •{" "}
-                  {new Date(date).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", {
-                    day: "numeric",
-                    month: "short",
-                  })}
+                  {formatBookingDateShort(date, locale)}
                 </span>
                 <span className="text-xs text-[var(--foreground-muted)]">
                   {basePrice} DT créneau
@@ -310,6 +342,7 @@ export function TimeContainer({
         racketFee={racketFee}
         state={bookingState}
         errorMessage={errorMessage}
+        locale={locale}
       />
     </div>
   );
