@@ -109,6 +109,36 @@ export async function signUpAction(formData: FormData) {
     if (diagnostic.includes("rate limit") || diagnostic.includes("too many requests")) {
       redirect(signUpReturnPath(locale, safeNext, { error: "rate_limited" }, referrerId));
     }
+    if (
+      diagnostic.includes("password") &&
+      (diagnostic.includes("weak") ||
+        diagnostic.includes("at least") ||
+        diagnostic.includes("characters") ||
+        diagnostic.includes("strength"))
+    ) {
+      redirect(signUpReturnPath(locale, safeNext, { error: "weak_password" }, referrerId));
+    }
+    if (
+      diagnostic.includes("captcha") ||
+      diagnostic.includes("bot") ||
+      diagnostic.includes("security check") ||
+      diagnostic.includes("human verification")
+    ) {
+      redirect(signUpReturnPath(locale, safeNext, { error: "bot_protection" }, referrerId));
+    }
+    if (
+      (diagnostic.includes("email") && diagnostic.includes("invalid")) ||
+      diagnostic.includes("invalid_email")
+    ) {
+      redirect(signUpReturnPath(locale, safeNext, { error: "invalid_email" }, referrerId));
+    }
+    if (
+      diagnostic.includes("service unavailable") ||
+      diagnostic.includes("temporarily unavailable") ||
+      diagnostic.includes("timeout")
+    ) {
+      redirect(signUpReturnPath(locale, safeNext, { error: "service_unavailable" }, referrerId));
+    }
     redirect(signUpReturnPath(locale, safeNext, { error: "signup_failed" }, referrerId));
   }
 

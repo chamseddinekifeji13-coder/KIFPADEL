@@ -59,6 +59,14 @@ function resolveSignUpError(
       return auth.authConfigError;
     case "rate_limited":
       return auth.rateLimitedError;
+    case "weak_password":
+      return auth.weakPasswordError;
+    case "invalid_email":
+      return auth.invalidEmailError;
+    case "bot_protection":
+      return auth.botProtectionError;
+    case "service_unavailable":
+      return auth.serviceUnavailableError;
     default:
       return auth.signUpFailedError;
   }
