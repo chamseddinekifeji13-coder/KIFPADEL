@@ -40,6 +40,8 @@ export default async function proxy(request: NextRequest) {
     return response;
   }
 
+  const { pathname } = request.nextUrl;
+
   try {
     const isShellHome =
       pathname === "/fr" ||
@@ -55,8 +57,6 @@ export default async function proxy(request: NextRequest) {
   } catch (err) {
     console.error("[Proxy] Error during session refresh:", err);
   }
-
-  const { pathname } = request.nextUrl;
 
   const hostname = request.nextUrl.hostname;
   if (hostname === "kifpadel.tn") {
