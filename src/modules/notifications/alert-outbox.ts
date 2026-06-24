@@ -9,6 +9,7 @@ export type OutboxRow = {
   id: string;
   user_id: string;
   channel: string;
+  kind: string;
   title: string;
   body: string;
 };
@@ -19,7 +20,7 @@ export async function processNotificationOutbox(limit = 50): Promise<void> {
 
     const { data: rows, error } = await admin
       .from("notification_outbox")
-      .select("id, user_id, channel, title, body")
+      .select("id, user_id, channel, kind, title, body")
       .eq("status", "pending")
       .order("created_at", { ascending: true })
       .limit(limit);
@@ -57,8 +58,11 @@ async function processOneOutboxRow(
     if (!phone) {
       errorMessage = "no_phone";
     } else {
-      const template = process.env.WHATSAPP_TOURNAMENT_ALERT_TEMPLATE?.trim() ?? "kifpadel_tournament_alert";
       const parts = row.body.split("|").map((p) => p.trim());
+      const template =
+        row.kind === "booking_underfilled_cancelled"
+          ? process.env.WHATSAPP_BOOKING_CANCELLED_TEMPLATE?.trim() ?? "kifpadel_booking_cancelled"
+          : process.env.WHATSAPP_TOURNAMENT_ALERT_TEMPLATE?.trim() ?? "kifpadel_tournament_alert";
       const wa = await sendWhatsAppTemplate(
         phone,
         template,

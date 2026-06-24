@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { AppShell } from "@/components/layout/app-shell";
+import { processNotificationOutbox } from "@/modules/notifications/alert-outbox";
 
 type AppLayoutProps = Readonly<{
   children: React.ReactNode;
@@ -16,6 +17,7 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
   }
 
   const dictionary = await getDictionary(locale as Locale);
+  void processNotificationOutbox(20);
 
   return (
     <AppShell
