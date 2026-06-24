@@ -7,6 +7,7 @@ import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isPhoneE164VerifiedByAnotherUser } from "@/lib/phone/phone-duplicate-guard";
 import { formatTunisiaLocalDisplay, normalizeTunisiaPhoneToE164 } from "@/lib/phone/normalize-tunisia";
+import { normalizeSignupEmail } from "@/lib/auth/normalize-signup-email";
 import { publicEnv } from "@/lib/config/env";
 import { sendActivationEmailViaResend } from "@/modules/auth/send-activation-email";
 import type { Gender } from "@/domain/types/core";
@@ -71,7 +72,10 @@ function mapAuthSignUpError(error: {
     (diagnostic.includes("weak") ||
       diagnostic.includes("at least") ||
       diagnostic.includes("characters") ||
-      diagnostic.includes("strength"))
+      diagnostic.includes("strength") ||
+      diagnostic.includes("short") ||
+      diagnostic.includes("minimum") ||
+      diagnostic.includes("too small"))
   ) {
     return "weak_password";
   }
@@ -83,7 +87,11 @@ function mapAuthSignUpError(error: {
   ) {
     return "bot_protection";
   }
-  if ((diagnostic.includes("email") && diagnostic.includes("invalid")) || diagnostic.includes("invalid_email")) {
+  if (
+    (diagnostic.includes("email") && diagnostic.includes("invalid")) ||
+    diagnostic.includes("invalid_email") ||
+    diagnostic.includes("unable to validate email")
+  ) {
     return "invalid_email";
   }
   if (
@@ -101,7 +109,7 @@ export async function signUpWithSupabase(
   input: SignUpInput,
 ): Promise<SignUpResult> {
   const locale = input.locale || "fr";
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeSignupEmail(input.email);
   const password = input.password;
   const phoneRaw = input.phone.trim();
   const displayName = (input.displayName ?? "").trim();
@@ -151,7 +159,9 @@ export async function signUpWithSupabase(
 
   if (error) {
     console.error("[signUpWithSupabase] Auth error:", JSON.stringify(error, null, 2));
-    return { ok: false, error: mapAuthSignUpError(error) };
+    const code = mapAuthSignUpError(error);
+    const detail = error.message?.trim() || undefined;
+    return { ok: false, error: code, detail };
   }
 
   const userId = data.user?.id;

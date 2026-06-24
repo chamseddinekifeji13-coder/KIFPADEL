@@ -15,7 +15,7 @@ import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
 
 type SignUpPageProps = Readonly<{
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ error?: string; next?: string; ref?: string }>;
+  searchParams: Promise<{ error?: string; error_detail?: string; next?: string; ref?: string }>;
 }>;
 
 export async function generateMetadata({ params }: SignUpPageProps): Promise<Metadata> {
@@ -74,10 +74,12 @@ function resolveSignUpError(
 
 export default async function SignUpPage({ params, searchParams }: SignUpPageProps) {
   const { locale } = await params;
-  const { error, next, ref: refRaw } = await searchParams;
+  const { error, error_detail: errorDetail, next, ref: refRaw } = await searchParams;
   if (!isLocale(locale)) notFound();
   const dictionary = await getDictionary(locale as Locale);
-  const errorMessage = resolveSignUpError(error, dictionary);
+  const errorMessage =
+    errorDetail?.trim() ||
+    resolveSignUpError(error, dictionary);
   const safeNext = sanitizeAuthNextPath(next, locale, `/${locale}/onboarding`);
   const referrerId = parseReferrerIdParam(refRaw);
   const authQuery = new URLSearchParams({ next: safeNext });
@@ -151,6 +153,22 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
             signUpCta: dictionary.auth.signUpCta,
             signUpSubmitting: dictionary.auth.signUpSubmitting,
             networkError: dictionary.auth.authNetworkError,
+            errorByCode: {
+              missing_fields: dictionary.auth.missingFieldsError,
+              user_exists: dictionary.auth.userExistsError,
+              invalid_redirect_url: dictionary.auth.invalidRedirectUrlError,
+              invalid_phone: dictionary.auth.invalidPhoneError,
+              invalid_gender: dictionary.auth.invalidGenderError,
+              phone_in_use: dictionary.auth.phoneInUseError,
+              profile_trigger_error: dictionary.auth.profileTriggerError,
+              auth_config_error: dictionary.auth.authConfigError,
+              rate_limited: dictionary.auth.rateLimitedError,
+              weak_password: dictionary.auth.weakPasswordError,
+              invalid_email: dictionary.auth.invalidEmailError,
+              bot_protection: dictionary.auth.botProtectionError,
+              service_unavailable: dictionary.auth.serviceUnavailableError,
+              signup_failed: dictionary.auth.signUpFailedError,
+            },
           }}
         />
         <p className="text-xs text-slate-500 text-center leading-relaxed">

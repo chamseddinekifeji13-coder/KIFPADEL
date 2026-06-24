@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
 import type { SignUpErrorCode } from "@/modules/auth/sign-up-types";
+import { normalizeSignupEmail } from "@/lib/auth/normalize-signup-email";
 
 type SignUpFormLabels = {
   phoneLabel: string;
@@ -23,6 +23,7 @@ type SignUpFormLabels = {
   signUpCta: string;
   signUpSubmitting: string;
   networkError: string;
+  errorByCode: Partial<Record<SignUpErrorCode, string>>;
 };
 
 type SignUpFormProps = {
@@ -33,7 +34,6 @@ type SignUpFormProps = {
 };
 
 export function SignUpForm({ locale, safeNext, referrerId, labels }: SignUpFormProps) {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
 
@@ -54,7 +54,7 @@ export function SignUpForm({ locale, safeNext, referrerId, labels }: SignUpFormP
       phone: String(formData.get("phone") ?? ""),
       displayName: String(formData.get("displayName") ?? ""),
       gender: String(formData.get("gender") ?? ""),
-      email: String(formData.get("email") ?? ""),
+      email: normalizeSignupEmail(String(formData.get("email") ?? "")),
       password: String(formData.get("password") ?? ""),
     };
 
@@ -70,7 +70,7 @@ export function SignUpForm({ locale, safeNext, referrerId, labels }: SignUpFormP
         cache: "no-store",
       });
 
-      let result: { ok?: boolean; redirectTo?: string; error?: SignUpErrorCode } | null = null;
+      let result: { ok?: boolean; redirectTo?: string; error?: SignUpErrorCode; detail?: string } | null = null;
       if (response.headers.get("content-type")?.includes("application/json")) {
         result = await response.json();
       }
@@ -81,7 +81,13 @@ export function SignUpForm({ locale, safeNext, referrerId, labels }: SignUpFormP
       }
 
       const errorCode = result?.error ?? "signup_failed";
-      router.push(`/${locale}/auth/sign-up?error=${errorCode}&next=${encodeURIComponent(safeNext)}${referrerId ? `&ref=${encodeURIComponent(referrerId)}` : ""}`);
+      const message =
+        result?.detail?.trim() ||
+        labels.errorByCode[errorCode] ||
+        labels.errorByCode.signup_failed ||
+        "Impossible de créer le compte pour le moment.";
+      setClientError(message);
+      setPending(false);
     } catch (err) {
       console.error("[SignUpForm]", err);
       setClientError(labels.networkError);

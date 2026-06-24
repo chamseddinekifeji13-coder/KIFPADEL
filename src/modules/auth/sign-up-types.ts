@@ -27,4 +27,4 @@ export type SignUpInput = {
 
 export type SignUpResult =
   | { ok: true; redirectTo: string }
-  | { ok: false; error: SignUpErrorCode };
+  | { ok: false; error: SignUpErrorCode; /** Message brut Supabase (diagnostic iOS). */ detail?: string };
