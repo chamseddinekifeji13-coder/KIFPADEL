@@ -64,7 +64,7 @@
   "paymentOnline": "Online payment",
   "paymentAtClub": "Pay at club",
   "paymentUnknown": "Not set",
-  "pendingExpiryHint": "A pending booking expires after 15 minutes if unpaid.",
+  "pendingExpiryHint": "If the club requires it: the booking is auto-cancelled when fewer than 4 players have joined within the club's deadline (from booking time). KIF tokens are refunded.",
   "profileSettingsAria": "Profile settings",
   "profileCardRoleLabel": "KIFPADEL Player",
   "profileCardIdLabel": "Player ID",

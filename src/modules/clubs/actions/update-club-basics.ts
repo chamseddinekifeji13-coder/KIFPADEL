@@ -90,6 +90,12 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
   const minTrustForPayOnSite = parseBoundedInt(formData.get("min_trust_for_pay_on_site"), 0, 100, 70);
   const requirePhoneVerification = parseCheckbox(formData.get("require_phone_verification"));
   const requireProfileComplete = parseCheckbox(formData.get("require_profile_complete"));
+  const bookingFillDeadlineMinutes = parseBoundedInt(
+    formData.get("booking_fill_deadline_minutes"),
+    0,
+    1440,
+    30,
+  );
 
   if (logoUrlRaw.length > 0 && !logoUrl) {
     return {
@@ -178,6 +184,7 @@ export async function updateClubBasicsAction(formData: FormData): Promise<Action
       min_trust_for_pay_on_site: policyPreview.minTrustForPayOnSite,
       require_phone_verification: policyPreview.requirePhoneVerification,
       require_profile_complete: policyPreview.requireProfileComplete,
+      booking_fill_deadline_minutes: bookingFillDeadlineMinutes,
     })
     .eq("id", clubId);
 

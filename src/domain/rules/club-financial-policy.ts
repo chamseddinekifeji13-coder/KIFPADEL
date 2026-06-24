@@ -14,6 +14,8 @@ export type ClubFinancialPolicy = {
   minTrustForPayOnSite: number;
   requirePhoneVerification: boolean;
   requireProfileComplete: boolean;
+  /** 0 = règle désactivée. Minutes après réservation pour atteindre 4 joueurs. */
+  bookingFillDeadlineMinutes: number;
 };
 
 export const DEFAULT_CLUB_FINANCIAL_POLICY: ClubFinancialPolicy = {
@@ -30,6 +32,7 @@ export const DEFAULT_CLUB_FINANCIAL_POLICY: ClubFinancialPolicy = {
   minTrustForPayOnSite: 70,
   requirePhoneVerification: true,
   requireProfileComplete: true,
+  bookingFillDeadlineMinutes: 30,
 };
 
 const NO_SHOW_DEBT_MODES = new Set<NoShowDebtMode>(["full_share", "percent", "fixed", "none"]);
@@ -59,6 +62,7 @@ export type ClubFinancialPolicyRow = {
   min_trust_for_pay_on_site?: number | null;
   require_phone_verification?: boolean | null;
   require_profile_complete?: boolean | null;
+  booking_fill_deadline_minutes?: number | null;
 };
 
 export function parseClubFinancialPolicy(row: ClubFinancialPolicyRow | null | undefined): ClubFinancialPolicy {
@@ -93,6 +97,12 @@ export function parseClubFinancialPolicy(row: ClubFinancialPolicyRow | null | un
       row?.require_phone_verification ?? defaults.requirePhoneVerification,
     ),
     requireProfileComplete: Boolean(row?.require_profile_complete ?? defaults.requireProfileComplete),
+    bookingFillDeadlineMinutes: clampInt(
+      row?.booking_fill_deadline_minutes,
+      0,
+      1440,
+      defaults.bookingFillDeadlineMinutes,
+    ),
   };
 }
 

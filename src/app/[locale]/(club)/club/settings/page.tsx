@@ -82,6 +82,7 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
     noShowPenaltyPoints: policy.noShowTrustPenalty,
     autoReportNoShow: policy.noShowAutoReport,
     noShowGracePeriodMinutes: policy.noShowGraceMinutes,
+    bookingFillDeadlineMinutes: policy.bookingFillDeadlineMinutes,
   };
 
   return (

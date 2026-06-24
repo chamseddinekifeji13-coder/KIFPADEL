@@ -64,7 +64,7 @@
   "paymentOnline": "Paiement en ligne",
   "paymentAtClub": "Paiement au club",
   "paymentUnknown": "Non défini",
-  "pendingExpiryHint": "Une réservation en attente expire après 15 minutes sans paiement.",
+  "pendingExpiryHint": "Si le club l'exige : la réservation est annulée automatiquement si 4 joueurs ne sont pas inscrits dans le délai fixé par le club (à partir de la réservation). Les jetons KIF sont remboursés.",
   "profileSettingsAria": "Paramètres du profil",
   "profileCardRoleLabel": "Joueur KIFPADEL",
   "profileCardIdLabel": "Identifiant joueur",

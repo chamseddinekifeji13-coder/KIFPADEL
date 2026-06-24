@@ -53,6 +53,7 @@ type Settings = {
   noShowPenaltyPoints: number;
   autoReportNoShow: boolean;
   noShowGracePeriodMinutes: number;
+  bookingFillDeadlineMinutes: number;
 };
 
 type ClubSettingsFormProps = {
@@ -101,6 +102,7 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
     fd.set("min_trust_for_pay_on_site", String(settings.minTrustForPayOnSite));
     fd.set("require_phone_verification", settings.requirePhoneVerification ? "1" : "0");
     fd.set("require_profile_complete", settings.requireProfileComplete ? "1" : "0");
+    fd.set("booking_fill_deadline_minutes", String(settings.bookingFillDeadlineMinutes));
 
     const result = await updateClubBasicsAction(fd);
 
@@ -425,6 +427,16 @@ export function ClubSettingsForm({ initialSettings, locale }: ClubSettingsFormPr
             max={48}
             unit="h"
             onChange={(v) => updateSetting("freeCancellationHours", v)}
+          />
+
+          <SliderField
+            label="Délai pour compléter le groupe (4 joueurs)"
+            description="Minutes après la réservation : si moins de 4 joueurs confirmés, le créneau est annulé automatiquement. 0 = désactivé."
+            value={settings.bookingFillDeadlineMinutes}
+            min={0}
+            max={240}
+            unit=" min"
+            onChange={(v) => updateSetting("bookingFillDeadlineMinutes", v)}
           />
 
           <ToggleField
