@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { signInWithGoogleAction } from "@/modules/auth/actions/sign-in-with-google";
-
 type GoogleSignInButtonProps = {
   locale: string;
   next?: string;
@@ -58,24 +56,33 @@ export function GoogleSignInButton({
 
     setPending(true);
 
-    const formData = new FormData();
-    formData.set("locale", locale);
-    if (next) {
-      formData.set("next", next);
-    }
-    if (referrerId) {
-      formData.set("ref", referrerId);
+    const result = await fetch("/api/auth/google", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        locale,
+        next: next ?? undefined,
+        ref: referrerId ?? undefined,
+      }),
+      cache: "no-store",
+    });
+
+    let parsed: { ok?: boolean; url?: string; error?: string } | null = null;
+    if (result.headers.get("content-type")?.includes("application/json")) {
+      parsed = await result.json();
     }
 
-    const result = await signInWithGoogleAction(formData);
-
-    if (!result.ok) {
+    if (!parsed?.ok || !parsed.url) {
       setPending(false);
-      router.push(`/${locale}/auth/sign-in?error=${result.error}`);
+      router.push(`/${locale}/auth/sign-in?error=${parsed?.error ?? "auth_config_error"}`);
       return;
     }
 
-    window.location.href = result.url;
+    window.location.href = parsed.url;
   };
 
   return (

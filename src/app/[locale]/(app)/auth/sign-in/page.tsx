@@ -3,17 +3,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
-import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { sanitizeAuthNextPath } from "@/lib/booking-paths";
 import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
 import { isGoogleAuthEnabled } from "@/lib/auth/google-auth-enabled";
 import { GoogleSignInButton } from "@/components/features/auth/google-sign-in-button";
-import { signInAction } from "@/modules/auth/actions/sign-in";
+import { SignInForm } from "@/components/features/auth/sign-in-form";
 import { ResendActivationEmailButton } from "@/components/features/auth/resend-activation-email-button";
 
 type SignInPageProps = Readonly<{
@@ -132,33 +130,19 @@ export default async function SignInPage({ params, searchParams }: SignInPagePro
             </div>
           </>
         ) : null}
-        <form action={signInAction} className="space-y-4">
-          <input type="hidden" name="locale" value={locale} />
-          <input type="hidden" name="next" value={safeNext} />
-          <div className="space-y-1 text-left">
-            <label htmlFor="email" className="text-[10px] font-black text-gold uppercase tracking-widest px-1">
-              {dictionary.auth.emailLabel}
-            </label>
-            <TextInput id="email" name="email" type="email" placeholder="you@example.com" />
-          </div>
-          <div className="space-y-1 text-left">
-            <label htmlFor="password" className="text-[10px] font-black text-gold uppercase tracking-widest px-1">
-              {dictionary.auth.passwordLabel}
-            </label>
-            <TextInput id="password" name="password" type="password" placeholder="••••••••" />
-          </div>
-          <Button type="submit" className="w-full h-14 rounded-2xl bg-gold text-black font-black uppercase tracking-widest">
-            {dictionary.auth.signInCta}
-          </Button>
-          <div className="pt-1">
-            <Link
-              href={`/${locale}/auth/reset-password`}
-              className="text-xs font-bold text-foreground-muted hover:text-gold transition-colors"
-            >
-              {dictionary.auth.forgotPasswordCta}
-            </Link>
-          </div>
-        </form>
+        <SignInForm
+          locale={locale}
+          safeNext={safeNext}
+          forgotPasswordHref={`/${locale}/auth/reset-password`}
+          labels={{
+            emailLabel: dictionary.auth.emailLabel,
+            passwordLabel: dictionary.auth.passwordLabel,
+            signInCta: dictionary.auth.signInCta,
+            signInSubmitting: dictionary.auth.signInSubmitting,
+            forgotPasswordCta: dictionary.auth.forgotPasswordCta,
+            networkError: dictionary.auth.authNetworkError,
+          }}
+        />
       </Card>
 
       <Card className="w-full text-center">

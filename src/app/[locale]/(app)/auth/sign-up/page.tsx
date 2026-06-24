@@ -6,14 +6,12 @@ import { notFound } from "next/navigation";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { isGoogleAuthEnabled } from "@/lib/auth/google-auth-enabled";
 import { GoogleSignInButton } from "@/components/features/auth/google-sign-in-button";
-import { Button } from "@/components/ui/button";
+import { SignUpForm } from "@/components/features/auth/sign-up-form";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
-import { TextInput } from "@/components/ui/text-input";
 import { isLocale, type Locale } from "@/i18n/config";
 import { sanitizeAuthNextPath } from "@/lib/booking-paths";
 import { parseReferrerIdParam } from "@/lib/referrals/referral-url";
-import { signUpAction } from "@/modules/auth/actions/sign-up";
 
 type SignUpPageProps = Readonly<{
   params: Promise<{ locale: string }>;
@@ -133,75 +131,28 @@ export default async function SignUpPage({ params, searchParams }: SignUpPagePro
           </>
         ) : null}
 
-        <form action={signUpAction} className="space-y-3">
-          <input type="hidden" name="locale" value={locale} />
-          <input type="hidden" name="next" value={safeNext} />
-          {referrerId ? <input type="hidden" name="ref" value={referrerId} /> : null}
-          <div className="space-y-1">
-            <label htmlFor="phone" className="text-xs font-medium text-slate-700">
-              {dictionary.auth.phoneLabel}
-            </label>
-            <TextInput
-              id="phone"
-              name="phone"
-              type="tel"
-              inputMode="numeric"
-              placeholder="22 123 456"
-              required
-              minLength={8}
-              maxLength={14}
-            />
-            <p className="text-[11px] text-slate-500">{dictionary.auth.phoneSignupHint}</p>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="displayName" className="text-xs font-medium text-slate-700">
-              {dictionary.auth.displayNameLabel}
-            </label>
-            <TextInput
-              id="displayName"
-              name="displayName"
-              type="text"
-              placeholder={dictionary.auth.displayNamePlaceholder}
-              minLength={2}
-              maxLength={60}
-            />
-            <p className="text-[11px] text-slate-500">{dictionary.auth.displayNameSignupHint}</p>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="gender" className="text-xs font-medium text-slate-700">
-              {dictionary.auth.genderLabel}
-            </label>
-            <select
-              id="gender"
-              name="gender"
-              required
-              defaultValue=""
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition-all focus:border-sky-400 focus:ring-1 focus:ring-sky-400"
-            >
-              <option value="" disabled>
-                {dictionary.auth.genderPlaceholder}
-              </option>
-              <option value="male">{dictionary.auth.genderMale}</option>
-              <option value="female">{dictionary.auth.genderFemale}</option>
-            </select>
-            <p className="text-[11px] text-slate-500">{dictionary.auth.genderSignupHint}</p>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="email" className="text-xs font-medium text-slate-700">
-              {dictionary.auth.emailLabel}
-            </label>
-            <TextInput id="email" name="email" type="email" placeholder="you@example.com" />
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="password" className="text-xs font-medium text-slate-700">
-              {dictionary.auth.passwordLabel}
-            </label>
-            <TextInput id="password" name="password" type="password" placeholder="••••••••" />
-          </div>
-          <Button type="submit" className="w-full">
-            {dictionary.auth.signUpCta}
-          </Button>
-        </form>
+        <SignUpForm
+          locale={locale}
+          safeNext={safeNext}
+          referrerId={referrerId}
+          labels={{
+            phoneLabel: dictionary.auth.phoneLabel,
+            phoneSignupHint: dictionary.auth.phoneSignupHint,
+            displayNameLabel: dictionary.auth.displayNameLabel,
+            displayNamePlaceholder: dictionary.auth.displayNamePlaceholder,
+            displayNameSignupHint: dictionary.auth.displayNameSignupHint,
+            genderLabel: dictionary.auth.genderLabel,
+            genderPlaceholder: dictionary.auth.genderPlaceholder,
+            genderMale: dictionary.auth.genderMale,
+            genderFemale: dictionary.auth.genderFemale,
+            genderSignupHint: dictionary.auth.genderSignupHint,
+            emailLabel: dictionary.auth.emailLabel,
+            passwordLabel: dictionary.auth.passwordLabel,
+            signUpCta: dictionary.auth.signUpCta,
+            signUpSubmitting: dictionary.auth.signUpSubmitting,
+            networkError: dictionary.auth.authNetworkError,
+          }}
+        />
         <p className="text-xs text-slate-500 text-center leading-relaxed">
           {dictionary.auth.signUpWhatsAppRequiredNote}
         </p>

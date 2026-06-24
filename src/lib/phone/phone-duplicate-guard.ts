@@ -23,7 +23,7 @@ export async function isPhoneE164VerifiedByAnotherUser(
 
   if (error) {
     console.error("[isPhoneE164VerifiedByAnotherUser]", error.message);
-    return true;
+    throw new Error(`phone_lookup_failed: ${error.message}`);
   }
 
   return Boolean(data?.id);
