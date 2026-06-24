@@ -8,9 +8,25 @@ import {
 type AdminPromotionPanelProps = {
   locale: string;
   signUpUrl: string;
+  variant?: "platform" | "club";
+  secondaryUrl?: string;
   labels: ReferralPanelLabels;
 };
 
-export function AdminPromotionPanel({ locale, signUpUrl, labels }: AdminPromotionPanelProps) {
-  return <ReferralSharePanel locale={locale} signUpUrl={signUpUrl} variant="platform" labels={labels} />;
+export function AdminPromotionPanel({
+  locale,
+  signUpUrl,
+  variant = "platform",
+  secondaryUrl,
+  labels,
+}: AdminPromotionPanelProps) {
+  return (
+    <ReferralSharePanel
+      locale={locale}
+      signUpUrl={signUpUrl}
+      variant={variant}
+      secondaryUrl={secondaryUrl}
+      labels={labels}
+    />
+  );
 }

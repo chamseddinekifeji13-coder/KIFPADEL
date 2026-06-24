@@ -115,6 +115,34 @@ export async function fetchPlayers(
   }
 }
 
+/** Profil léger pour rejoindre un match (évite avatar/storage). */
+export async function fetchViewerJoinProfile(userId: string): Promise<{
+  gender: Gender | null;
+  displayName: string;
+}> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("gender, display_name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error || !data) {
+      return { gender: null, displayName: "Joueur" };
+    }
+
+    const g = data.gender;
+    return {
+      gender: g === "male" || g === "female" ? g : null,
+      displayName: data.display_name?.trim() || "Joueur",
+    };
+  } catch (err) {
+    rethrowFrameworkError(err);
+    return { gender: null, displayName: "Joueur" };
+  }
+}
+
 export async function fetchPlayerById(userId: string): Promise<Player | null> {
   try {
     const supabase = await createSupabaseServerClient();

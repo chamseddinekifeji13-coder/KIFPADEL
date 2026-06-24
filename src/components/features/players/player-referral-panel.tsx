@@ -24,8 +24,9 @@ export type ReferralPanelLabels = {
 type ReferralSharePanelProps = {
   locale: string;
   signUpUrl: string;
-  variant: "player" | "platform";
+  variant: "player" | "platform" | "club";
   referrerName?: string;
+  secondaryUrl?: string;
   labels: ReferralPanelLabels;
   className?: string;
 };
@@ -35,6 +36,7 @@ export function ReferralSharePanel({
   signUpUrl,
   variant,
   referrerName,
+  secondaryUrl,
   labels,
   className,
 }: ReferralSharePanelProps) {
@@ -48,8 +50,9 @@ export function ReferralSharePanel({
         url: signUpUrl,
         variant,
         referrerName,
+        secondaryUrl,
       }),
-    [locale, signUpUrl, variant, referrerName],
+    [locale, signUpUrl, variant, referrerName, secondaryUrl],
   );
 
   const onCopy = async () => {
@@ -88,7 +91,9 @@ export function ReferralSharePanel({
           {labels.previewTitle}
         </p>
         <p className="text-sm text-white/90 whitespace-pre-line leading-relaxed">{copy.text}</p>
-        <p className="mt-3 text-xs text-[var(--gold)] break-all font-medium">{signUpUrl}</p>
+        {variant !== "club" ? (
+          <p className="mt-3 text-xs text-[var(--gold)] break-all font-medium">{signUpUrl}</p>
+        ) : null}
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">

@@ -4,7 +4,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchMatchById, fetchMatchResult } from "@/modules/matches/repository";
-import { playerService } from "@/modules/players/service";
+import { fetchViewerJoinProfile } from "@/modules/players/repository";
 import { MatchJoinActions } from "@/components/features/matches/match-join-actions";
 import { MatchShareInvitePanel } from "@/components/features/matches/match-share-invite-panel";
 import { MatchTeamsRoster } from "@/components/features/matches/match-teams-roster";
@@ -48,77 +48,85 @@ export default async function MatchDetailsPage({ params, searchParams }: MatchDe
   const bannerTeam = sp.team === "A" || sp.team === "B" ? sp.team : null;
   if (!isLocale(locale)) notFound();
 
-  const dictionary = await getDictionary(locale as Locale);
+  const supabase = await createSupabaseServerClient();
+  const [dictionary, match, authResult] = await Promise.all([
+    getDictionary(locale as Locale),
+    fetchMatchById(matchId),
+    supabase.auth.getUser(),
+  ]);
   const labels = dictionary.player;
-  const match = await fetchMatchById(matchId);
   if (!match) notFound();
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = authResult.data.user;
+  const activeParticipants = match.match_participants.filter((p) => isActiveMatchParticipantRow(p));
+  const teamA = activeParticipants.filter((p) => p.team === "A");
+  const teamB = activeParticipants.filter((p) => p.team === "B");
 
-  let viewerGender = null;
   let participationPhase: "none" | "pending" | "confirmed" = "none";
   let viewerTeam: "A" | "B" | null = null;
   let sharePrice = match.price_per_player;
-  let walletBalance = 0;
-  let viewerDisplayName = "Joueur";
-  let canAccessChat = false;
-  let chatMessages: Awaited<ReturnType<typeof fetchMatchMessages>> = [];
-  let participantNames: Record<string, string> = {};
-
   if (user) {
-    walletBalance = await fetchKifWalletBalance(user.id);
-    const profile = await playerService.getPlayerProfile(user.id);
-    viewerGender = profile?.gender ?? null;
-    viewerDisplayName = profile?.display_name ?? "Joueur";
     const myRow = match.match_participants.find((p) => p.player_id === user.id);
     if (myRow) {
       participationPhase = resolveViewerParticipationPhase(myRow);
       viewerTeam = myRow.team === "A" || myRow.team === "B" ? myRow.team : null;
       sharePrice = resolveSharePrice(myRow, match.price_per_player);
     }
-
-    canAccessChat = await canUserAccessMatchChat(matchId);
-    if (canAccessChat) {
-      [chatMessages, participantNames] = await Promise.all([
-        fetchMatchMessages(matchId),
-        fetchMatchParticipantNames(matchId, match.created_by),
-      ]);
-    }
   }
 
-  const activeParticipants = match.match_participants.filter((p) => isActiveMatchParticipantRow(p));
-  const teamA = activeParticipants.filter((p) => p.team === "A");
-  const teamB = activeParticipants.filter((p) => p.team === "B");
-  const participantProfiles = await fetchMatchParticipantProfiles(match.id);
+  const [
+    participantProfiles,
+    matchResult,
+    clubDetails,
+    viewerJoinProfile,
+    walletBalance,
+    chatAccess,
+  ] = await Promise.all([
+    fetchMatchParticipantProfiles(match.id),
+    fetchMatchResult(matchId),
+    match.club_id
+      ? clubService.getClubDetails(match.club_id).catch(() => null)
+      : Promise.resolve(null),
+    user ? fetchViewerJoinProfile(user.id) : Promise.resolve(null),
+    user ? fetchKifWalletBalance(user.id) : Promise.resolve(0),
+    user ? canUserAccessMatchChat(matchId) : Promise.resolve(false),
+  ]);
 
-  const clubDetails = match.club_id
-    ? await clubService.getClubDetails(match.club_id).catch(() => null)
-    : null;
+  const viewerGender = viewerJoinProfile?.gender ?? null;
+  const viewerDisplayName = viewerJoinProfile?.displayName ?? "Joueur";
+  const canAccessChat = Boolean(chatAccess);
+
+  let chatMessages: Awaited<ReturnType<typeof fetchMatchMessages>> = [];
+  let participantNames: Record<string, string> = {};
+  if (user && canAccessChat) {
+    [chatMessages, participantNames] = await Promise.all([
+      fetchMatchMessages(matchId),
+      fetchMatchParticipantNames(matchId, match.created_by),
+    ]);
+  }
+
   const racketOffered = clubDetails ? isRacketRentalOfferedByClub(clubDetails) : false;
   const racketUnitPrice =
     racketOffered && clubDetails?.racket_rental_price_per_unit != null
       ? Number(clubDetails.racket_rental_price_per_unit)
       : 0;
 
-  const matchResult = await fetchMatchResult(matchId);
   let canRecordResult = false;
   let teamRatings: { teamA: number; teamB: number } | null = null;
 
   if (user && !matchResult && match.status !== "played") {
-    if (match.created_by === user.id) {
+    const isCreator = match.created_by === user.id;
+    const isParticipant = activeParticipants.some((participant) => participant.player_id === user.id);
+
+    if (isCreator || isParticipant) {
       canRecordResult = true;
-    } else if (activeParticipants.some((participant) => participant.player_id === user.id)) {
-      canRecordResult = true;
+      teamRatings = await fetchMatchTeamRatings(matchId);
     } else if (match.club_id) {
       const staffGuard = await assertClubStaffCanManage(supabase, match.club_id, user.id);
       canRecordResult = staffGuard.ok;
-    }
-
-    if (canRecordResult) {
-      teamRatings = await fetchMatchTeamRatings(matchId);
+      if (canRecordResult) {
+        teamRatings = await fetchMatchTeamRatings(matchId);
+      }
     }
   }
 

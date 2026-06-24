@@ -1,4 +1,4 @@
-export type ReferralMessageVariant = "player" | "platform";
+export type ReferralMessageVariant = "player" | "platform" | "club";
 
 export type ReferralShareCopy = {
   title: string;
@@ -11,11 +11,23 @@ type BuildReferralMessageInput = {
   url: string;
   variant: ReferralMessageVariant;
   referrerName?: string;
+  /** Lien connexion (variant club) pour les gestionnaires déjà inscrits. */
+  secondaryUrl?: string;
 };
 
 export function buildReferralShareCopy(input: BuildReferralMessageInput): ReferralShareCopy {
   const isEn = input.locale === "en";
   const name = input.referrerName?.trim() || (isEn ? "A friend" : "Un ami");
+
+  if (input.variant === "club") {
+    const signInUrl = input.secondaryUrl?.trim() || input.url;
+    const title = isEn ? "Kifpadel — free club profile" : "Kifpadel — profil club gratuit";
+    const text = isEn
+      ? `Hello,\n\nKifpadel invites your club to join Tunisia's padel network and create your club profile for free.\n\n✅ Free club account creation\n✅ No sign-up fees\n✅ No commitment\n\nStep 1 — Create your account:\n${input.url}\n\nStep 2 — Already registered? Sign in to create your club:\n${signInUrl}`
+      : `Bonjour,\n\nKifpadel vous invite à rejoindre le réseau padel en Tunisie et à créer gratuitement le profil de votre club.\n\n✅ Création de compte club gratuite\n✅ Aucun frais à l'inscription\n✅ Sans engagement\n\nÉtape 1 — Créez votre compte :\n${input.url}\n\nÉtape 2 — Déjà inscrit ? Connectez-vous pour créer votre club :\n${signInUrl}`;
+    const payload = `${text}`;
+    return { title, text, payload };
+  }
 
   if (input.variant === "platform") {
     const title = isEn ? "Join Kifpadel" : "Rejoignez Kifpadel";
