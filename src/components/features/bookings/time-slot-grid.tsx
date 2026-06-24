@@ -24,12 +24,12 @@ export function TimeSlotGrid({ slots, selectedSlot, onSelect }: TimeSlotGridProp
             disabled={!slot.isAvailable}
             onClick={() => onSelect(slot.id)}
             className={cn(
-              "min-h-[52px] py-3 px-2 rounded-xl text-sm font-bold border-2 transition-all duration-200 flex flex-col items-center gap-0.5 touch-manipulation cursor-pointer",
-              slot.isAvailable 
+              "tap-target min-h-[52px] py-3 px-2 rounded-xl text-sm font-bold border-2 transition-all duration-100 flex flex-col items-center gap-0.5 touch-manipulation cursor-pointer",
+              slot.isAvailable
                 ? selectedSlot === slot.id
-                  ? "bg-[var(--gold)]/10 border-[var(--gold)] text-[var(--gold)]"
-                  : "bg-[var(--surface)] border-[var(--border)] text-white hover:border-[var(--foreground-muted)]"
-                : "bg-[var(--background)] border-[var(--border)] text-[var(--foreground-muted)] cursor-not-allowed opacity-40"
+                  ? "bg-[var(--gold)]/10 border-[var(--gold)] text-[var(--gold)] scale-[1.02]"
+                  : "bg-[var(--surface)] border-[var(--border)] text-white [@media(hover:hover)]:hover:border-[var(--foreground-muted)] active:border-[var(--gold)]/60 active:scale-[0.98]"
+                : "bg-[var(--background)] border-[var(--border)] text-[var(--foreground-muted)] cursor-not-allowed opacity-40",
             )}
           >
             <span className="text-sm">{slot.time}</span>

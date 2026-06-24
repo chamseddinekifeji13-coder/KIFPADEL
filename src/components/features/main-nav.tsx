@@ -62,14 +62,20 @@ export function MainNav({ locale, labels }: MainNavProps) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "tap-target relative flex flex-col items-center justify-center gap-1.5 min-h-14 min-w-[64px] rounded-2xl group",
-                active ? "text-gold" : "text-foreground-muted hover:text-white"
+                "tap-target relative flex flex-col items-center justify-center gap-1.5 min-h-14 min-w-[64px] rounded-2xl group touch-manipulation",
+                active
+                  ? "text-gold"
+                  : "text-foreground-muted [@media(hover:hover)]:hover:text-white active:text-white",
               )}
             >
-              <div className={cn(
-                "p-2 rounded-xl transition-[background-color,transform,border-color] duration-150",
-                active ? "bg-gold/10 scale-110 shadow-gold/20 border border-gold/20" : "group-hover:bg-white/5"
-              )}>
+              <div
+                className={cn(
+                  "p-2 rounded-xl transition-[background-color,transform,border-color] duration-150 pointer-events-none",
+                  active
+                    ? "bg-gold/10 scale-110 shadow-gold/20 border border-gold/20"
+                    : "[@media(hover:hover)]:group-hover:bg-white/5 group-active:bg-white/10",
+                )}
+              >
                 <Icon
                   aria-hidden="true"
                   className={cn("h-6 w-6 transition-all", active ? "fill-gold/10" : "")}

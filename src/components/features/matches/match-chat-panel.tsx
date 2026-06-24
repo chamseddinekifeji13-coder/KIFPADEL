@@ -217,7 +217,7 @@ export function MatchChatPanel({
                 void onSend();
               }
             }}
-            className="flex-1 h-11 rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[var(--gold)]/50"
+            className="flex-1 h-11 rounded-xl border border-white/10 bg-black/20 px-3 text-base md:text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[var(--gold)]/50 touch-manipulation"
           />
           <button
             type="button"

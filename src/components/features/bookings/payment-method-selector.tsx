@@ -62,12 +62,12 @@ export function PaymentMethodSelector({
           disabled={walletDisabled}
           aria-pressed={walletSelected}
           className={cn(
-            "relative min-h-[88px] p-4 rounded-xl border-2 transition-all touch-manipulation text-left",
+            "tap-target relative min-h-[88px] p-4 rounded-xl border-2 transition-all duration-100 touch-manipulation text-left",
             walletSelected
               ? "border-[var(--gold)] bg-[var(--gold)]/10"
               : walletDisabled
                 ? "border-amber-500/35 bg-amber-500/5 opacity-80 cursor-not-allowed"
-                : "border-[var(--border)] bg-[var(--background)] hover:border-[var(--foreground-muted)] cursor-pointer",
+                : "border-[var(--border)] bg-[var(--background)] [@media(hover:hover)]:hover:border-[var(--foreground-muted)] active:border-[var(--gold)]/50 active:scale-[0.98] cursor-pointer",
           )}
         >
           <div className="flex flex-col items-center gap-1.5 text-center">
@@ -122,12 +122,12 @@ export function PaymentMethodSelector({
           disabled={isRestricted}
           aria-pressed={selected === "on_site" && !isRestricted}
           className={cn(
-            "relative min-h-[88px] p-4 rounded-xl border-2 transition-all touch-manipulation text-left",
+            "tap-target relative min-h-[88px] p-4 rounded-xl border-2 transition-all duration-100 touch-manipulation text-left",
             isRestricted
               ? "border-[var(--border)] bg-[var(--background)] opacity-50 cursor-not-allowed"
               : selected === "on_site"
                 ? "border-[var(--gold)] bg-[var(--gold)]/10 cursor-pointer"
-                : "border-[var(--border)] bg-[var(--background)] hover:border-[var(--foreground-muted)] cursor-pointer",
+                : "border-[var(--border)] bg-[var(--background)] [@media(hover:hover)]:hover:border-[var(--foreground-muted)] active:border-[var(--gold)]/50 active:scale-[0.98] cursor-pointer",
           )}
         >
           <div className="flex flex-col items-center gap-1.5 text-center">

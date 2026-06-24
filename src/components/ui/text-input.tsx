@@ -34,7 +34,7 @@ export function TextInput({
       minLength={minLength}
       maxLength={maxLength}
       className={cn(
-        "h-12 w-full rounded-2xl border border-white/5 bg-surface-elevated px-4 text-sm text-white placeholder:text-foreground-muted outline-none transition-all focus:border-gold/30 focus:shadow-gold",
+        "h-12 w-full rounded-2xl border border-white/5 bg-surface-elevated px-4 text-base md:text-sm text-white placeholder:text-foreground-muted outline-none transition-all focus:border-gold/30 focus:shadow-gold",
         className,
       )}
     />
