@@ -129,7 +129,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
 
 
       {/* Virtual Member Card */}
-      <section className="relative overflow-hidden rounded-[2rem] aspect-[1.6/1] bg-[var(--surface)] border border-[var(--gold)]/20 p-6 flex flex-col justify-between text-white shadow-2xl shadow-black/20 group">
+      <section className="relative overflow-hidden rounded-[2rem] bg-[var(--surface)] border border-[var(--gold)]/20 p-5 sm:p-6 flex flex-col gap-4 text-white shadow-2xl shadow-black/20 group min-h-[240px]">
         {/* Abstract Background Design */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--gold)] rounded-full blur-[90px] opacity-10 -mr-20 -mt-20 group-hover:opacity-20 transition-opacity" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full blur-[70px] opacity-5 -ml-20 -mb-20" />
@@ -169,7 +169,18 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
           </Badge>
         </div>
 
-        <div className="relative flex justify-between items-end">
+        <div className="relative grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{labels.profileCardIdLabel}</p>
+            <p className="text-sm font-bold text-white">KIF-2026</p>
+          </div>
+          <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2">
+            <p className="text-[10px] uppercase tracking-widest text-emerald-300/70 font-bold">{labels.reliabilityLabel}</p>
+            <p className="text-sm font-bold text-emerald-300">{profile.trust_score}/100</p>
+          </div>
+        </div>
+
+        <div className="relative">
           <div className="space-y-1">
             <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
               {labels.reliabilityLabel}
@@ -188,10 +199,6 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
                 Genre non renseigné — nécessaire pour certains matchs
               </p>
             )}
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-black tracking-tighter">KIF-2026</p>
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-medium">{labels.profileCardIdLabel}</p>
           </div>
         </div>
       </section>
