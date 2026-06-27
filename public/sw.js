@@ -1,12 +1,13 @@
 /**
- * Kifpadel PWA service worker (v9)
+ * Kifpadel PWA service worker (v10)
  * - Accueil /fr|/en : réseau d'abord, écran boot statique si lent (jamais de cache HTML SSR).
  * - Cache-first : icônes, manifest, chunks _next/static.
  * - Pas d'interception auth / profil / club.
+ * - Pas d'interception en localhost (dev).
  */
 
-const CACHE_NAME = "kifpadel-static-v9";
-const NETWORK_TIMEOUT_MS = 2800;
+const CACHE_NAME = "kifpadel-static-v10";
+const NETWORK_TIMEOUT_MS = 8000;
 const BOOT_RETRY_HEADER = "X-Kifpadel-Boot-Retry";
 
 const PRECACHE_URLS = [
@@ -20,6 +21,10 @@ const PRECACHE_URLS = [
 
 const SENSITIVE_PATH_RE =
   /\/(auth|profile|onboarding|admin|club)(\/|$)|^\/api\//;
+
+function isLocalDevHost(url) {
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+}
 
 function normalizePathname(pathname) {
   const trimmed = pathname.replace(/\/$/, "");
@@ -75,6 +80,10 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  if (isLocalDevHost(requestUrl)) {
     return;
   }
 

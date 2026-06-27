@@ -57,15 +57,29 @@
     <div class="logo">KIF</div>
     <div class="spinner" aria-hidden="true"></div>
     <p id="msg">Chargement…</p>
+    <button id="retry" type="button" hidden style="margin-top:0.5rem;padding:0.5rem 1rem;border-radius:0.75rem;border:1px solid rgba(212,175,55,0.4);background:#141a2e;color:#d4af37;font-weight:700;cursor:pointer">
+      Réessayer
+    </button>
     <script>
       (function () {
         var target = "/fr";
+        var attempts = 0;
+        var maxAttempts = 12;
+        var msg = document.getElementById("msg");
+        var retryBtn = document.getElementById("retry");
         try {
           var seg = location.pathname.split("/").filter(Boolean)[0];
           if (seg === "en" || seg === "fr") target = "/" + seg;
         } catch (e) {}
 
         function tryLoad() {
+          attempts += 1;
+          if (attempts > maxAttempts) {
+            msg.textContent = "Connexion lente. Touchez Réessayer ou rechargez la page.";
+            retryBtn.hidden = false;
+            return;
+          }
+
           fetch(target, {
             credentials: "same-origin",
             cache: "no-store",
@@ -82,6 +96,13 @@
               setTimeout(tryLoad, 2000);
             });
         }
+
+        retryBtn.addEventListener("click", function () {
+          attempts = 0;
+          retryBtn.hidden = true;
+          msg.textContent = "Chargement…";
+          tryLoad();
+        });
 
         tryLoad();
       })();
