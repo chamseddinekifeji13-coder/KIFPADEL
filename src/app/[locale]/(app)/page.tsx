@@ -19,6 +19,8 @@ import {
 import { Avatar } from "@/components/ui/avatar";
 import { SponsorPartnersStrip } from "@/components/features/sponsors/sponsor-partners-strip";
 import { listActiveSponsorsForPublic } from "@/modules/sponsors/repository";
+import { PwaInstallPanel } from "@/components/features/pwa/pwa-install-panel";
+import { buildPwaInstallLabels } from "@/lib/pwa/labels";
 
 type LocaleHomeProps = {
   params: Promise<{ locale: string }>;
@@ -146,6 +148,8 @@ export default async function LocaleHomePage({ params }: LocaleHomeProps) {
           )}
         </div>
       </section>
+
+      <PwaInstallPanel labels={buildPwaInstallLabels(dictionary.player)} />
 
       {/* Intent Grid */}
       <div className="grid gap-6 sm:grid-cols-2">
