@@ -28,15 +28,11 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <div className="mx-auto flex w-full max-w-2xl lg:max-w-7xl min-h-dvh flex-col bg-background">
-      <div className="sticky top-0 z-50 flex justify-end px-4 py-4 max-md:backdrop-blur-none md:backdrop-blur-md">
+      <div className="sticky top-0 z-50 flex justify-end px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] max-md:backdrop-blur-none md:backdrop-blur-md">
         <LocaleSwitcher currentLocale={locale} />
       </div>
 
-      {/* 
-          Main Content Area 
-          We use a larger bottom padding to accommodate the floating nav 
-      */}
-      <main className="flex-1 flex flex-col p-4 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))]">
+      <main className="flex-1 flex flex-col p-4 pb-[calc(8.75rem+env(safe-area-inset-bottom,0px))] max-md:pb-[calc(9.25rem+env(safe-area-inset-bottom,0px))]">
         {children}
       </main>
 

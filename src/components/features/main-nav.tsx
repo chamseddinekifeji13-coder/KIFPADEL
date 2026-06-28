@@ -47,7 +47,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
   return (
     <nav
       aria-label="Navigation principale"
-      className="fixed inset-x-[4%] bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 mx-auto max-w-lg animate-fade-in max-md:animate-none"
+      className="fixed inset-x-[4%] bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 mx-auto max-w-lg animate-fade-in max-md:animate-none"
     >
       <div className="glass-gold rounded-[2rem] p-2 flex justify-between items-center px-4 h-20 shadow-premium max-md:backdrop-blur-none">
         {items.map((item) => {
@@ -62,7 +62,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "tap-target relative flex flex-col items-center justify-center gap-1.5 min-h-14 min-w-[64px] rounded-2xl group touch-manipulation",
+                "tap-target relative z-10 flex flex-col items-center justify-center gap-1.5 min-h-[56px] min-w-[68px] rounded-2xl group touch-manipulation",
                 active
                   ? "text-gold"
                   : "text-foreground-muted [@media(hover:hover)]:hover:text-white active:text-white",
@@ -70,7 +70,7 @@ export function MainNav({ locale, labels }: MainNavProps) {
             >
               <div
                 className={cn(
-                  "p-2 rounded-xl transition-[background-color,transform,border-color] duration-150 pointer-events-none",
+                  "p-2.5 rounded-xl transition-[background-color,transform,border-color] duration-150",
                   active
                     ? "bg-gold/10 scale-110 shadow-gold/20 border border-gold/20"
                     : "[@media(hover:hover)]:group-hover:bg-white/5 group-active:bg-white/10",

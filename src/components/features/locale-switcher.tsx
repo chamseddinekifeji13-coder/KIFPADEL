@@ -36,7 +36,7 @@ export function LocaleSwitcher({ currentLocale }: LocaleSwitcherProps) {
             href={getLocaleHref(locale)}
             aria-current={isActive ? "true" : undefined}
             className={cn(
-              "tap-target min-w-[2.5rem] rounded-full border px-3 py-1 text-center transition-colors touch-manipulation",
+              "tap-target inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border px-3 py-2 text-center transition-colors touch-manipulation",
               isActive
                 ? "border-[var(--gold)] bg-[var(--gold)]/10 text-[var(--gold)]"
                 : "border-transparent text-[var(--foreground-muted)] [@media(hover:hover)]:hover:text-white active:text-white active:bg-white/5",

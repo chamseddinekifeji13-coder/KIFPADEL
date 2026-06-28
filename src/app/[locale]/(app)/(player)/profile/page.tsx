@@ -121,7 +121,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
         <a
           href="#account-settings"
           aria-label={labels.profileSettingsAria}
-          className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+          className="tap-target inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors touch-manipulation"
         >
           <Settings className="h-5 w-5" />
         </a>
@@ -346,7 +346,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
       />
 
       {/* Account Settings List */}
-      <section id="account-settings" className="scroll-mt-6 space-y-3">
+      <section id="account-settings" className="scroll-mt-[calc(5rem+env(safe-area-inset-top,0px))] space-y-3">
         <SectionTitle title={labels.accountSettingsTitle} className="text-sm opacity-50 px-2" />
         <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] divide-y divide-[var(--border)] shadow-sm overflow-hidden">
           
@@ -354,7 +354,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
           {superAdminActor && (
             <Link
               href={`/${locale}/admin`}
-              className="w-full p-4 flex items-center justify-between hover:bg-violet-500/10 transition-colors group"
+              className="tap-target w-full min-h-12 p-4 flex items-center justify-between hover:bg-violet-500/10 transition-colors group touch-manipulation"
             >
               <div className="flex items-center gap-3">
                 <Shield className="h-4 w-4 text-violet-400 group-hover:text-violet-300 transition-colors" />
@@ -370,7 +370,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
           {managedClub && (
             <Link
               href={`/${locale}/club/dashboard`}
-              className="w-full p-4 flex items-center justify-between hover:bg-[var(--gold)]/10 transition-colors group"
+              className="tap-target w-full min-h-12 p-4 flex items-center justify-between hover:bg-[var(--gold)]/10 transition-colors group touch-manipulation"
             >
               <div className="flex items-center gap-3">
                 <LayoutDashboard className="h-4 w-4 text-[var(--gold)] group-hover:text-[var(--gold-dark)] transition-colors" />
@@ -398,7 +398,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
             <Link 
               key={item.label} 
               href={item.href} 
-              className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface-elevated)] transition-colors group"
+              className="tap-target w-full min-h-12 p-4 flex items-center justify-between hover:bg-[var(--surface-elevated)] transition-colors group touch-manipulation"
             >
               <span className="text-sm font-bold text-slate-200 group-hover:text-white pl-7">
                 {item.label}
@@ -411,7 +411,7 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
           <form action={signOutAction}>
             <input type="hidden" name="locale" value={locale} />
             <button 
-              className="w-full p-4 flex items-center justify-between hover:bg-red-500/10 transition-colors group" 
+              className="tap-target w-full min-h-12 p-4 flex items-center justify-between hover:bg-red-500/10 transition-colors group touch-manipulation" 
               type="submit"
             >
               <div className="flex items-center gap-3">

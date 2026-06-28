@@ -81,7 +81,7 @@ export function ClubAlertSubscribe({
             disabled={pending}
             onClick={handleToggle}
             className={[
-              "mt-1 shrink-0 inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors touch-manipulation",
+              "mt-1 shrink-0 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-colors touch-manipulation",
               "focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/60 focus:ring-offset-2 focus:ring-offset-black",
               effectivelySubscribed
                 ? "border border-[var(--border)] bg-[var(--surface-elevated)] text-white hover:bg-white/5"

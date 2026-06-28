@@ -27,6 +27,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
   title: {
     default: "Kifpadel — Réservez et jouez au Padel en Tunisie",
     template: "%s · Kifpadel",
@@ -47,7 +52,10 @@ export const metadata: Metadata = {
       { url: "/icons/icon.svg", type: "image/svg+xml" },
     ],
     shortcut: "/icons/icon-192.png",
-    apple: "/icons/apple-touch-icon.png",
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   alternates: {
     canonical: "/",
