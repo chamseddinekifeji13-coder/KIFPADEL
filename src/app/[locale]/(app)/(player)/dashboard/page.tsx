@@ -14,6 +14,8 @@ import { TopRivals } from "@/components/features/players/top-rivals";
 import { clubService } from "@/modules/clubs/service";
 import { getSuperAdminActor } from "@/modules/admin/actor";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PwaInstallPanel } from "@/components/features/pwa/pwa-install-panel";
+import { buildPwaInstallLabels } from "@/lib/pwa/labels";
 
 function bookingStatusLabel(status: string, dictionaryLabels: Record<string, string>) {
   const statusLabels = {
@@ -185,6 +187,8 @@ export default async function PlayerDashboardPage({ params }: { params: Promise<
                 </span>
               </Link>
             ) : null}
+
+            <PwaInstallPanel labels={buildPwaInstallLabels(labels)} variant="compact" />
             
             <Link 
               href={`/${locale}/profile`}

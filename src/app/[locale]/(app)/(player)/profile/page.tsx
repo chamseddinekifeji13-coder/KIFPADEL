@@ -43,6 +43,8 @@ import { buildAccountVerifiedCelebrationLabels } from "@/components/features/pla
 import { PlayerReferralPanel } from "@/components/features/players/player-referral-panel";
 import { publicEnv } from "@/lib/config/env";
 import { buildReferralSignUpUrl } from "@/lib/referrals/referral-url";
+import { PwaInstallPanel } from "@/components/features/pwa/pwa-install-panel";
+import { buildPwaInstallLabels } from "@/lib/pwa/labels";
 
 type ProfilePageProps = {
   params: Promise<{ locale: string }>;
@@ -344,6 +346,8 @@ export default async function ProfilePage({ params, searchParams }: ProfilePageP
         sponsors={sponsors}
         title={dictionary.common.sponsorsPartnersTitle}
       />
+
+      <PwaInstallPanel labels={buildPwaInstallLabels(labels)} />
 
       {/* Account Settings List */}
       <section id="account-settings" className="scroll-mt-[calc(5rem+env(safe-area-inset-top,0px))] space-y-3">
